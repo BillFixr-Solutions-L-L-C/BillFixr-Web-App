@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function WhyChooseUs() {
   return (
     <section id="why-choose-us" className="bg-primary-50 px-6 py-20">
@@ -14,8 +16,14 @@ export default function WhyChooseUs() {
           </p>
         </div>
 
-        <div className="flex aspect-[4/5] items-center justify-center rounded-3xl bg-primary-100 sm:aspect-[9/10]">
-          <span className="text-sm text-primary-400">Photo placeholder — awaiting real asset</span>
+        <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-primary-100 sm:aspect-[9/10]">
+          <Image
+            src="/img-1.jpg"
+            alt="A caregiver supporting a patient at a medical office"
+            fill
+            sizes="(min-width: 1024px) 50vw, 100vw"
+            className="object-cover"
+          />
         </div>
       </div>
     </section>

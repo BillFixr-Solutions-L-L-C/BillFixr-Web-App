@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import Navbar from "@/components/landing/Navbar";
 import BeforeYouPay from "@/components/landing/BeforeYouPay";
@@ -27,8 +28,14 @@ export default function CareersPage() {
           We&apos;re looking for talented, driven individuals to help us achieve our mission.
         </p>
 
-        <div className="mt-8 flex aspect-[21/8] items-center justify-center overflow-hidden rounded-2xl bg-primary-100">
-          <span className="text-sm text-primary-400">Photo placeholder — awaiting real asset</span>
+        <div className="relative mt-8 aspect-[21/8] overflow-hidden rounded-2xl bg-primary-100">
+          <Image
+            src="/img-2.jpg"
+            alt="BillFixr team members working together"
+            fill
+            sizes="(min-width: 1024px) 1024px, 100vw"
+            className="object-cover object-[50%_25%]"
+          />
         </div>
       </section>
 
