@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import AuthPanel from "@/components/auth/AuthPanel";
+
+export const metadata: Metadata = {
+  title: "BillFixr - Login",
+};
 
 export default function LoginPage() {
   return (
