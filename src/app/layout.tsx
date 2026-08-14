@@ -15,7 +15,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "BillFixr — Take Control of Your Bills",
+  title: "BillFixr",
   description: "AI-powered medical bill review and negotiation.",
 };
 
