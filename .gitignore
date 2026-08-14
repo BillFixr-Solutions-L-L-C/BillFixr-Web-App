@@ -40,7 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# internal planning docs — not part of the shipped codebase
+# internal planning/process docs — not part of the shipped codebase
 BillFixr PRD.docx
 PRD-Summary.md
 TODO.md
+/docs/
+/.claude/
