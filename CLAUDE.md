@@ -1,5 +1,0 @@
-@AGENTS.md
-
-@docs/FIGMA-WORKFLOW.md
-@docs/DESIGN-SYSTEM.md
-@docs/FRONTEND-CONVENTIONS.md
