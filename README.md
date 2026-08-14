@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BillFixr
 
-## Getting Started
+BillFixr is an AI-powered platform that reviews medical bills for billing
+errors and overcharges, then negotiates reductions on the patient's behalf.
 
-First, run the development server:
+This repository contains the web application: the marketing site, the
+authenticated user dashboard, and the internal admin dashboard.
+
+## Status
+
+Frontend-first build. All screens currently run on mock/local data — there
+is no backend integration yet, and bill scanning / error detection / letter
+generation are handled by a separate AI/ML workstream that this app will
+integrate with as an external service once it's ready.
+
+## Stack
+
+- [Next.js](https://nextjs.org) (App Router) + TypeScript
+- Tailwind CSS v4
+- No component library — UI is hand-built with Tailwind utilities
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Other scripts: `npm run build`, `npm run start`, `npm run lint`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project structure
 
-## Learn More
+- `src/app/(landing)` via `src/app/page.tsx` — marketing/landing page
+- `src/app/dashboard/**` — end-user dashboard
+- `src/app/admin/**` — internal admin dashboard
+- `src/app/careers/**`, `src/app/testimonial` — public careers listings and
+  the logged-in testimonial flow
+- `src/components/` — shared UI, grouped by area (`landing/`, `dashboard/`,
+  `admin/`)
 
-To learn more about Next.js, take a look at the following resources:
+## Conventions & design source
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Before making UI changes, see `docs/`:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `docs/FIGMA-WORKFLOW.md` — how to pull screens from the Figma source of
+  truth
+- `docs/DESIGN-SYSTEM.md` — confirmed colors, typography, and component
+  patterns
+- `docs/FRONTEND-CONVENTIONS.md` — stack conventions and the verification
+  checklist to run before calling a UI change done
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Proprietary — © 2026 BillFixr Solutions, LLC. All rights reserved.
