@@ -2,7 +2,6 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 
 const links = [
-  { label: "Home", href: "/" },
   { label: "How it works", href: "/#how-it-works" },
   { label: "Why choose us", href: "/#why-choose-us", hasChevron: true },
   { label: "Testimonials", href: "/#testimonials" },
