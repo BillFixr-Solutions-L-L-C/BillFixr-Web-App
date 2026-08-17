@@ -57,11 +57,11 @@ function TikTokIcon() {
 }
 
 const socials = [
-  { label: "Facebook", icon: <FacebookIcon /> },
-  { label: "Instagram", icon: <InstagramIcon /> },
-  { label: "LinkedIn", icon: <LinkedInIcon /> },
-  { label: "X", icon: <XIcon /> },
-  { label: "TikTok", icon: <TikTokIcon /> },
+  { label: "Facebook", href: "https://www.facebook.com/BillFixrSolutions", icon: <FacebookIcon /> },
+  { label: "Instagram", href: "https://www.instagram.com/billfixrsolutions", icon: <InstagramIcon /> },
+  { label: "LinkedIn", href: "https://www.linkedin.com/company/billfixr-solutions-llc/", icon: <LinkedInIcon /> },
+  { label: "X", href: null, icon: <XIcon /> },
+  { label: "TikTok", href: "https://www.tiktok.com/@billfixr", icon: <TikTokIcon /> },
 ];
 
 const wordmarkTextClass =
@@ -117,15 +117,28 @@ export default function Footer() {
 
           <div className="flex gap-20">
             <div className="flex flex-col items-center gap-4">
-              {socials.map((s) => (
-                <span
-                  key={s.label}
-                  aria-label={s.label}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white"
-                >
-                  {s.icon}
-                </span>
-              ))}
+              {socials.map((s) =>
+                s.href ? (
+                  <a
+                    key={s.label}
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={s.label}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white transition hover:bg-white/80"
+                  >
+                    {s.icon}
+                  </a>
+                ) : (
+                  <span
+                    key={s.label}
+                    aria-label={s.label}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white"
+                  >
+                    {s.icon}
+                  </span>
+                ),
+              )}
             </div>
             <nav className="flex flex-col justify-between text-lg font-bold leading-none text-white">
               {linkColumns.map((link) => (
