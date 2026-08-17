@@ -7,6 +7,8 @@ import Logo from "@/components/Logo";
 import {
   DashboardIcon,
   UsersIcon,
+  CareersIcon,
+  TestimonialsIcon,
   PaymentsIcon,
   UploadsIcon,
   SupportIcon,
@@ -19,6 +21,8 @@ import {
 const nav = [
   { label: "Dashboard", href: "/admin", icon: DashboardIcon },
   { label: "Users", href: "/admin/users", icon: UsersIcon },
+  { label: "Careers", href: "/admin/careers", icon: CareersIcon },
+  { label: "Testimonials", href: "/admin/testimonials", icon: TestimonialsIcon },
   {
     label: "Payments",
     href: "/admin/payments",
