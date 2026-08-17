@@ -3,7 +3,7 @@ import Logo from "@/components/Logo";
 
 const links = [
   { label: "How it works", href: "/#how-it-works" },
-  { label: "Why choose us", href: "/#why-choose-us", hasChevron: true },
+  { label: "Why choose us", href: "/#why-choose-us" },
   { label: "Testimonials", href: "/#testimonials" },
   { label: "Careers", href: "/careers" },
   { label: "Contact", href: "/#contact" },
@@ -18,17 +18,8 @@ export default function Navbar() {
 
       <nav className="hidden items-center gap-8 text-sm font-medium text-primary-900 md:flex">
         {links.map((link) => (
-          <Link
-            key={link.label}
-            href={link.href}
-            className="flex items-center gap-1 hover:text-primary-600"
-          >
+          <Link key={link.label} href={link.href} className="hover:text-primary-600">
             {link.label}
-            {link.hasChevron && (
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                <path d="M2.5 4.5 6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
           </Link>
         ))}
       </nav>
