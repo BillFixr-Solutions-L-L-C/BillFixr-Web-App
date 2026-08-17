@@ -4,6 +4,7 @@ const linkColumns = [
   { label: "Terms of Use", href: "/terms" },
   { label: "Privacy Policy", href: "/privacy" },
   { label: "Govt. Compliance", href: "/compliance" },
+  { label: "Service Policies", href: "/policies" },
   { label: "Contact Support", href: "#contact" },
 ];
 
