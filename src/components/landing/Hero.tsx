@@ -63,7 +63,7 @@ export default function Hero() {
             AI-POWERED MEDICAL BILLS REVIEW
           </span>
 
-          <h1 className="mt-8 font-sans text-6xl font-bold leading-[1.05] text-primary-900 sm:text-7xl">
+          <h1 className="mt-8 font-sans text-4xl font-bold leading-[1.05] text-primary-900 sm:text-7xl">
             Take Control of Your Bills-
             <span className="text-accent-500">Automatically</span>
           </h1>
