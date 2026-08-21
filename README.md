@@ -37,6 +37,13 @@ BillFixr is available to individuals 18 or older residing in the United
 States who are reviewing a medical bill that belongs to them, or that they
 have legal authorization to act on behalf of.
 
+## AI backend
+
+The repository includes an isolated Python AI service at
+`services/ai-service/` for ingestion, OCR, extraction, case analysis, and
+draft generation. See `AI-SERVICE-INTEGRATION.md` for the frontend handoff
+and integration path.
+
 ## How BillFixr is paid
 
 A small commitment fee is charged when a bill is submitted for analysis.

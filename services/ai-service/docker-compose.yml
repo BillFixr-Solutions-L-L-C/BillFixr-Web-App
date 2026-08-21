@@ -1,0 +1,25 @@
+services:
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - billfixr_data:/app/.billfixr-data
+      - billfixr_cache:/app/.billfixr-cache
+
+  worker:
+    build: .
+    command: python scripts/run_worker.py --interval 3 --limit 10
+    env_file:
+      - .env
+    volumes:
+      - billfixr_data:/app/.billfixr-data
+      - billfixr_cache:/app/.billfixr-cache
+
+volumes:
+  billfixr_data:
+  billfixr_cache:
+
