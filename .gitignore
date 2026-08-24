@@ -49,3 +49,6 @@ BACKEND-PLAN.md
 /.claude/
 /CLAUDE.md
 /AGENTS.md
+
+.vercel
+.env*

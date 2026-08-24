@@ -3,13 +3,13 @@ import Link from "next/link";
 
 export default function BeforeYouPay() {
   return (
-    <section className="bg-primary-50 px-6 py-24 text-center sm:py-28">
+    <section className="flex min-h-screen flex-col items-center justify-center bg-primary-50 px-6 py-24 text-center">
       <div className="mx-auto max-w-4xl">
         <Image
           src="/logo-icon.png"
           alt=""
-          width={220}
-          height={193}
+          width={320}
+          height={281}
           className="mx-auto mb-8"
         />
 
