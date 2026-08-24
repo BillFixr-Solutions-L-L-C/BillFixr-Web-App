@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type LineItem = { label: string; value: string };
 
@@ -71,6 +71,78 @@ function CardBrandIcon({ brand }: { brand: string }) {
   );
 }
 
+function CheckIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+const cardBrands = ["Mastercard", "Visa", "Verve"];
+
+function CardBrandDropdown({ value, onChange }: { value: string; onChange: (brand: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative mt-4">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-left transition focus:border-primary-400 focus:outline-none"
+      >
+        <CardBrandIcon brand={value} />
+        <span className="flex-1 text-sm font-medium text-gray-700">{value}</span>
+        <span className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}>
+          <ChevronDownIcon />
+        </span>
+      </button>
+
+      {open && (
+        <ul
+          role="listbox"
+          className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-gray-100 bg-white py-2 shadow-xl"
+        >
+          {cardBrands.map((option) => (
+            <li key={option}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={value === option}
+                onClick={() => {
+                  onChange(option);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center gap-3 px-5 py-2.5 text-left text-sm transition hover:bg-gray-50 ${
+                  value === option ? "bg-primary-50 font-semibold text-primary-700" : "text-gray-700"
+                }`}
+              >
+                <CardBrandIcon brand={option} />
+                {option}
+                {value === option && <span className="ml-auto text-primary-600"><CheckIcon /></span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function formatCardNumber(digits: string) {
   return digits.match(/.{1,4}/g)?.join(" ") ?? "";
 }
@@ -130,21 +202,7 @@ export default function PaymentForm({
         </div>
       </div>
 
-      <div className="relative mt-4 flex items-center gap-3 rounded-full border border-gray-200 px-5 py-2.5 transition focus-within:border-primary-400">
-        <CardBrandIcon brand={brand} />
-        <select
-          value={brand}
-          onChange={(e) => setBrand(e.target.value)}
-          className="flex-1 appearance-none bg-transparent text-sm font-medium text-gray-700 focus:outline-none"
-        >
-          <option>Mastercard</option>
-          <option>Visa</option>
-          <option>Verve</option>
-        </select>
-        <span className="pointer-events-none text-gray-400">
-          <ChevronDownIcon />
-        </span>
-      </div>
+      <CardBrandDropdown value={brand} onChange={setBrand} />
 
       <div className="mt-5 space-y-4">
         <div>
