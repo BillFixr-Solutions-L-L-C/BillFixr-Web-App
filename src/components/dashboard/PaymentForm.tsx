@@ -17,7 +17,11 @@ export default function PaymentForm({
           <span className="-mr-2.5 h-5 w-5 rounded-full bg-red-500/80" />
           <span className="h-5 w-5 rounded-full bg-accent-500/80" />
         </span>
-        <span className="text-sm text-gray-700">Mastercard</span>
+        <select className="flex-1 bg-transparent text-sm text-gray-700 focus:outline-none">
+          <option>Mastercard</option>
+          <option>Visa</option>
+          <option>Verve</option>
+        </select>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
