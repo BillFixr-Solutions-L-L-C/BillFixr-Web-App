@@ -293,7 +293,7 @@ export default function DashboardHome() {
 
       {previewOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="relative w-full max-w-xs rounded-2xl bg-white p-6 shadow-xl">
+          <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
             <button
               type="button"
               onClick={() => setPreviewOpen(false)}
