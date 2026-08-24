@@ -32,8 +32,8 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="relative mx-auto w-full max-w-7xl px-6 py-6 lg:px-10">
-      <div className="flex items-center justify-between">
+    <header className="relative mx-auto w-full max-w-7xl px-6 pb-6 pt-8 lg:px-10 lg:pt-10">
+      <div className="flex min-h-20 items-center justify-between">
         <Link href="/">
           <Logo />
         </Link>
@@ -46,7 +46,7 @@ export default function Navbar() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link
             href="/signup"
             className="rounded-full bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 sm:px-5"
