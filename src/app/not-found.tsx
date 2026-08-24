@@ -10,11 +10,10 @@ export default function NotFound() {
           <span className="text-primary-900">Error</span>
           <span className="text-primary-500">404</span>
         </h1>
-        <h2 className="mt-6 text-2xl font-bold text-primary-900">Oop! Page not found.</h2>
+        <h2 className="mt-6 text-2xl font-bold text-primary-900">Oops! Page not found.</h2>
         <p className="mt-4 text-primary-900/50">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin ultricies fringilla
-          diam, a egestas tellus ultricies et. Maecenas nec erat non nulla commodo ultricies
-          at eu nisl. Proin egestas, nisi a Maecenas
+          The page you&apos;re looking for doesn&apos;t exist or may have been moved. Check the
+          URL, or head back home and try again.
         </p>
         <Link
           href="/"
