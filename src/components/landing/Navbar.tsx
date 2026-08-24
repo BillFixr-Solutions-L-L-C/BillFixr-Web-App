@@ -34,19 +34,17 @@ export default function Navbar() {
   return (
     <header className="relative mx-auto w-full max-w-7xl px-6 py-6 lg:px-10">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <Link href="/">
-            <Logo />
-          </Link>
+        <Link href="/">
+          <Logo />
+        </Link>
 
-          <nav className="hidden items-center gap-8 text-sm font-medium text-primary-900 md:flex">
-            {links.map((link) => (
-              <Link key={link.label} href={link.href} className="hover:text-primary-600">
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
+        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 text-sm font-medium text-primary-900 md:flex">
+          {links.map((link) => (
+            <Link key={link.label} href={link.href} className="hover:text-primary-600">
+              {link.label}
+            </Link>
+          ))}
+        </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
