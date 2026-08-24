@@ -8,11 +8,17 @@ export default function WelcomeBanner({
   subtitle?: string;
 }) {
   return (
-    <div className="flex items-center gap-5 rounded-2xl bg-gradient-to-br from-primary-600 to-primary-900 px-8 py-6">
-      <Image src="/logo-icon.png" alt="" width={72} height={67} className="shrink-0" />
+    <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-primary-600 to-primary-900 px-4 py-4 sm:gap-5 sm:px-8 sm:py-6">
+      <Image
+        src="/logo-icon.png"
+        alt=""
+        width={72}
+        height={67}
+        className="h-11 w-[47px] shrink-0 sm:h-[67px] sm:w-[72px]"
+      />
       <div>
-        <h2 className="text-2xl font-bold text-white">{title}</h2>
-        <p className="mt-1 text-base text-white/85">{subtitle}</p>
+        <h2 className="text-lg font-bold text-white sm:text-2xl">{title}</h2>
+        <p className="mt-0.5 text-sm text-white/85 sm:mt-1 sm:text-base">{subtitle}</p>
       </div>
     </div>
   );
