@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen items-stretch gap-10 p-6 lg:p-10">
-      <div className="mx-auto flex w-full max-w-md flex-col justify-center lg:mx-0">
+    <main className="flex min-h-screen items-stretch justify-center gap-10 p-6 lg:p-10">
+      <div className="mx-auto flex w-full max-w-md flex-col justify-center">
         <Logo />
 
         <h1 className="mt-16 text-3xl font-semibold text-gray-900">Welcome Back</h1>
