@@ -7,6 +7,7 @@ import TextStepper from "@/components/dashboard/TextStepper";
 import Modal from "@/components/dashboard/Modal";
 import PaymentForm from "@/components/dashboard/PaymentForm";
 import FlowCard from "@/components/dashboard/FlowCard";
+import BillPreview from "@/components/dashboard/BillPreview";
 
 type Stage =
   | "upload"
@@ -36,6 +37,7 @@ const finalStats = {
 export default function DashboardHome() {
   const [stage, setStage] = useState<Stage>("upload");
   const [fileName, setFileName] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (stage === "uploading") {
@@ -94,7 +96,11 @@ export default function DashboardHome() {
                   </p>
                 </div>
               </div>
-              <button type="button" className="text-sm font-medium text-primary-600">
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(true)}
+                className="text-sm font-medium text-primary-600"
+              >
                 👁 View
               </button>
             </div>

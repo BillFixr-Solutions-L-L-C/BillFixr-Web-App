@@ -1,3 +1,8 @@
+"use client";
+
+import { useState } from "react";
+import BillPreview from "@/components/dashboard/BillPreview";
+
 const headerInfo = [
   { label: "Member name", value: "Dave J. Collins" },
   { label: "Member ID", value: "UCH-810-4474" },
@@ -23,6 +28,8 @@ const lineItems = [
 ];
 
 export default function DocumentAnalysisPage() {
+  const [previewOpen, setPreviewOpen] = useState(false);
+
   return (
     <div>
       <h1 className="font-serif text-4xl font-bold text-gray-900">Analysis Complete - Errors Found</h1>
@@ -63,7 +70,7 @@ export default function DocumentAnalysisPage() {
             </div>
             <div className="flex items-center gap-3 text-xs">
               <span className="text-primary-600">✓ Uploaded</span>
-              <button type="button" className="text-primary-600">
+              <button type="button" onClick={() => setPreviewOpen(true)} className="text-primary-600">
                 👁 View
               </button>
             </div>
@@ -172,6 +179,23 @@ export default function DocumentAnalysisPage() {
           Completed
         </span>
       </div>
+
+      {previewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="relative w-full max-w-xs rounded-2xl bg-white p-6 shadow-xl">
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(false)}
+              aria-label="Close"
+              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+            <p className="mb-4 text-sm font-semibold text-gray-800">Crown Med Hosp...</p>
+            <BillPreview />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

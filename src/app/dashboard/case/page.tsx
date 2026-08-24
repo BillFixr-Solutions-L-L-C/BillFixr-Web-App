@@ -29,6 +29,7 @@ const caseRows = [
 
 export default function ActiveCasePage() {
   const [view, setView] = useState<View>("list");
+  const [previewOpen, setPreviewOpen] = useState<string | null>(null);
 
   if (view === "list") {
     return (
@@ -185,7 +186,11 @@ export default function ActiveCasePage() {
                   </p>
                 </div>
               </div>
-              <button type="button" className="text-sm font-medium text-primary-600">
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(file.name)}
+                className="text-sm font-medium text-primary-600"
+              >
                 👁 View
               </button>
             </div>
@@ -329,6 +334,23 @@ export default function ActiveCasePage() {
           </>
         )}
       </div>
+
+      {previewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="relative w-full max-w-xs rounded-2xl bg-white p-6 shadow-xl">
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(null)}
+              aria-label="Close"
+              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+            <p className="mb-4 text-sm font-semibold text-gray-800">{previewOpen}</p>
+            <BillPreview />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
