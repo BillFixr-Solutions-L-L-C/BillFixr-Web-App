@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import RevenueChart from "@/components/admin/RevenueChart";
 import DonutChart from "@/components/admin/DonutChart";
 
@@ -10,7 +13,7 @@ const processes = [
   { title: "Risk Assessment Agent", detail: "OCR: 98% complete, Agent: ACtive, Generator: Pending" },
 ];
 
-const failedTasks = [
+const initialFailedTasks = [
   { workflow: "Claim 7536", caseId: "7536", error: "OCR", timestamp: "AUG 26,2026" },
   { workflow: "Claim 7536", caseId: "7536", error: "OCR", timestamp: "AUG 26,2026" },
 ];
@@ -22,6 +25,16 @@ const logs = [
 ];
 
 export default function AutomationMonitoringPage() {
+  const [failedTasks, setFailedTasks] = useState(initialFailedTasks);
+
+  const retry = (index: number) => {
+    setFailedTasks((tasks) => tasks.filter((_, i) => i !== index));
+  };
+
+  const retryAll = () => {
+    setFailedTasks([]);
+  };
+
   return (
     <div>
       <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">
@@ -60,44 +73,55 @@ export default function AutomationMonitoringPage() {
 
           <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-sm font-semibold text-gray-900">Failed Tasks &amp; Alerts</h2>
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  <th className="py-2 pr-4">Workflow</th>
-                  <th className="py-2 pr-4">Case ID</th>
-                  <th className="py-2 pr-4">Error Code</th>
-                  <th className="py-2 pr-4">Timestamp</th>
-                  <th className="py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {failedTasks.map((t, i) => (
-                  <tr key={i} className="border-t border-gray-50">
-                    <td className="py-2 pr-4 text-gray-800">
-                      {t.workflow}
-                      <br />
-                      <span className="text-xs text-red-500">OCR Time-out</span>
-                    </td>
-                    <td className="py-2 pr-4 text-gray-500">{t.caseId}</td>
-                    <td className="py-2 pr-4 text-gray-500">{t.error}</td>
-                    <td className="py-2 pr-4 text-gray-500">{t.timestamp}</td>
-                    <td className="py-2">
-                      <button type="button" className="rounded-lg border border-gray-200 px-3 py-1 text-xs">
-                        Retry
-                      </button>
-                    </td>
+            {failedTasks.length > 0 ? (
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <th className="py-2 pr-4">Workflow</th>
+                    <th className="py-2 pr-4">Case ID</th>
+                    <th className="py-2 pr-4">Error Code</th>
+                    <th className="py-2 pr-4">Timestamp</th>
+                    <th className="py-2">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="mt-4 flex gap-3">
-              <button type="button" className="rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white">
-                Retry ALL
-              </button>
-              <button type="button" className="rounded-full bg-primary-700 px-5 py-2 text-sm font-semibold text-white">
-                Retry ALL
-              </button>
-            </div>
+                </thead>
+                <tbody>
+                  {failedTasks.map((t, i) => (
+                    <tr key={i} className="border-t border-gray-50">
+                      <td className="py-2 pr-4 text-gray-800">
+                        {t.workflow}
+                        <br />
+                        <span className="text-xs text-red-500">OCR Time-out</span>
+                      </td>
+                      <td className="py-2 pr-4 text-gray-500">{t.caseId}</td>
+                      <td className="py-2 pr-4 text-gray-500">{t.error}</td>
+                      <td className="py-2 pr-4 text-gray-500">{t.timestamp}</td>
+                      <td className="py-2">
+                        <button
+                          type="button"
+                          onClick={() => retry(i)}
+                          className="rounded-lg border border-gray-200 px-3 py-1 text-xs hover:bg-gray-50"
+                        >
+                          Retry
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="py-4 text-sm text-gray-400">No failed tasks. Everything&apos;s running clean.</p>
+            )}
+            {failedTasks.length > 0 && (
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={retryAll}
+                  className="rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+                >
+                  Retry ALL
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 function Row({
   label,
   value,
@@ -39,6 +43,8 @@ const alerts = [
 ];
 
 export default function OpsPanel() {
+  const [failedTasks, setFailedTasks] = useState(2);
+
   return (
     <div className="flex flex-col gap-4">
       <Card title="Case Detail Overview">
@@ -49,12 +55,14 @@ export default function OpsPanel() {
 
       <Card title="Automation Monitoring">
         <Row label="Workflow Status" value="Normal" />
-        <Row label="Failed Tasks" value="2" highlight />
+        <Row label="Failed Tasks" value={String(failedTasks)} highlight={failedTasks > 0} />
         <button
           type="button"
-          className="mt-2 w-full rounded-lg border border-gray-200 py-1.5 text-xs font-medium text-gray-600"
+          disabled={failedTasks === 0}
+          onClick={() => setFailedTasks(0)}
+          className="mt-2 w-full rounded-lg border border-gray-200 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Retry All
+          {failedTasks === 0 ? "All clear" : "Retry All"}
         </button>
       </Card>
 

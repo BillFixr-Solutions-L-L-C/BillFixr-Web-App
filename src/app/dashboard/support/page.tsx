@@ -19,6 +19,15 @@ function Avatar({ className = "" }: { className?: string }) {
 
 export default function SupportPage() {
   const [chatOpen, setChatOpen] = useState(false);
+  const [messages, setMessages] = useState(seedMessages);
+  const [draft, setDraft] = useState("");
+
+  const sendMessage = () => {
+    const text = draft.trim();
+    if (!text) return;
+    setMessages((m) => [...m, { from: "user", text }]);
+    setDraft("");
+  };
 
   return (
     <div className="relative">
@@ -66,7 +75,7 @@ export default function SupportPage() {
           </button>
 
           <div className="flex-1 space-y-4 overflow-y-auto py-4">
-            {seedMessages.map((m, i) =>
+            {messages.map((m, i) =>
               m.from === "agent" ? (
                 <div
                   key={i}
@@ -88,6 +97,11 @@ export default function SupportPage() {
           <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2.5">
             <input
               type="text"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") sendMessage();
+              }}
               placeholder="How can i help you?"
               className="flex-1 bg-transparent text-sm focus:outline-none"
             />
@@ -96,8 +110,9 @@ export default function SupportPage() {
             </button>
             <button
               type="button"
+              onClick={sendMessage}
               aria-label="Send"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800 text-white"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800 text-white hover:bg-gray-700"
             >
               ↑
             </button>
