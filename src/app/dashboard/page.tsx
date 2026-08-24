@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import WelcomeBanner from "@/components/dashboard/WelcomeBanner";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import TextStepper from "@/components/dashboard/TextStepper";
@@ -122,12 +123,25 @@ export default function DashboardHome() {
                     <td className="px-4 py-3 text-gray-800">{fileName || "Crown Med Hosp..."}</td>
                     <td className="px-4 py-3 text-gray-600">Crown health...</td>
                     <td className="px-4 py-3 text-gray-600">Jul 14, 2026</td>
-                    <td className="px-4 py-3 font-medium text-primary-600">Ready</td>
+                    <td className="px-4 py-3 font-medium text-accent-600">Negotiating</td>
                     <td className="px-4 py-3 font-medium text-red-500">2 found</td>
                     <td className="px-4 py-3 text-gray-800">$2,345</td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-primary-50 px-5 py-4">
+              <p className="text-sm text-primary-800">
+                Your errors have been found and negotiation has started. Track the response and
+                next steps from your Active Case.
+              </p>
+              <Link
+                href="/dashboard/case"
+                className="shrink-0 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+              >
+                Continue to Active Case
+              </Link>
             </div>
           </div>
         )
@@ -275,6 +289,23 @@ export default function DashboardHome() {
             onConfirm={() => setStage("scanning")}
           />
         </Modal>
+      )}
+
+      {previewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="relative w-full max-w-xs rounded-2xl bg-white p-6 shadow-xl">
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(false)}
+              aria-label="Close"
+              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+            <p className="mb-4 text-sm font-semibold text-gray-800">{fileName || "Crown Med Hosp..."}</p>
+            <BillPreview />
+          </div>
+        </div>
       )}
     </div>
   );
