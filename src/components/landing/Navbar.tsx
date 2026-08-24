@@ -32,7 +32,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="relative mx-auto w-full max-w-7xl px-6 py-6 lg:px-10">
+    <header className="relative w-full px-6 py-6 lg:px-16">
       <div className="flex items-center justify-between">
         <Link href="/">
           <Logo />
