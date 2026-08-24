@@ -19,9 +19,9 @@ const faqs = [
       "BillFixr uses AI to scan your medical bill for billing errors, then generates and sends negotiation documents to your provider on your behalf, following up until a resolution is reached.",
   },
   {
-    question: "Can I change my plan later?",
+    question: "Why is there a five-dollar commitment fee?",
     answer:
-      "Yes, you can update your plan at any time from your account settings.",
+      "The five-dollar commitment fee is simply a gentle way to make sure we are supporting people who truly need help. Many people upload bills without any intention of continuing, and that slows down the process for those who are genuinely overwhelmed and looking for real relief.\n\nThis small fee helps us focus our time and energy on you. It also goes directly toward your final BillFixr fee, so you are not paying anything extra.\n\nIt is just a simple step that allows us to begin working on your bill immediately and give you the attention you deserve.",
   },
 ];
 
@@ -68,7 +68,11 @@ export default function FAQ() {
                   <ToggleIcon open={open} />
                 </button>
                 {open && (
-                  <p className="px-5 pb-4 text-sm text-primary-900/60">{faq.answer}</p>
+                  <div className="space-y-3 px-5 pb-4 text-sm text-primary-900/60">
+                    {faq.answer.split("\n\n").map((paragraph, j) => (
+                      <p key={j}>{paragraph}</p>
+                    ))}
+                  </div>
                 )}
               </div>
             );
