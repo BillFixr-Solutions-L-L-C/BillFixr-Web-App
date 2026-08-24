@@ -52,3 +52,7 @@ BACKEND-PLAN.md
 
 .vercel
 .env*
+
+# trial font — not licensed for the public deployment, local preview only
+tt_firs_neue.zip
+/src/app/fonts/
