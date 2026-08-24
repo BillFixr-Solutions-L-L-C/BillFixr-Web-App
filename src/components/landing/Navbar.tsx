@@ -38,7 +38,7 @@ export default function Navbar() {
           <Logo />
         </Link>
 
-        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 text-sm font-medium text-primary-900 md:flex">
+        <nav className="hidden items-center gap-8 text-sm font-medium text-primary-900 md:flex">
           {links.map((link) => (
             <Link key={link.label} href={link.href} className="hover:text-primary-600">
               {link.label}
