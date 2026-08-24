@@ -36,7 +36,7 @@ export default function SupportPage() {
         <div>
           <label className="text-sm text-gray-700">Message</label>
           <textarea
-            rows={5}
+            rows={12}
             className="mt-2 w-full rounded-xl border border-primary-200 px-4 py-3 text-sm focus:border-primary-400 focus:outline-none"
           />
         </div>
