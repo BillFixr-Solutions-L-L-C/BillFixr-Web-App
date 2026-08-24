@@ -35,13 +35,13 @@ export default function UserManagementPage() {
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">User Account &amp; Access Control</h2>
             </div>
-            <div className="mb-4 flex gap-2">
-              <select className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500">
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+              <select className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-500 sm:py-1.5">
                 <option>Filter</option>
               </select>
               <input
                 placeholder="Search"
-                className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500"
+                className="flex-1 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-500 sm:py-1.5"
               />
             </div>
             <div className="overflow-x-auto">
@@ -90,45 +90,18 @@ export default function UserManagementPage() {
             </table>
             </div>
           </div>
-
-          <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Billing Details</h2>
-              <button type="button" className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium">
-                View Payment History
-              </button>
-            </div>
-            <div className="grid gap-6 sm:grid-cols-3">
-              <div>
-                <p className="font-semibold text-gray-900">Billing Model</p>
-                <p className="mt-1 text-sm text-gray-500">One-time, per-case fee</p>
-                <p className="text-sm text-gray-500">No recurring subscription</p>
-              </div>
-              <div>
-                <p className="font-semibold text-gray-900">Payment Method</p>
-                <p className="mt-1 text-sm text-gray-500">Payment: **** Okafor</p>
-                <p className="text-sm text-gray-500">Payment: **** 082963z</p>
-              </div>
-              <div>
-                <p className="font-semibold text-gray-900">Last Payment</p>
-                <p className="mt-1 text-sm text-gray-500">Aug 20, 2026</p>
-                <p className="mt-3 text-sm font-semibold text-gray-900">Amount Paid</p>
-                <p className="mt-1 text-sm text-gray-500">$2,500</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="flex min-w-0 flex-col gap-6">
           <div className="min-w-0 rounded-2xl bg-white p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold text-gray-900">User Activity &amp; Login Logs</h2>
-            <div className="mb-3 flex gap-2">
-              <select className="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-500">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+              <select className="rounded-lg border border-gray-200 px-2 py-2 text-xs text-gray-500 sm:py-1">
                 <option>Filter</option>
               </select>
               <input
                 placeholder="Search"
-                className="flex-1 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-500"
+                className="flex-1 rounded-lg border border-gray-200 px-2 py-2 text-xs text-gray-500 sm:py-1"
               />
             </div>
             <div className="overflow-x-auto">
