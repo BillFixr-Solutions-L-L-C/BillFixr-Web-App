@@ -64,7 +64,7 @@ export default function Hero() {
           </span>
 
           <h1 className="mt-8 font-sans text-4xl font-bold leading-[1.05] text-primary-900 sm:text-7xl">
-            Take Control of Your Bills-
+            Take Control of Your Medical Bills-
             <span className="text-accent-500">Automatically</span>
           </h1>
 
