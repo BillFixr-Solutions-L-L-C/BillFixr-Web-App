@@ -29,9 +29,9 @@ export default function UserManagementPage() {
     <div>
       <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">User Management Dashboard</h1>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="flex flex-col gap-6">
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">User Account &amp; Access Control</h2>
             </div>
@@ -44,7 +44,8 @@ export default function UserManagementPage() {
                 className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500"
               />
             </div>
-            <table className="w-full text-left text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-sm">
               <thead>
                 <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                   <th className="py-2 pr-4">Username</th>
@@ -87,9 +88,10 @@ export default function UserManagementPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Billing Details</h2>
               <button type="button" className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium">
@@ -117,8 +119,8 @@ export default function UserManagementPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-6">
-          <div className="rounded-2xl bg-white p-5 shadow-sm">
+        <div className="flex min-w-0 flex-col gap-6">
+          <div className="min-w-0 rounded-2xl bg-white p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold text-gray-900">User Activity &amp; Login Logs</h2>
             <div className="mb-3 flex gap-2">
               <select className="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-500">
@@ -129,7 +131,8 @@ export default function UserManagementPage() {
                 className="flex-1 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-500"
               />
             </div>
-            <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[280px] text-left text-xs">
               <thead>
                 <tr className="text-gray-400">
                   <th className="py-1.5 pr-2 font-medium">Timestamp</th>
@@ -145,11 +148,13 @@ export default function UserManagementPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
-          <div className="rounded-2xl bg-white p-5 shadow-sm">
+          <div className="min-w-0 rounded-2xl bg-white p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold text-gray-900">System Roles &amp; Permissions</h2>
-            <table className="w-full text-left text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[280px] text-left text-sm">
               <thead>
                 <tr className="text-xs text-gray-400">
                   <th className="py-1.5 font-medium">Roles</th>
@@ -171,6 +176,7 @@ export default function UserManagementPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">

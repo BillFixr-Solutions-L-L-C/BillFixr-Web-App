@@ -41,8 +41,8 @@ export default function AutomationMonitoringPage() {
         Automation Monitoring Dashboard
       </h1>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl bg-white p-6 shadow-sm">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+        <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-gray-900">Workflow Processes</h2>
           <div className="relative pl-6">
             <div className="absolute bottom-2 left-[7px] top-2 w-px bg-gray-100" />
@@ -58,23 +58,24 @@ export default function AutomationMonitoringPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white p-6 shadow-sm">
+        <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-gray-900">System Health &amp; Reporting</h2>
           <RevenueChart />
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div>
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
+      <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="min-w-0">
+          <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">Today&apos;s Status Distribution</h2>
             <DonutChart />
           </div>
 
-          <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+          <div className="mt-6 min-w-0 rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-sm font-semibold text-gray-900">Failed Tasks &amp; Alerts</h2>
             {failedTasks.length > 0 ? (
-              <table className="w-full text-left text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-left text-sm">
                 <thead>
                   <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                     <th className="py-2 pr-4">Workflow</th>
@@ -108,6 +109,7 @@ export default function AutomationMonitoringPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             ) : (
               <p className="py-4 text-sm text-gray-400">No failed tasks. Everything&apos;s running clean.</p>
             )}
@@ -125,7 +127,7 @@ export default function AutomationMonitoringPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6">
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">System Lead</p>
             <p className="mt-1 text-3xl font-bold text-gray-900">90%</p>

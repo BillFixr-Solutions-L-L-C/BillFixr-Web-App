@@ -46,7 +46,7 @@ export default function OpsPanel() {
   const [failedTasks, setFailedTasks] = useState(2);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <Card title="Case Detail Overview">
         <Row label="Latest OCR" value="98% Accuracy" />
         <Row label="AI Analysis" value="2 High-Priority Risk" highlight />

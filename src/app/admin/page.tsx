@@ -50,19 +50,19 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="flex flex-col gap-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl bg-white p-6 shadow-sm">
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="grid min-w-0 gap-4 md:grid-cols-2">
+            <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-sm font-semibold text-gray-800">System Health & Reporting</h2>
               <RevenueChart />
             </div>
-            <div className="rounded-2xl bg-white p-6 shadow-sm">
+            <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-sm font-semibold text-gray-800">Today&apos;s Status Distribution</h2>
               <DonutChart />
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
             <CaseTable />
           </div>
         </div>

@@ -27,9 +27,9 @@ export default function AdminUserDetailPage() {
     <div>
       <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Customers</h1>
 
-      <div className="flex items-center gap-6">
+      <div className="flex flex-wrap items-center gap-6">
         <span className="h-20 w-20 shrink-0 rounded-full bg-primary-100" />
-        <div className="flex gap-10 text-sm text-gray-500">
+        <div className="flex flex-wrap gap-6 text-sm text-gray-500 sm:gap-10">
           <div>
             <p>Date Joined:</p>
             <p className="mt-1 font-medium text-gray-800">25/06/25</p>
