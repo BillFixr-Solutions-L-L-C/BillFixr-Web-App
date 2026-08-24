@@ -78,7 +78,12 @@ export default function PaymentsTable({ rows }: { rows: Row[] }) {
               <div>
                 <p className="font-semibold text-gray-900">Customer</p>
                 <p className="mt-1 text-sm text-gray-500">{selected.customer}</p>
-                <p className="text-sm text-gray-500">Paid via Card</p>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900">Payment Method</p>
+                <p className="mt-1 text-sm text-gray-500">
+                  Card •••• {selected.id.replace("#", "").slice(-4)}
+                </p>
               </div>
               <div>
                 <p className="font-semibold text-gray-900">Payment Date</p>
