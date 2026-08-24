@@ -1,4 +1,52 @@
+"use client";
+
+import { useState } from "react";
+
 type LineItem = { label: string; value: string };
+
+function CardIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3 10h18" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3.5" y="5" width="17" height="16" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LockIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+      <rect x="5" y="10.5" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function formatCardNumber(digits: string) {
+  return digits.match(/.{1,4}/g)?.join(" ") ?? "";
+}
+
+function formatExpiry(digits: string) {
+  return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+}
 
 export default function PaymentForm({
   lineItems,
@@ -9,60 +57,154 @@ export default function PaymentForm({
   total: string;
   onConfirm: () => void;
 }) {
+  const [brand, setBrand] = useState("Mastercard");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardHolder, setCardHolder] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvc, setCvc] = useState("");
+
   return (
     <div>
-      <div className="flex items-center gap-3 rounded-full border border-gray-100 bg-white px-5 py-3 shadow-sm">
-        <span className="h-2.5 w-2.5 rounded-full bg-primary-500" />
-        <span className="flex h-5 w-9 items-center">
+      <h2 className="text-xl font-bold text-gray-900">Payment Details</h2>
+      <p className="mt-1 text-sm text-gray-500">Enter your card information to continue</p>
+
+      <div className="relative mt-5 overflow-hidden rounded-2xl bg-gradient-to-br from-primary-600 to-primary-900 p-6 text-white shadow-lg">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10"
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-14 -left-6 h-32 w-32 rounded-full bg-black/10"
+        />
+
+        <div className="relative flex items-center justify-between">
+          <span className="h-7 w-10 rounded-md bg-gradient-to-br from-yellow-200/90 to-yellow-500/80" />
+          <span className="text-sm font-semibold italic tracking-wide">{brand}</span>
+        </div>
+
+        <p className="relative mt-7 font-mono text-xl tracking-widest">
+          {cardNumber ? formatCardNumber(cardNumber.padEnd(16, "•")) : "•••• •••• •••• ••••"}
+        </p>
+
+        <div className="relative mt-6 flex items-center justify-between text-xs">
+          <div>
+            <p className="text-white/60">Card Holder</p>
+            <p className="mt-1 font-medium uppercase tracking-wide">{cardHolder || "YOUR NAME"}</p>
+          </div>
+          <div>
+            <p className="text-white/60">Expires</p>
+            <p className="mt-1 font-medium">{expiry ? formatExpiry(expiry) : "MM/YY"}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-3 rounded-full border border-gray-200 px-5 py-2.5">
+        <span className="flex h-5 w-9 shrink-0 items-center">
           <span className="-mr-2.5 h-5 w-5 rounded-full bg-red-500/80" />
           <span className="h-5 w-5 rounded-full bg-accent-500/80" />
         </span>
-        <select className="flex-1 bg-transparent text-sm text-gray-700 focus:outline-none">
+        <select
+          value={brand}
+          onChange={(e) => setBrand(e.target.value)}
+          className="flex-1 bg-transparent text-sm text-gray-700 focus:outline-none"
+        >
           <option>Mastercard</option>
           <option>Visa</option>
           <option>Verve</option>
         </select>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
+      <div className="mt-5 space-y-4">
         <div>
           <label className="text-sm text-gray-700">Card number</label>
-          <input className="mt-1 w-full rounded-lg border border-primary-200 px-4 py-2.5 text-sm focus:border-primary-400 focus:outline-none" />
+          <div className="relative mt-1">
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+              <CardIcon />
+            </span>
+            <input
+              value={formatCardNumber(cardNumber)}
+              onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, "").slice(0, 16))}
+              placeholder="1234 5678 9012 3456"
+              inputMode="numeric"
+              className="w-full rounded-lg border border-primary-200 py-2.5 pl-11 pr-4 text-sm focus:border-primary-400 focus:outline-none"
+            />
+          </div>
         </div>
+
         <div>
           <label className="text-sm text-gray-700">Card Holder</label>
-          <input className="mt-1 w-full rounded-lg border border-primary-200 px-4 py-2.5 text-sm focus:border-primary-400 focus:outline-none" />
+          <div className="relative mt-1">
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+              <UserIcon />
+            </span>
+            <input
+              value={cardHolder}
+              onChange={(e) => setCardHolder(e.target.value)}
+              placeholder="Full name on card"
+              className="w-full rounded-lg border border-primary-200 py-2.5 pl-11 pr-4 text-sm focus:border-primary-400 focus:outline-none"
+            />
+          </div>
         </div>
-        <div>
-          <label className="text-sm text-gray-700">Expiry Date</label>
-          <input className="mt-1 w-full rounded-lg border border-primary-200 px-4 py-2.5 text-sm focus:border-primary-400 focus:outline-none" />
-        </div>
-        <div>
-          <label className="text-sm text-gray-700">CVC</label>
-          <input className="mt-1 w-full rounded-lg border border-primary-200 px-4 py-2.5 text-sm focus:border-primary-400 focus:outline-none" />
+
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <div>
+            <label className="text-sm text-gray-700">Expiry Date</label>
+            <div className="relative mt-1">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                <CalendarIcon />
+              </span>
+              <input
+                value={formatExpiry(expiry)}
+                onChange={(e) => setExpiry(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                placeholder="MM/YY"
+                inputMode="numeric"
+                className="w-full rounded-lg border border-primary-200 py-2.5 pl-11 pr-4 text-sm focus:border-primary-400 focus:outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-sm text-gray-700">CVC</label>
+            <div className="relative mt-1">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                <LockIcon className="h-[18px] w-[18px]" />
+              </span>
+              <input
+                value={cvc}
+                onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 3))}
+                placeholder="123"
+                inputMode="numeric"
+                className="w-full rounded-lg border border-primary-200 py-2.5 pl-11 pr-4 text-sm focus:border-primary-400 focus:outline-none"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="mt-5 rounded-lg bg-gray-50 px-5 py-3">
+      <div className="mt-5 rounded-xl bg-gray-50 px-5 py-4">
         {lineItems.map((item) => (
           <div key={item.label} className="flex justify-between py-1 text-sm text-gray-500">
             <span>{item.label}</span>
             <span>{item.value}</span>
           </div>
         ))}
-      </div>
-      <div className="mt-2 flex justify-between rounded-lg bg-gray-50 px-5 py-3">
-        <span className="text-sm font-semibold text-primary-700">Total Amount</span>
-        <span className="text-sm font-bold text-primary-700">{total}</span>
+        <div className="my-2 border-t border-gray-200" />
+        <div className="flex justify-between">
+          <span className="text-sm font-semibold text-primary-700">Total Amount</span>
+          <span className="text-sm font-bold text-primary-700">{total}</span>
+        </div>
       </div>
 
       <button
         type="button"
         onClick={onConfirm}
-        className="mt-6 rounded-full bg-primary-600 px-8 py-3 text-sm font-semibold text-white hover:bg-primary-700"
+        className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary-600 py-3.5 text-sm font-semibold text-white transition hover:bg-primary-700"
       >
-        Confirm Payment
+        <LockIcon /> Confirm Payment
       </button>
+      <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-gray-400">
+        <LockIcon /> Payments are encrypted and securely processed
+      </p>
     </div>
   );
 }
