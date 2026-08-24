@@ -11,11 +11,11 @@ export default function DashboardStats({
   values: { billsAnalyzed: string; savingsFound: string; errorsDetected: string; appealsGenerated: string };
 }) {
   return (
-    <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="mt-6 grid grid-cols-2 gap-5 lg:grid-cols-4">
       {labels.map((l) => (
-        <div key={l.key} className="rounded-xl bg-white px-4 py-4 text-center shadow-sm">
-          <p className="text-xs font-medium tracking-wide text-gray-400">{l.label}</p>
-          <p className="mt-1.5 text-xl font-bold text-gray-900">{values[l.key]}</p>
+        <div key={l.key} className="rounded-xl bg-white px-5 py-6 text-center shadow-sm">
+          <p className="text-sm font-medium tracking-wide text-gray-400">{l.label}</p>
+          <p className="mt-2 text-3xl font-bold text-gray-900">{values[l.key]}</p>
         </div>
       ))}
     </div>

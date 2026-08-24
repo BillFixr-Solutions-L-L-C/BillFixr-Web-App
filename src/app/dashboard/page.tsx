@@ -60,19 +60,19 @@ export default function DashboardHome() {
       {hasFile ? (
         stage === "scanning" ? (
           <FlowCard>
-            <p className="text-2xl font-bold leading-tight text-[#003322]">
+            <p className="text-3xl font-bold leading-tight text-[#003322]">
               We&apos;re scanning your
               <br />
               Medical Bill
             </p>
-            <div className="relative mt-5 flex h-24 w-24 items-center justify-center rounded-full border-[8px] border-[#d9d9d9]">
+            <div className="relative mt-6 flex h-28 w-28 items-center justify-center rounded-full border-[8px] border-[#d9d9d9]">
               <div
                 className="absolute inset-0 rounded-full border-[8px] border-transparent border-t-[#0f7545] border-r-[#0f7545]"
                 style={{ transform: "rotate(-45deg)" }}
               />
-              <span className="text-lg font-bold text-[#003322]">40%</span>
+              <span className="text-xl font-bold text-[#003322]">40%</span>
             </div>
-            <p className="mt-5 text-sm text-[#a6b1bb]">Please wait...</p>
+            <p className="mt-5 text-base text-[#a6b1bb]">Please wait...</p>
             <button
               type="button"
               onClick={() => setStage("negotiating")}
@@ -126,12 +126,12 @@ export default function DashboardHome() {
           </div>
         )
       ) : (
-        <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
-          <div className="flex min-h-[360px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 px-6 py-8 text-center">
+        <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex min-h-[440px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 px-6 py-10 text-center">
             {stage === "upload" && (
               <label className="flex cursor-pointer flex-col items-center">
-                <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-primary-50">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-primary-50">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path
                       d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9l-5-6Z"
                       stroke="#0f7545"
@@ -140,17 +140,17 @@ export default function DashboardHome() {
                     />
                     <path d="M14 3v6h5" stroke="#0f7545" strokeWidth="1.6" strokeLinejoin="round" />
                   </svg>
-                  <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#0f7545] text-[10px] font-bold text-white">
+                  <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#0f7545] text-xs font-bold text-white">
                     +
                   </span>
                 </span>
-                <p className="mt-3 text-xl font-bold text-[#003322]">Choose a file</p>
-                <p className="mt-2 max-w-sm text-sm text-[#a6b1bb]">
+                <p className="mt-4 text-2xl font-bold text-[#003322]">Choose a file</p>
+                <p className="mt-2 max-w-sm text-base text-[#a6b1bb]">
                   Drag and drop your files,{" "}
                   <span className="font-medium text-[#0f7545]">or click here to choose</span> from
                   your device. Supported files includes Jpeg, png, doc, pdf.
                 </p>
-                <span className="mt-4 rounded-full bg-[#0f7545] px-6 py-2.5 text-sm font-semibold text-white">
+                <span className="mt-5 rounded-full bg-[#0f7545] px-8 py-3 text-base font-semibold text-white">
                   Upload Your Bill
                 </span>
                 <input
@@ -170,12 +170,12 @@ export default function DashboardHome() {
 
             {stage === "uploading" && (
               <div className="flex w-full max-w-sm flex-col items-center">
-                <p className="text-xl font-bold text-[#003322]">File Uploading</p>
+                <p className="text-2xl font-bold text-[#003322]">File Uploading</p>
                 <div className="mt-6 h-[8px] w-full rounded-[20px] bg-[#d9d9d9]">
                   <div className="h-[8px] w-[40%] rounded-[20px] bg-[#ebb55d]" />
                 </div>
-                <p className="mt-4 text-xl font-bold text-[#003322]">40%</p>
-                <p className="mt-2 text-sm text-[#a6b1bb]">
+                <p className="mt-4 text-2xl font-bold text-[#003322]">40%</p>
+                <p className="mt-2 text-base text-[#a6b1bb]">
                   Please wait a minute while your file is being uploaded for scan
                 </p>
               </div>
@@ -183,15 +183,15 @@ export default function DashboardHome() {
 
             {stage === "uploaded" && (
               <div className="flex flex-col items-center">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#4bd37b]">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#4bd37b]">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M5 13l4 4L19 7" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
-                <p className="mt-3 max-w-xs text-xl font-bold leading-tight text-[#003322]">
+                <p className="mt-4 max-w-xs text-2xl font-bold leading-tight text-[#003322]">
                   File Uploaded successfully
                 </p>
-                <p className="mt-2 max-w-sm text-sm text-[#a6b1bb]">
+                <p className="mt-2 max-w-sm text-base text-[#a6b1bb]">
                   Your file will be scan by in a moment
                 </p>
               </div>
@@ -199,14 +199,14 @@ export default function DashboardHome() {
 
             {stage === "ready" && (
               <div className="flex flex-col items-center gap-3">
-                <p className="text-xl font-bold text-[#003322]">Ready for scan</p>
-                <p className="max-w-sm text-sm text-[#a6b1bb]">
+                <p className="text-2xl font-bold text-[#003322]">Ready for scan</p>
+                <p className="max-w-sm text-base text-[#a6b1bb]">
                   Your medical bill is ready for scan now, click the button below
                 </p>
                 <button
                   type="button"
                   onClick={() => setStage("feePrompt")}
-                  className="mt-1 rounded-full bg-[#0f7545] px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+                  className="mt-1 rounded-full bg-[#0f7545] px-8 py-3 text-base font-semibold text-white hover:opacity-90"
                 >
                   Scan now
                 </button>
