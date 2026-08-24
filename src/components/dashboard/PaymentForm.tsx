@@ -40,6 +40,37 @@ function LockIcon({ className = "" }: { className?: string }) {
   );
 }
 
+function ChevronDownIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function CardBrandIcon({ brand }: { brand: string }) {
+  if (brand === "Visa") {
+    return (
+      <span className="flex h-6 w-9 shrink-0 items-center justify-center rounded bg-[#1a1f71] text-[10px] font-bold italic tracking-tighter text-white">
+        VISA
+      </span>
+    );
+  }
+  if (brand === "Verve") {
+    return (
+      <span className="flex h-6 w-9 shrink-0 items-center justify-center rounded bg-gradient-to-r from-[#0a3d62] to-[#e58e26] text-[8px] font-bold tracking-tight text-white">
+        VERVE
+      </span>
+    );
+  }
+  return (
+    <span className="flex h-6 w-9 shrink-0 items-center" aria-hidden="true">
+      <span className="-mr-2.5 h-6 w-6 rounded-full bg-[#eb001b]/90" />
+      <span className="h-6 w-6 rounded-full bg-[#f79e1b]/90" />
+    </span>
+  );
+}
+
 function formatCardNumber(digits: string) {
   return digits.match(/.{1,4}/g)?.join(" ") ?? "";
 }
@@ -99,20 +130,20 @@ export default function PaymentForm({
         </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-3 rounded-full border border-gray-200 px-5 py-2.5">
-        <span className="flex h-5 w-9 shrink-0 items-center">
-          <span className="-mr-2.5 h-5 w-5 rounded-full bg-red-500/80" />
-          <span className="h-5 w-5 rounded-full bg-accent-500/80" />
-        </span>
+      <div className="relative mt-4 flex items-center gap-3 rounded-full border border-gray-200 px-5 py-2.5 transition focus-within:border-primary-400">
+        <CardBrandIcon brand={brand} />
         <select
           value={brand}
           onChange={(e) => setBrand(e.target.value)}
-          className="flex-1 bg-transparent text-sm text-gray-700 focus:outline-none"
+          className="flex-1 appearance-none bg-transparent text-sm font-medium text-gray-700 focus:outline-none"
         >
           <option>Mastercard</option>
           <option>Visa</option>
           <option>Verve</option>
         </select>
+        <span className="pointer-events-none text-gray-400">
+          <ChevronDownIcon />
+        </span>
       </div>
 
       <div className="mt-5 space-y-4">
