@@ -58,7 +58,7 @@ export default function Testimonials() {
               Share your experience →
             </Link>
           </div>
-          <p className="text-4xl font-bold text-primary-900 sm:text-5xl">150k+</p>
+          <p className="text-5xl font-bold text-primary-900 sm:text-7xl">150k+</p>
         </div>
 
         <div className="mt-10 grid gap-6 sm:grid-cols-3">
