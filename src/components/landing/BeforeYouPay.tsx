@@ -8,8 +8,8 @@ export default function BeforeYouPay() {
         <Image
           src="/logo-icon.png"
           alt=""
-          width={320}
-          height={281}
+          width={460}
+          height={404}
           className="mx-auto mb-8"
         />
 
