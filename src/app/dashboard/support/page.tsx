@@ -73,7 +73,7 @@ export default function SupportPage() {
       )}
 
       {chatOpen && (
-        <div className="fixed bottom-6 right-6 z-50 flex h-[32rem] w-full max-w-md flex-col rounded-3xl bg-white/95 p-6 shadow-2xl backdrop-blur">
+        <div className="fixed inset-x-4 bottom-6 z-50 flex h-[32rem] max-h-[calc(100vh-3rem)] flex-col rounded-3xl bg-white/95 p-6 shadow-2xl backdrop-blur sm:inset-x-auto sm:right-6 sm:w-full sm:max-w-md">
           <button
             type="button"
             onClick={() => setChatOpen(false)}
