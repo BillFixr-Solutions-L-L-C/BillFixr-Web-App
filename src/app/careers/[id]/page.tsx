@@ -16,7 +16,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const job = jobs.find((j) => j.id === id) ?? jobs[0];
 
   return (
-    <div className="bg-primary-50">
+    <main className="bg-primary-50">
       <Navbar />
 
       <section className="mx-auto max-w-5xl px-6 pb-10 pt-6">
@@ -105,6 +105,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
       <BeforeYouPay />
       <Footer />
-    </div>
+    </main>
   );
 }

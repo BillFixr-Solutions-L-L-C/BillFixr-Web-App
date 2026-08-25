@@ -17,7 +17,7 @@ function BriefcaseIcon() {
 
 export default function CareersPage() {
   return (
-    <div className="bg-primary-50">
+    <main className="bg-primary-50">
       <Navbar />
 
       <section className="mx-auto max-w-5xl px-6 pb-10 pt-6 sm:pb-14">
@@ -76,6 +76,6 @@ export default function CareersPage() {
 
       <BeforeYouPay />
       <Footer />
-    </div>
+    </main>
   );
 }
