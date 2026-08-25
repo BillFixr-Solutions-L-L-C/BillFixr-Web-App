@@ -68,7 +68,7 @@ export default function SupportPage() {
           className="fixed bottom-6 right-6 z-40 flex items-center gap-3 rounded-full bg-primary-600 py-2 pl-2 pr-5 text-sm font-semibold text-white shadow-lg hover:bg-primary-700"
         >
           <Avatar className="relative h-9 w-9 after:absolute after:bottom-0 after:right-0 after:h-2.5 after:w-2.5 after:rounded-full after:bg-white after:ring-2 after:ring-primary-600" />
-          Chat with AI
+          Live chat with support
         </button>
       )}
 
