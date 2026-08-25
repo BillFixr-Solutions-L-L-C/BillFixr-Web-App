@@ -50,18 +50,27 @@ export default function SupportPage() {
           />
         </div>
 
-        <div className="flex items-center justify-end gap-4">
+        <div className="flex items-center justify-end">
           <button
             type="button"
             className="rounded-full bg-primary-600 px-8 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
           >
             Send
           </button>
-          <button type="button" onClick={() => setChatOpen(true)} aria-label="Open live chat">
-            <Avatar className="relative h-11 w-11 after:absolute after:bottom-0 after:right-0 after:h-3 after:w-3 after:rounded-full after:bg-primary-600 after:ring-2 after:ring-white" />
-          </button>
         </div>
       </div>
+
+      {!chatOpen && (
+        <button
+          type="button"
+          onClick={() => setChatOpen(true)}
+          aria-label="Open live chat"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-3 rounded-full bg-primary-600 py-2 pl-2 pr-5 text-sm font-semibold text-white shadow-lg hover:bg-primary-700"
+        >
+          <Avatar className="relative h-9 w-9 after:absolute after:bottom-0 after:right-0 after:h-2.5 after:w-2.5 after:rounded-full after:bg-white after:ring-2 after:ring-primary-600" />
+          Chat with AI
+        </button>
+      )}
 
       {chatOpen && (
         <div className="fixed bottom-6 right-6 z-50 flex h-[32rem] w-full max-w-md flex-col rounded-3xl bg-white/95 p-6 shadow-2xl backdrop-blur">
