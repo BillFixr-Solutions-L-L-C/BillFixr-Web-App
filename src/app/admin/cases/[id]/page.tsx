@@ -35,9 +35,9 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
                 <p className="text-xs text-gray-400">Status</p>
                 <p className="text-sm font-medium text-gray-800">Pending</p>
               </div>
-              <button type="button" className="rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white">
+              <span className="rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white">
                 Under Review
-              </button>
+              </span>
             </div>
           </div>
 
@@ -133,7 +133,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
                 Manual Approve
               </button>
               <button type="button" className="rounded-full bg-red-500 py-2 text-sm font-semibold text-white">
-                Log Out
+                Reject
               </button>
               <button type="button" className="rounded-full bg-red-100 py-2 text-sm font-semibold text-red-500">
                 Deny &amp; Escalate
