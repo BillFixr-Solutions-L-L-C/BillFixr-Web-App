@@ -73,14 +73,14 @@ function WordmarkStrip() {
       {/* straight segment, above the glass. Heights/offsets are vw-based
           to stay proportional to the vw-based font size at any viewport. */}
       <div className="relative h-[4vw] overflow-hidden select-none" aria-hidden="true">
-        <p className={`${wordmarkTextClass} top-[0.7vw]`}>BILLFIXR</p>
+        <p className={`${wordmarkTextClass} -top-[1vw]`}>BILLFIXR</p>
       </div>
 
       {/* glass segment: the same wordmark continues here, bent by the glass */}
       <div className="relative overflow-hidden border-t border-white/10 bg-white/5 py-[1.7vw] backdrop-blur-sm">
         <p
           aria-hidden="true"
-          className={`${wordmarkTextClass} -top-[3.3vw] skew-x-12 select-none [transform-origin:50%_3.3vw]`}
+          className={`${wordmarkTextClass} -top-[5vw] skew-x-12 select-none [transform-origin:50%_5vw]`}
         >
           BILLFIXR
         </p>
