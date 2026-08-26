@@ -26,7 +26,17 @@ const requirements = [
   "Strong verbal and written communication skills, with the ability to collaborate effectively with different teams.",
 ];
 
-export const jobs: Job[] = ["1", "2", "3", "4"].map((id) => ({
+// These ids match seeded rows in the job_postings table (see
+// supabase/migrations/20260826160000_seed_job_postings.sql) so that
+// submitting an application has a real job_id to reference. Full admin
+// CRUD for job postings (replacing this hardcoded list entirely) is
+// still Step 6b.
+export const jobs: Job[] = [
+  "a1e1c1a0-0001-4a1a-8b1a-000000000001",
+  "a1e1c1a0-0001-4a1a-8b1a-000000000002",
+  "a1e1c1a0-0001-4a1a-8b1a-000000000003",
+  "a1e1c1a0-0001-4a1a-8b1a-000000000004",
+].map((id) => ({
   id,
   title: "DevOps Engineer",
   location: "Remote | Full Time",

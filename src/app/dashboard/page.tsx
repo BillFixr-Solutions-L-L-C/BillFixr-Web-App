@@ -9,6 +9,7 @@ import Modal from "@/components/dashboard/Modal";
 import PaymentForm from "@/components/dashboard/PaymentForm";
 import FlowCard from "@/components/dashboard/FlowCard";
 import BillPreview from "@/components/dashboard/BillPreview";
+import { createClient } from "@/lib/supabase/client";
 
 type Stage =
   | "upload"
@@ -37,19 +38,57 @@ const finalStats = {
 
 export default function DashboardHome() {
   const [stage, setStage] = useState<Stage>("upload");
-  const [fileName, setFileName] = useState("");
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  const fileName = pendingFile?.name ?? "";
+
   useEffect(() => {
-    if (stage === "uploading") {
-      const t = setTimeout(() => setStage("uploaded"), 1400);
-      return () => clearTimeout(t);
-    }
     if (stage === "uploaded") {
       const t = setTimeout(() => setStage("ready"), 1200);
       return () => clearTimeout(t);
     }
   }, [stage]);
+
+  async function handleAgree() {
+    setStage("uploading");
+    setUploadError(null);
+
+    if (!pendingFile) return;
+
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setUploadError("You need to be logged in to upload a bill.");
+      setStage("upload");
+      return;
+    }
+
+    const path = `${user.id}/${Date.now()}-${pendingFile.name}`;
+    const { error: uploadErr } = await supabase.storage.from("bills").upload(path, pendingFile);
+    if (uploadErr) {
+      setUploadError(uploadErr.message);
+      setStage("upload");
+      return;
+    }
+
+    const { error: insertErr } = await supabase.from("bills").insert({
+      user_id: user.id,
+      filename: pendingFile.name,
+      storage_url: path,
+      status: "uploaded",
+    });
+    if (insertErr) {
+      setUploadError(insertErr.message);
+      setStage("upload");
+      return;
+    }
+
+    setStage("uploaded");
+  }
 
   const hasFile = stage === "scanning" || stage === "negotiating";
   const stats = stage === "negotiating" ? finalStats : emptyStats;
@@ -180,12 +219,16 @@ export default function DashboardHome() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      setFileName(file.name);
+                      setPendingFile(file);
                       setStage("terms");
                     }
                   }}
                 />
               </label>
+            )}
+
+            {stage === "upload" && uploadError && (
+              <p className="mt-4 text-sm text-danger">{uploadError}</p>
             )}
 
             {stage === "uploading" && (
@@ -258,7 +301,7 @@ export default function DashboardHome() {
           </p>
           <button
             type="button"
-            onClick={() => setStage("uploading")}
+            onClick={handleAgree}
             className="mx-auto mt-8 block rounded-full bg-[#0f7545] px-10 py-3.5 text-sm font-semibold text-white hover:opacity-90"
           >
             I Agree

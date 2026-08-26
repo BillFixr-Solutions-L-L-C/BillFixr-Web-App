@@ -1,15 +1,8 @@
 import Navbar from "@/components/landing/Navbar";
 import BeforeYouPay from "@/components/landing/BeforeYouPay";
 import Footer from "@/components/landing/Footer";
+import ApplyForm from "@/components/careers/ApplyForm";
 import { jobs } from "@/lib/jobs";
-
-function SendIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="m5 12 14-7-5.5 15-3-6.5L5 12Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -61,44 +54,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             <h2 className="text-lg font-bold text-primary-900">Apply for this role</h2>
             <p className="mt-1 text-sm text-primary-900/60">Input your information</p>
 
-            <form className="mt-5 space-y-3">
-              <input
-                type="text"
-                placeholder="Full Name"
-                className="w-full rounded-full border border-gray-200 bg-gray-50 px-5 py-3 text-sm placeholder:text-gray-400 focus:border-primary-400 focus:outline-none"
-              />
-              <input
-                type="email"
-                placeholder="Email"
-                className="w-full rounded-full border border-gray-200 bg-gray-50 px-5 py-3 text-sm placeholder:text-gray-400 focus:border-primary-400 focus:outline-none"
-              />
-              <input
-                type="tel"
-                placeholder="Phone number"
-                className="w-full rounded-full border border-gray-200 bg-gray-50 px-5 py-3 text-sm placeholder:text-gray-400 focus:border-primary-400 focus:outline-none"
-              />
-
-              <div>
-                <label className="text-sm text-primary-900">CV/Resume</label>
-                <label className="mt-2 flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-primary-200 px-6 py-8 text-center transition hover:border-primary-400">
-                  <input type="file" accept=".pdf,.doc,.docx" className="hidden" />
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full border border-primary-300 text-primary-600">
-                    <SendIcon />
-                  </span>
-                  <span className="text-sm text-primary-900/80">
-                    Drag & drop your CV, or <span className="font-semibold text-primary-600">browse</span>
-                  </span>
-                  <span className="text-xs text-primary-900/40">PDF, DOC, DOCX • Max 3MB</span>
-                </label>
-              </div>
-
-              <button
-                type="submit"
-                className="mt-2 w-full rounded-full bg-[#0f7545] py-3.5 text-sm font-bold text-white transition hover:bg-primary-700"
-              >
-                Submit application
-              </button>
-            </form>
+            <ApplyForm jobId={job.id} />
           </aside>
         </div>
       </section>
