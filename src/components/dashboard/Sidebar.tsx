@@ -46,7 +46,7 @@ function NavLink({ label, href, onNavigate }: { label: string; href: string; onN
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({ user }: { user: { name: string; status: "active" | "suspended" } }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
 
@@ -110,8 +110,10 @@ export default function Sidebar() {
         <div className="mt-6 rounded-2xl border border-gray-100 p-4 shadow-sm">
           <span className="block h-11 w-11 shrink-0 rounded-full bg-primary-100" aria-hidden="true" />
           <div className="mt-3 min-w-0">
-            <p className="truncate text-base font-medium text-gray-900">Haris Ahmed</p>
-            <p className="text-sm text-[#0f7545]">Active</p>
+            <p className="truncate text-base font-medium text-gray-900">{user.name}</p>
+            <p className={`text-sm ${user.status === "active" ? "text-[#0f7545]" : "text-danger"}`}>
+              {user.status === "active" ? "Active" : "Suspended"}
+            </p>
           </div>
         </div>
       </aside>

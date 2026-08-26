@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
+import { createClient } from "@/lib/supabase/client";
 import {
   DashboardIcon,
   UsersIcon,
@@ -62,6 +63,7 @@ function MenuIcon() {
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [openGroup, setOpenGroup] = useState<string | null>(
     nav.find((item) => item.children?.some((c) => c.href === pathname))?.label ?? null,
   );
@@ -164,12 +166,18 @@ export default function AdminSidebar() {
           </nav>
         </div>
 
-        <Link
-          href="/"
+        <button
+          type="button"
+          onClick={async () => {
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            router.push("/");
+            router.refresh();
+          }}
           className="rounded-full border border-red-200 py-2.5 text-center text-sm font-semibold text-red-500 hover:bg-red-50"
         >
           Logout
-        </Link>
+        </button>
       </aside>
     </>
   );

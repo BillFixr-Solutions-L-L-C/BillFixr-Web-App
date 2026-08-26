@@ -21,9 +21,35 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  // Refreshes the session cookie if needed. Route-level protection for
-  // /dashboard and /admin is handled separately (Step 1e), not here.
-  await supabase.auth.getUser();
+  // Refreshes the session cookie if needed.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+  const isDashboardRoute = pathname.startsWith("/dashboard");
+  const isAdminRoute = pathname.startsWith("/admin");
+  const isAuthRoute = pathname === "/login" || pathname === "/signup";
+
+  if (!user && (isDashboardRoute || isAdminRoute)) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  if (user && (isAdminRoute || isAuthRoute)) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (isAdminRoute && profile?.role !== "admin") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
+    if (isAuthRoute) {
+      return NextResponse.redirect(new URL(profile?.role === "admin" ? "/admin" : "/dashboard", request.url));
+    }
+  }
 
   return response;
 }

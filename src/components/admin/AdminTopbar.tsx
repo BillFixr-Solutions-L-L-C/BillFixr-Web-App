@@ -5,7 +5,7 @@ const today = new Date().toLocaleDateString("en-US", {
   year: "2-digit",
 });
 
-export default function AdminTopbar() {
+export default function AdminTopbar({ user }: { user: { name: string; roleName: string } }) {
   return (
     <header className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-4 sm:px-8 sm:py-5">
       <p className="text-sm font-semibold text-gray-900 sm:text-lg">{today}</p>
@@ -36,8 +36,8 @@ export default function AdminTopbar() {
 
         <div className="flex items-center gap-3">
           <div className="hidden text-right sm:block">
-            <p className="text-sm font-semibold text-gray-900">Promise V.</p>
-            <p className="text-xs text-primary-600">Super Admin</p>
+            <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+            <p className="text-xs text-primary-600">{user.roleName}</p>
           </div>
           <span className="h-9 w-9 shrink-0 rounded-full bg-primary-100" />
         </div>
