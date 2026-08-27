@@ -193,8 +193,11 @@ export default function ManageAdmins({
             <h2 className="font-serif text-xl font-bold text-gray-900">Add new admin</h2>
             <form onSubmit={addAdmin} className="mt-6 space-y-4">
               <div>
-                <label className="text-sm text-gray-600">Full name</label>
+                <label htmlFor="add-admin-name" className="text-sm text-gray-600">
+                  Full name
+                </label>
                 <input
+                  id="add-admin-name"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -202,8 +205,11 @@ export default function ManageAdmins({
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-600">Email</label>
+                <label htmlFor="add-admin-email" className="text-sm text-gray-600">
+                  Email
+                </label>
                 <input
+                  id="add-admin-email"
                   required
                   type="email"
                   value={email}
@@ -212,8 +218,11 @@ export default function ManageAdmins({
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-600">Role</label>
+                <label htmlFor="add-admin-role" className="text-sm text-gray-600">
+                  Role
+                </label>
                 <select
+                  id="add-admin-role"
                   value={roleId}
                   onChange={(e) => setRoleId(e.target.value)}
                   className="mt-1 w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm"

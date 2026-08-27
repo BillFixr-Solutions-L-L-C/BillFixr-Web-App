@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { isCaseCompleted } from "@/lib/caseStatus";
 
 type CaseWithProfile = {
   id: string;
@@ -7,8 +8,6 @@ type CaseWithProfile = {
   created_at: string;
   profiles: { name: string } | null;
 };
-
-const DELIVERED_STATUSES = new Set(["resolved", "paid", "closed", "closed_no_errors"]);
 
 export default async function CaseTable() {
   const supabase = await createClient();
@@ -42,7 +41,7 @@ export default async function CaseTable() {
             </tr>
           ) : (
             rows.map((row, i) => {
-              const delivered = DELIVERED_STATUSES.has(row.status);
+              const delivered = isCaseCompleted(row.status);
               return (
                 <tr key={row.id} className="border-t border-gray-50">
                   <td className="py-3 pr-4 text-gray-500">{String(i + 1).padStart(3, "0")}</td>

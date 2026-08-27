@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { escapeHtml } from "@/lib/html";
 
 // Vercel Cron hits this on a schedule (see vercel.json). Sends the
 // 3/7/21-day follow-up emails for cases stuck in awaiting_response.
@@ -119,11 +120,4 @@ function followUpEmailHtml({ name, filename }: { name: string; filename: string 
   </table>
 </body>
 </html>`;
-}
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (char) => {
-    const map: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
-    return map[char];
-  });
 }

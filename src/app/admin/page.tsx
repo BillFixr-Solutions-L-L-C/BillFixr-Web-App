@@ -4,9 +4,7 @@ import DonutChart from "@/components/admin/DonutChart";
 import OpsPanel from "@/components/admin/OpsPanel";
 import { WalletIcon, UploadsIcon, SupportIcon } from "@/components/admin/icons";
 import { createClient } from "@/lib/supabase/server";
-
-const COMPLETED_STATUSES = ["resolved", "paid", "closed", "closed_no_errors"];
-const PENDING_REVIEW_STATUSES = ["uploaded", "scanning", "analyzed"];
+import { COMPLETED_STATUSES, PENDING_REVIEW_STATUSES } from "@/lib/caseStatus";
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
