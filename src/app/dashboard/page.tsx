@@ -41,6 +41,8 @@ export default function DashboardHome() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [billId, setBillId] = useState<string | null>(null);
+  const [caseId, setCaseId] = useState<string | null>(null);
 
   const fileName = pendingFile?.name ?? "";
 
@@ -75,19 +77,56 @@ export default function DashboardHome() {
       return;
     }
 
-    const { error: insertErr } = await supabase.from("bills").insert({
-      user_id: user.id,
-      filename: pendingFile.name,
-      storage_url: path,
-      status: "uploaded",
-    });
+    const { data: billRow, error: insertErr } = await supabase
+      .from("bills")
+      .insert({
+        user_id: user.id,
+        filename: pendingFile.name,
+        storage_url: path,
+        status: "uploaded",
+      })
+      .select("id")
+      .single();
     if (insertErr) {
       setUploadError(insertErr.message);
       setStage("upload");
       return;
     }
 
+    setBillId(billRow.id);
     setStage("uploaded");
+  }
+
+  async function handleCommitmentFeePaid() {
+    setStage("scanning");
+    if (!billId) return;
+
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: caseRow } = await supabase
+      .from("cases")
+      .insert({ bill_id: billId, user_id: user.id, status: "scanning" })
+      .select("id")
+      .single();
+    if (caseRow) setCaseId(caseRow.id);
+  }
+
+  async function handleScanComplete() {
+    setStage("negotiating");
+    if (!caseId) return;
+
+    const res = await fetch("/api/dev/advance-case", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId, toStatus: "awaiting_response" }),
+    });
+    if (!res.ok) {
+      console.error("Failed to advance case to awaiting_response:", await res.text());
+    }
   }
 
   const hasFile = stage === "scanning" || stage === "negotiating";
@@ -117,7 +156,7 @@ export default function DashboardHome() {
             <p className="mt-5 text-base text-[#a6b1bb]">Please wait...</p>
             <button
               type="button"
-              onClick={() => setStage("negotiating")}
+              onClick={handleScanComplete}
               className="mt-4 text-xs text-gray-300 hover:text-gray-400"
             >
               (dev) simulate scan complete
@@ -329,7 +368,7 @@ export default function DashboardHome() {
           <PaymentForm
             lineItems={[{ label: "Commitment fee", value: "$5" }]}
             total="$5"
-            onConfirm={() => setStage("scanning")}
+            onConfirm={handleCommitmentFeePaid}
           />
         </Modal>
       )}

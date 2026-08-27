@@ -21,7 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       .eq("id", user.id)
       .single();
     name = profile?.name ?? "";
-    roleName = profile?.roles?.[0]?.name ?? "";
+    roleName = (profile as unknown as { roles: { name: string } | null } | null)?.roles?.name ?? "";
   }
 
   return <AdminShell user={{ name, roleName }}>{children}</AdminShell>;

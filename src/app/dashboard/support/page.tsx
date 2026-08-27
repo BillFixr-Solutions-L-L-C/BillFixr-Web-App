@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import PageHeading from "@/components/dashboard/PageHeading";
+import { createClient } from "@/lib/supabase/client";
 
 const seedMessages = [
   { from: "agent", text: "How can i help you?" },
@@ -17,10 +18,18 @@ function Avatar({ className = "" }: { className?: string }) {
   );
 }
 
+const complaintOptions = ["Payment issue", "Case status question", "Document access", "Other"];
+
 export default function SupportPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState(seedMessages);
   const [draft, setDraft] = useState("");
+
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
 
   const sendMessage = () => {
     const text = draft.trim();
@@ -29,33 +38,91 @@ export default function SupportPage() {
     setDraft("");
   };
 
+  async function handleSubmitTicket() {
+    setError(null);
+    if (!subject || !message.trim()) {
+      setError("Please select a topic and enter a message.");
+      return;
+    }
+
+    setSubmitting(true);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setError("You need to be logged in to send a message.");
+      setSubmitting(false);
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("support_tickets").insert({
+      user_id: user.id,
+      subject,
+      message,
+      status: "open",
+    });
+
+    setSubmitting(false);
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+
+    setSubject("");
+    setMessage("");
+    setSubmitted(true);
+  }
+
   return (
     <div className="relative">
       <PageHeading title="Support" />
 
       <div className="space-y-4">
-        <select className="w-full rounded-lg border border-primary-200 px-4 py-2.5 text-sm text-gray-500 focus:border-primary-400 focus:outline-none">
-          <option>Select your complain</option>
-          <option>Payment issue</option>
-          <option>Case status question</option>
-          <option>Document access</option>
-          <option>Other</option>
+        <select
+          value={subject}
+          onChange={(e) => {
+            setSubject(e.target.value);
+            setSubmitted(false);
+          }}
+          className="w-full rounded-lg border border-primary-200 px-4 py-2.5 text-sm text-gray-500 focus:border-primary-400 focus:outline-none"
+        >
+          <option value="">Select your complain</option>
+          {complaintOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
         </select>
 
         <div>
           <label className="text-sm text-gray-700">Message</label>
           <textarea
             rows={12}
+            value={message}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              setSubmitted(false);
+            }}
             className="mt-2 w-full rounded-xl border border-primary-200 px-4 py-3 text-sm focus:border-primary-400 focus:outline-none"
           />
         </div>
 
+        {error && <p className="text-sm text-danger">{error}</p>}
+        {submitted && (
+          <p className="text-sm text-primary-600">
+            Your message has been sent. We&apos;ll get back to you shortly.
+          </p>
+        )}
+
         <div className="flex items-center justify-end">
           <button
             type="button"
-            className="rounded-full bg-primary-600 px-8 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+            onClick={handleSubmitTicket}
+            disabled={submitting}
+            className="rounded-full bg-primary-600 px-8 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
           >
-            Send
+            {submitting ? "Sending…" : "Send"}
           </button>
         </div>
       </div>

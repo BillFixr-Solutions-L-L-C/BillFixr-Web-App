@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import PageHeading from "@/components/dashboard/PageHeading";
 import PaymentForm from "@/components/dashboard/PaymentForm";
 import BillPreview from "@/components/dashboard/BillPreview";
+import { createClient } from "@/lib/supabase/client";
 
 type View = "list" | "pending" | "received" | "letter" | "summary" | "savings" | "payment" | "paid";
+
+type CaseRow = {
+  id: string;
+  status: string;
+  bills: { filename: string } | null;
+};
 
 const stats = [
   { label: "Bill Analyzed", value: "1" },
@@ -20,58 +27,129 @@ const files = [
   { name: "Appeal Letter 1", size: "205kb", status: "Sent" },
 ];
 
-const caseRows = [
-  { bill: "Crown Med Hosp...", provider: "Crown health...", date: "Jul 14, 2026", appeal: "Sent", response: "Received", savings: "$2,345" },
-  { bill: "Crown Med Hosp...", provider: "Crown health...", date: "Jul 14, 2026", appeal: "Sent", response: "Pending", savings: "..........." },
-  { bill: "Crown Med Hosp...", provider: "Crown health...", date: "Jul 14, 2026", appeal: "Sent", response: "Pending", savings: "..........." },
-  { bill: "Crown Med Hosp...", provider: "Crown health...", date: "Jul 14, 2026", appeal: "Sent", response: "Pending", savings: "..........." },
-];
+function viewForStatus(status: string): View {
+  if (status === "response_received" || status === "resolved" || status === "payment_pending" || status === "paid" || status === "closed") {
+    return "received";
+  }
+  return "pending";
+}
 
 export default function ActiveCasePage() {
+  const [loading, setLoading] = useState(true);
+  const [cases, setCases] = useState<CaseRow[]>([]);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [view, setView] = useState<View>("list");
   const [previewOpen, setPreviewOpen] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      const { data } = await supabase
+        .from("cases")
+        .select("id, status, bills(filename)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      setCases((data as unknown as CaseRow[]) ?? []);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  async function advanceCase(toStatus: "response_received" | "paid") {
+    if (!selectedCaseId) return;
+    const res = await fetch("/api/dev/advance-case", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId: selectedCaseId, toStatus }),
+    });
+    if (!res.ok) {
+      console.error(`Failed to advance case to ${toStatus}:`, await res.text());
+      return;
+    }
+    setCases((prev) => prev.map((c) => (c.id === selectedCaseId ? { ...c, status: toStatus } : c)));
+  }
+
+  async function handleSimulateProviderResponse() {
+    await advanceCase("response_received");
+    setView("received");
+  }
+
+  async function handlePaid() {
+    await advanceCase("paid");
+    setView("paid");
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <PageHeading title="Active Case" />
+        <p className="text-sm text-gray-400">Loading…</p>
+      </div>
+    );
+  }
 
   if (view === "list") {
     return (
       <div>
         <PageHeading title="Active Case" />
-        <div className="overflow-x-auto rounded-2xl bg-white shadow-sm">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead>
-              <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
-                <th className="px-4 py-3">Bill</th>
-                <th className="px-4 py-3">Provider</th>
-                <th className="px-4 py-3">Upload Date</th>
-                <th className="px-4 py-3">Appeal Letter</th>
-                <th className="px-4 py-3">Provider Response</th>
-                <th className="px-4 py-3">Savings</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {caseRows.map((row, i) => (
-                <tr
-                  key={i}
-                  onClick={() => setView(row.response === "Received" ? "received" : "pending")}
-                  className="cursor-pointer border-t border-gray-50 hover:bg-gray-50"
-                >
-                  <td className="flex items-center gap-2 px-4 py-3">
-                    <span className="text-accent-500">📄</span>
-                    {row.bill}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{row.provider}</td>
-                  <td className="px-4 py-3 text-gray-600">{row.date}</td>
-                  <td className="px-4 py-3 font-medium text-primary-600">{row.appeal}</td>
-                  <td className={`px-4 py-3 font-medium ${row.response === "Received" ? "text-primary-600" : "text-accent-600"}`}>
-                    {row.response}
-                  </td>
-                  <td className="px-4 py-3 text-gray-800">{row.savings}</td>
-                  <td className="px-4 py-3 text-gray-400">⋮</td>
+        {cases.length === 0 ? (
+          <div className="rounded-2xl bg-white p-10 text-center text-sm text-gray-500 shadow-sm">
+            No active cases yet. Upload a bill from your dashboard to get started.
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl bg-white shadow-sm">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead>
+                <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
+                  <th className="px-4 py-3">Bill</th>
+                  <th className="px-4 py-3">Provider</th>
+                  <th className="px-4 py-3">Upload Date</th>
+                  <th className="px-4 py-3">Appeal Letter</th>
+                  <th className="px-4 py-3">Provider Response</th>
+                  <th className="px-4 py-3">Savings</th>
+                  <th className="px-4 py-3" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {cases.map((row) => {
+                  const responseLabel = viewForStatus(row.status) === "received" ? "Received" : "Pending";
+                  return (
+                    <tr
+                      key={row.id}
+                      onClick={() => {
+                        setSelectedCaseId(row.id);
+                        setView(viewForStatus(row.status));
+                      }}
+                      className="cursor-pointer border-t border-gray-50 hover:bg-gray-50"
+                    >
+                      <td className="flex items-center gap-2 px-4 py-3">
+                        <span className="text-accent-500">📄</span>
+                        {row.bills?.filename ?? "Bill"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">Crown health...</td>
+                      <td className="px-4 py-3 text-gray-600">Jul 14, 2026</td>
+                      <td className="px-4 py-3 font-medium text-primary-600">Sent</td>
+                      <td className={`px-4 py-3 font-medium ${responseLabel === "Received" ? "text-primary-600" : "text-accent-600"}`}>
+                        {responseLabel}
+                      </td>
+                      <td className="px-4 py-3 text-gray-800">
+                        {responseLabel === "Received" ? "$2,345" : "..........."}
+                      </td>
+                      <td className="px-4 py-3 text-gray-400">⋮</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     );
   }
@@ -138,7 +216,7 @@ export default function ActiveCasePage() {
               { label: "Charges", value: "$1,000" },
             ]}
             total="$1,000"
-            onConfirm={() => setView("paid")}
+            onConfirm={handlePaid}
           />
         </div>
       </div>
@@ -251,7 +329,7 @@ export default function ActiveCasePage() {
         {view === "pending" && (
           <button
             type="button"
-            onClick={() => setView("received")}
+            onClick={handleSimulateProviderResponse}
             className="mt-4 text-xs text-gray-300 hover:text-gray-400"
           >
             (dev) simulate provider response
