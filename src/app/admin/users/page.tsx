@@ -1,14 +1,14 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 
-const customers = Array.from({ length: 10 }).map(() => ({
-  id: "#000189",
-  name: "Emeka James",
-  email: "emmyJames@gmail.com",
-  date: "20 Jan, 12:30 PM",
-  status: "Active",
-}));
+export default async function AdminUsersPage() {
+  const supabase = await createClient();
+  const { data: customers } = await supabase
+    .from("profiles")
+    .select("id, name, email, status, created_at")
+    .eq("role", "customer")
+    .order("created_at", { ascending: false });
 
-export default function AdminUsersPage() {
   return (
     <div>
       <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Customers</h1>
@@ -23,54 +23,54 @@ export default function AdminUsersPage() {
           </select>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead>
-              <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                <th className="py-3 pr-4">SN</th>
-                <th className="py-3 pr-4">Unique ID</th>
-                <th className="py-3 pr-4">Full name</th>
-                <th className="py-3 pr-4">Email</th>
-                <th className="py-3 pr-4">Date joined</th>
-                <th className="py-3 pr-4">Status</th>
-                <th className="py-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.map((c, i) => (
-                <tr key={i} className="border-t border-gray-50">
-                  <td className="py-3 pr-4 text-gray-500">{String(i + 1).padStart(3, "0")}</td>
-                  <td className="py-3 pr-4">
-                    <Link href="/admin/users/1" className="flex items-center gap-2 text-gray-800 hover:text-primary-700">
-                      <span className="h-7 w-7 rounded-full bg-primary-100" />
-                      {c.id}
-                    </Link>
-                  </td>
-                  <td className="py-3 pr-4 text-gray-800">{c.name}</td>
-                  <td className="py-3 pr-4 text-gray-500">{c.email}</td>
-                  <td className="py-3 pr-4 text-gray-500">{c.date}</td>
-                  <td className="py-3 pr-4 font-medium text-primary-600">{c.status}</td>
-                  <td className="py-3 text-right text-gray-400">
-                    <span className="mr-3">🚫</span>
-                    <span>🗑</span>
-                  </td>
+        {!customers || customers.length === 0 ? (
+          <p className="py-6 text-center text-sm text-gray-400">No customers yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead>
+                <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <th className="py-3 pr-4">SN</th>
+                  <th className="py-3 pr-4">Full name</th>
+                  <th className="py-3 pr-4">Email</th>
+                  <th className="py-3 pr-4">Date joined</th>
+                  <th className="py-3 pr-4">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-6 flex items-center justify-between text-sm text-gray-500">
-          <p>Showing 1-20 of 75 entries</p>
-          <div className="flex gap-2">
-            <button type="button" className="rounded-lg border border-gray-200 px-4 py-1.5">
-              ← Previous
-            </button>
-            <button type="button" className="rounded-lg border border-gray-200 px-4 py-1.5">
-              Next →
-            </button>
+              </thead>
+              <tbody>
+                {customers.map((c, i) => (
+                  <tr key={c.id} className="border-t border-gray-50">
+                    <td className="py-3 pr-4 text-gray-500">{String(i + 1).padStart(3, "0")}</td>
+                    <td className="py-3 pr-4">
+                      <Link
+                        href={`/admin/users/${c.id}`}
+                        className="flex items-center gap-2 text-gray-800 hover:text-primary-700"
+                      >
+                        <span className="h-7 w-7 shrink-0 rounded-full bg-primary-100" />
+                        {c.name}
+                      </Link>
+                    </td>
+                    <td className="py-3 pr-4 text-gray-500">{c.email}</td>
+                    <td className="py-3 pr-4 text-gray-500">
+                      {new Date(c.created_at).toLocaleDateString("en-US", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </td>
+                    <td
+                      className={`py-3 pr-4 font-medium ${
+                        c.status === "active" ? "text-primary-600" : "text-danger"
+                      }`}
+                    >
+                      {c.status === "active" ? "Active" : "Suspended"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

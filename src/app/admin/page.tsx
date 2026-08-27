@@ -3,21 +3,58 @@ import RevenueChart from "@/components/admin/RevenueChart";
 import DonutChart from "@/components/admin/DonutChart";
 import OpsPanel from "@/components/admin/OpsPanel";
 import { WalletIcon, UploadsIcon, SupportIcon } from "@/components/admin/icons";
+import { createClient } from "@/lib/supabase/server";
 
-const stats = [
-  { label: "Total Cases", value: "1,240", tone: "text-gray-900" },
-  { label: "Open Cases", value: "241", tone: "text-gray-900" },
-  { label: "Completed", value: "720", tone: "text-primary-600" },
-  { label: "Pending Review", value: "720", tone: "text-accent-600" },
-];
+const COMPLETED_STATUSES = ["resolved", "paid", "closed", "closed_no_errors"];
+const PENDING_REVIEW_STATUSES = ["uploaded", "scanning", "analyzed"];
 
-const iconStats = [
-  { label: "Total Revenue", value: "$1,257,274", trend: "+23%", bg: "bg-primary-500", icon: WalletIcon },
-  { label: "Upload count", value: "1,274", trend: null, bg: "bg-blue-500", icon: UploadsIcon },
-  { label: "Support tickets", value: "14", trend: null, bg: "bg-accent-500", icon: SupportIcon },
-];
+export default async function AdminDashboardPage() {
+  const supabase = await createClient();
 
-export default function AdminDashboardPage() {
+  const [
+    { count: totalCases },
+    { count: completedCases },
+    { count: pendingReviewCases },
+    { count: uploadCount },
+    { count: supportTicketCount },
+    { data: paidPayments },
+  ] = await Promise.all([
+    supabase.from("cases").select("id", { count: "exact", head: true }),
+    supabase.from("cases").select("id", { count: "exact", head: true }).in("status", COMPLETED_STATUSES),
+    supabase.from("cases").select("id", { count: "exact", head: true }).in("status", PENDING_REVIEW_STATUSES),
+    supabase.from("bills").select("id", { count: "exact", head: true }),
+    supabase.from("support_tickets").select("id", { count: "exact", head: true }),
+    supabase.from("payment_records").select("amount").eq("status", "paid"),
+  ]);
+
+  const totalRevenue = (paidPayments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
+  const openCases = (totalCases ?? 0) - (completedCases ?? 0);
+
+  const stats = [
+    { label: "Total Cases", value: (totalCases ?? 0).toLocaleString(), tone: "text-gray-900" },
+    { label: "Open Cases", value: openCases.toLocaleString(), tone: "text-gray-900" },
+    { label: "Completed", value: (completedCases ?? 0).toLocaleString(), tone: "text-primary-600" },
+    { label: "Pending Review", value: (pendingReviewCases ?? 0).toLocaleString(), tone: "text-accent-600" },
+  ];
+
+  const iconStats = [
+    {
+      label: "Total Revenue",
+      value: `$${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      trend: null,
+      bg: "bg-primary-500",
+      icon: WalletIcon,
+    },
+    { label: "Upload count", value: (uploadCount ?? 0).toLocaleString(), trend: null, bg: "bg-blue-500", icon: UploadsIcon },
+    {
+      label: "Support tickets",
+      value: (supportTicketCount ?? 0).toLocaleString(),
+      trend: null,
+      bg: "bg-accent-500",
+      icon: SupportIcon,
+    },
+  ];
+
   return (
     <div>
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

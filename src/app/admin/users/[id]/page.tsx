@@ -1,13 +1,16 @@
+import { notFound } from "next/navigation";
 import BillPreview from "@/components/dashboard/BillPreview";
 import LetterPreview from "@/components/admin/LetterPreview";
+import AccountActions from "@/components/admin/AccountActions";
+import { createClient } from "@/lib/supabase/server";
 
-function Field({ label, defaultValue, type = "text" }: { label: string; defaultValue: string; type?: string }) {
+function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <label className="text-sm text-gray-600">{label}</label>
       <input
-        type={type}
-        defaultValue={defaultValue}
+        type="text"
+        defaultValue={value}
         readOnly
         className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700"
       />
@@ -22,7 +25,33 @@ const documents = [
   { label: "Provider Letter", preview: <LetterPreview /> },
 ];
 
-export default function AdminUserDetailPage() {
+export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, name, email, status, created_at")
+    .eq("id", id)
+    .eq("role", "customer")
+    .single();
+
+  if (!profile) {
+    notFound();
+  }
+
+  const { count: billsCount } = await supabase
+    .from("bills")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", id);
+
+  const { count: casesCount } = await supabase
+    .from("cases")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", id);
+
+  const { data: canDelete } = await supabase.rpc("can_delete_accounts");
+
   return (
     <div>
       <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Customers</h1>
@@ -32,26 +61,29 @@ export default function AdminUserDetailPage() {
         <div className="flex flex-wrap gap-6 text-sm text-gray-500 sm:gap-10">
           <div>
             <p>Date Joined:</p>
-            <p className="mt-1 font-medium text-gray-800">25/06/25</p>
+            <p className="mt-1 font-medium text-gray-800">
+              {new Date(profile.created_at).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "2-digit",
+              })}
+            </p>
           </div>
           <div>
-            <p>Orders Made:</p>
-            <p className="mt-1 font-medium text-gray-800">07</p>
+            <p>Bills Uploaded:</p>
+            <p className="mt-1 font-medium text-gray-800">{String(billsCount ?? 0).padStart(2, "0")}</p>
           </div>
           <div>
-            <p>Styling Requests:</p>
-            <p className="mt-1 font-medium text-gray-800">05</p>
+            <p>Active Cases:</p>
+            <p className="mt-1 font-medium text-gray-800">{String(casesCount ?? 0).padStart(2, "0")}</p>
           </div>
         </div>
       </div>
 
       <div className="mt-8 grid gap-5 sm:grid-cols-3">
-        <Field label="Full name" defaultValue="Charlene Reed" />
-        <Field label="Nickname" defaultValue="Charlene Reed" />
-        <Field label="Email" defaultValue="charlenereed@gmail.com" />
-        <Field label="Address" defaultValue="USA" />
-        <Field label="Password" defaultValue="charlene123" type="password" />
-        <Field label="Phone" defaultValue="234 81305965" />
+        <Field label="Full name" value={profile.name} />
+        <Field label="Email" value={profile.email} />
+        <Field label="Status" value={profile.status === "active" ? "Active" : "Suspended"} />
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -68,19 +100,8 @@ export default function AdminUserDetailPage() {
         ))}
       </div>
 
-      <div className="mt-8 flex gap-4">
-        <button
-          type="button"
-          className="rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
-        >
-          Suspend account
-        </button>
-        <button
-          type="button"
-          className="rounded-full bg-red-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-red-600"
-        >
-          Delete Account
-        </button>
+      <div className="mt-8">
+        <AccountActions userId={profile.id} initialStatus={profile.status} canDelete={Boolean(canDelete)} />
       </div>
     </div>
   );

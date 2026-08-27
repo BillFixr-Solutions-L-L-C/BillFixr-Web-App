@@ -1,0 +1,85 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+export default function AccountActions({
+  userId,
+  initialStatus,
+  canDelete,
+}: {
+  userId: string;
+  initialStatus: "active" | "suspended";
+  canDelete: boolean;
+}) {
+  const router = useRouter();
+  const [status, setStatus] = useState(initialStatus);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function toggleSuspend() {
+    setBusy(true);
+    setError("");
+    const supabase = createClient();
+    const nextStatus = status === "active" ? "suspended" : "active";
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ status: nextStatus })
+      .eq("id", userId);
+    setBusy(false);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+    setStatus(nextStatus);
+    router.refresh();
+  }
+
+  async function deleteAccount() {
+    if (!confirm("This permanently deletes the account and all associated data. Continue?")) {
+      return;
+    }
+    setBusy(true);
+    setError("");
+    const res = await fetch("/api/admin/delete-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setBusy(false);
+      setError(body.error ?? "Failed to delete account");
+      return;
+    }
+    router.push("/admin/users");
+    router.refresh();
+  }
+
+  return (
+    <div>
+      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      <div className="flex flex-wrap gap-4">
+        <button
+          type="button"
+          onClick={toggleSuspend}
+          disabled={busy}
+          className="rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-50"
+        >
+          {status === "active" ? "Suspend account" : "Reactivate account"}
+        </button>
+        {canDelete && (
+          <button
+            type="button"
+            onClick={deleteAccount}
+            disabled={busy}
+            className="rounded-full bg-red-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50"
+          >
+            Delete Account
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
