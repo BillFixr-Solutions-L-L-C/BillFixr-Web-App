@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import BillPreview from "@/components/dashboard/BillPreview";
 import LetterPreview from "@/components/admin/LetterPreview";
 import AccountActions from "@/components/admin/AccountActions";
+import PromoteToAdmin from "@/components/admin/PromoteToAdmin";
 import { createClient } from "@/lib/supabase/server";
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -51,6 +52,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     .eq("user_id", id);
 
   const { data: canDelete } = await supabase.rpc("can_delete_accounts");
+  const { data: roles } = await supabase.from("roles").select("id, name").order("name");
 
   return (
     <div>
@@ -100,8 +102,9 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
         ))}
       </div>
 
-      <div className="mt-8">
+      <div className="mt-8 flex flex-wrap items-start gap-4">
         <AccountActions userId={profile.id} initialStatus={profile.status} canDelete={Boolean(canDelete)} />
+        <PromoteToAdmin userId={profile.id} roles={roles ?? []} />
       </div>
     </div>
   );
