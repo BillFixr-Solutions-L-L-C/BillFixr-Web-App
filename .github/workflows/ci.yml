@@ -49,6 +49,19 @@ jobs:
       # also covers files outside Next's own build (e.g. *.test.ts).
       - run: npm run typecheck
 
+  # Deploys intentionally do NOT use `vercel pull` + `vercel build` +
+  # `vercel deploy --prebuilt` (the pattern Vercel's own docs lead with).
+  # That pattern builds locally on the runner, and this project has env
+  # vars marked "Sensitive" in Vercel (NEXT_PUBLIC_SUPABASE_URL and
+  # others) — Vercel deliberately refuses to hand sensitive values to a
+  # local/CLI build, so `vercel pull` writes the literal string
+  # "[SENSITIVE]" in their place. That shipped a broken production build
+  # once already (2026-08-29) — the site 500'd because
+  # NEXT_PUBLIC_SUPABASE_URL wasn't a real URL. `vercel deploy` without
+  # `--prebuilt` instead uploads the source and lets Vercel's own build
+  # infrastructure run `next build`, which is a context sensitive vars do
+  # resolve in. Slower (no local build cache reuse) but correct, and
+  # secrets never touch the GitHub-hosted runner either way.
   deploy-preview:
     name: Deploy preview
     needs: test
@@ -62,22 +75,10 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
-      - name: Pull Vercel environment
-        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Build
-        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
       - name: Deploy
         id: deploy
         run: |
-          url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          url=$(vercel deploy --token=${{ secrets.VERCEL_TOKEN }})
           echo "url=$url" >> "$GITHUB_OUTPUT"
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -108,22 +109,10 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
-      - name: Pull Vercel environment
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Build
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
       - name: Deploy
         id: deploy
         run: |
-          url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          url=$(vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }})
           echo "url=$url" >> "$GITHUB_OUTPUT"
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
