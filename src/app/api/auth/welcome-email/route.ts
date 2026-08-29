@@ -61,7 +61,11 @@ function welcomeEmailHtml({ name }: { name: string }) {
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td valign="top" width="32" style="padding-right:12px;">
-                    <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:999px; background-color:#0f7545; color:#ffffff; font-size:12px; font-weight:700; text-align:center; line-height:24px;">${i + 1}</span>
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="24" height="24">
+                      <tr>
+                        <td width="24" height="24" align="center" valign="middle" bgcolor="#0f7545" style="width:24px; height:24px; border-radius:12px; background-color:#0f7545; font-family:Arial, Helvetica, sans-serif; font-size:12px; font-weight:700; line-height:24px; color:#ffffff; text-align:center;">${i + 1}</td>
+                      </tr>
+                    </table>
                   </td>
                   <td valign="top">
                     <p style="margin:0; font-size:14px; font-weight:700; color:#003322;">${escapeHtml(step.title)}</p>
@@ -120,7 +124,39 @@ function welcomeEmailHtml({ name }: { name: string }) {
           ${stepRows}
 
           <tr>
-            <td align="center" style="padding:16px 40px 8px;">
+            <td style="padding:8px 40px 0;">
+              <div style="border-top:1px solid #ebebeb;"></div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:24px 40px 0;">
+              <p style="margin:0 0 4px; font-size:13px; font-weight:700; color:#003322; text-transform:uppercase; letter-spacing:0.04em;">
+                What it costs
+              </p>
+              <p style="margin:0; font-size:13px; line-height:1.6; color:#4d6276;">
+                A small $5 commitment fee gets your bill into the queue for review right away -
+                it goes toward your final BillFixr fee, so it's never extra. If we find and fix
+                errors, a success fee applies only as a percentage of what you actually save. If
+                no errors are found, that's all you ever pay - no success fee.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:16px 40px 0;">
+              <p style="margin:0 0 4px; font-size:13px; font-weight:700; color:#003322; text-transform:uppercase; letter-spacing:0.04em;">
+                Your documents are private
+              </p>
+              <p style="margin:0; font-size:13px; line-height:1.6; color:#4d6276;">
+                Your bill is only used to review and negotiate on your behalf - it's not shared or
+                sold, and you can see everything we're doing from your dashboard at any time.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td align="center" style="padding:28px 40px 8px;">
               <table role="presentation" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="border-radius:999px; background-color:#0f7545;">
