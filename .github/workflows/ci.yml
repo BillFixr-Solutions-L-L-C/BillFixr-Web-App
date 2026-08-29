@@ -29,8 +29,6 @@ jobs:
 
       - run: npm run lint
 
-      - run: npm run typecheck
-
       - run: npm test
 
       # Placeholder values only — this build is a compile-correctness
@@ -43,6 +41,13 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
           RESEND_API_KEY: placeholder-resend-key
           CRON_SECRET: placeholder-cron-secret
+
+      # Runs after build, not before — `next build` generates route/layout
+      # prop types under .next/types that tsc needs to resolve (e.g.
+      # LayoutProps); running typecheck first fails on a fresh checkout
+      # with no prior .next/ directory. Still worth its own step since it
+      # also covers files outside Next's own build (e.g. *.test.ts).
+      - run: npm run typecheck
 
   deploy-preview:
     name: Deploy preview
