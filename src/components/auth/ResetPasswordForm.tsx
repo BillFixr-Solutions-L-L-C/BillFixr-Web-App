@@ -1,30 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordForm() {
   const router = useRouter();
-  const [status, setStatus] = useState<"exchanging" | "ready" | "invalid">("exchanging");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const code = new URLSearchParams(window.location.search).get("code");
-    if (!code) {
-      queueMicrotask(() => setStatus("invalid"));
-      return;
-    }
-
-    const supabase = createClient();
-    supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-      setStatus(error ? "invalid" : "ready");
-    });
-  }, []);
-
+  // By the time this page loads, /auth/confirm has already verified the
+  // recovery link and established the session server-side — nothing to
+  // exchange here. If someone lands here without a valid session (e.g. a
+  // stale bookmark), updateUser below will fail with a clear auth error.
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -45,18 +35,6 @@ export default function ResetPasswordForm() {
     }
 
     router.push("/login");
-  }
-
-  if (status === "exchanging") {
-    return <p className="mt-8 text-sm text-gray-500">Verifying your link…</p>;
-  }
-
-  if (status === "invalid") {
-    return (
-      <p className="mt-8 text-sm text-danger">
-        This password reset link is invalid or has expired. Request a new one from the login page.
-      </p>
-    );
   }
 
   return (

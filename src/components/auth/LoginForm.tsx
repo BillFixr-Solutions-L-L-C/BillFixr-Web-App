@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
+const LINK_ERROR_MESSAGES: Record<string, string> = {
+  invalid_or_expired_link: "That link is invalid or has expired. Request a new one, or log in below.",
+};
+
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const linkError = LINK_ERROR_MESSAGES[searchParams.get("error") ?? ""];
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +44,7 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
+      {linkError && <p className="text-sm text-danger">{linkError}</p>}
       <input
         type="email"
         placeholder="Email"

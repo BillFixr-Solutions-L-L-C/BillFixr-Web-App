@@ -160,6 +160,18 @@ site_url = "https://billfixr.com"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
+# Only bare origins listed below because nothing in this app currently
+# passes emailRedirectTo/redirectTo to a Supabase auth method — signup
+# confirmation and password recovery both go through the server-side
+# /auth/confirm route instead (see supabase/templates/*.html, which build
+# the link directly from {{ .SiteURL }} + {{ .TokenHash }}, bypassing
+# Supabase's hosted redirect entirely). Bare origins alone would NOT be
+# enough if a path-carrying redirectTo were ever reintroduced — Supabase
+# only matches exact entries here, it does not treat a bare origin as a
+# prefix. Discovered 2026-08-29 the hard way: recovery emails had been
+# silently falling back to site_url (the bare homepage) instead of
+# landing on /reset-password this whole time, which is what motivated
+# moving to the /auth/confirm pattern rather than just fixing this list.
 additional_redirect_urls = [
   "http://localhost:3000",
   "https://billfixr.com",
@@ -228,7 +240,7 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
@@ -252,6 +264,10 @@ sender_name = "BillFixr"
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.confirmation]
+subject = "Welcome to BillFixr - confirm your account"
+content_path = "./supabase/templates/confirmation.html"
 
 [auth.email.template.recovery]
 subject = "Reset your BillFixr password"

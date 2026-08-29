@@ -12,6 +12,7 @@ export default function SignUpForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmationSent, setConfirmationSent] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -19,7 +20,7 @@ export default function SignUpForm() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { name } },
@@ -31,8 +32,32 @@ export default function SignUpForm() {
       return;
     }
 
+    // With email confirmations enabled, signUp doesn't return an active
+    // session — the account only activates once the confirmation link is
+    // clicked, so there's nothing to redirect into yet.
+    if (!data.session) {
+      setConfirmationSent(true);
+      setLoading(false);
+      return;
+    }
+
     router.push("/dashboard");
     router.refresh();
+  }
+
+  if (confirmationSent) {
+    return (
+      <div className="mt-8 flex flex-col gap-4 text-center">
+        <h2 className="text-lg font-semibold text-primary-900">Check your email</h2>
+        <p className="text-sm text-gray-500">
+          We sent a confirmation link to <span className="font-medium text-primary-900">{email}</span>. Click it to
+          activate your account.
+        </p>
+        <Link href="/login" className="mt-2 text-sm font-medium text-accent-600">
+          Back to log in
+        </Link>
+      </div>
+    );
   }
 
   return (
