@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyAuthError } from "@/lib/authErrors";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 export default function ResetPasswordForm() {
   const router = useRouter();
@@ -40,23 +41,19 @@ export default function ResetPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
-      <input
-        type="password"
+      <PasswordInput
         placeholder="New password"
         required
         minLength={8}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="rounded-full border border-gray-200 px-5 py-3.5 text-sm focus:border-primary-400 focus:outline-none"
       />
-      <input
-        type="password"
+      <PasswordInput
         placeholder="Confirm new password"
         required
         minLength={8}
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}
-        className="rounded-full border border-gray-200 px-5 py-3.5 text-sm focus:border-primary-400 focus:outline-none"
       />
 
       {error && <p className="text-sm text-danger">{error}</p>}

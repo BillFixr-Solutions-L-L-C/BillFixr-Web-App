@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyAuthError } from "@/lib/authErrors";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 export default function SignUpForm() {
   const router = useRouter();
@@ -79,14 +80,12 @@ export default function SignUpForm() {
         onChange={(e) => setEmail(e.target.value)}
         className="rounded-full border border-gray-200 px-5 py-3.5 text-sm focus:border-primary-400 focus:outline-none"
       />
-      <input
-        type="password"
+      <PasswordInput
         placeholder="Password"
         required
         minLength={8}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="rounded-full border border-gray-200 px-5 py-3.5 text-sm focus:border-primary-400 focus:outline-none"
       />
 
       {error && <p className="text-sm text-danger">{error}</p>}

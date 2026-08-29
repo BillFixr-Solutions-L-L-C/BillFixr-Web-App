@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 const LINK_ERROR_MESSAGES: Record<string, string> = {
   invalid_or_expired_link: "That link is invalid or has expired. Request a new one, or log in below.",
@@ -53,13 +54,11 @@ export default function LoginForm() {
         onChange={(e) => setEmail(e.target.value)}
         className="rounded-full border border-gray-200 px-5 py-3.5 text-sm focus:border-primary-400 focus:outline-none"
       />
-      <input
-        type="password"
+      <PasswordInput
         placeholder="Password"
         required
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="rounded-full border border-gray-200 px-5 py-3.5 text-sm focus:border-primary-400 focus:outline-none"
       />
 
       {error && <p className="text-sm text-danger">{error}</p>}
