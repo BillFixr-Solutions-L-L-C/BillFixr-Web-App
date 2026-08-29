@@ -117,3 +117,20 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      # `vercel deploy --prod` marks the deployment as the production
+      # target, but does not reliably move the custom-domain aliases onto
+      # it — confirmed 2026-08-29: two prior "successful" CI deploys (and
+      # a fresh manual one) all left www.billfixr.com/billfixr.com
+      # pointing at an old deployment, because a one-off manual
+      # `vercel rollback` during an earlier incident left production
+      # pinned. Explicitly re-aliasing every deploy makes this correct
+      # regardless of any pinned state, instead of trusting the implicit
+      # behavior.
+      - name: Point the production domains at this deployment
+        run: |
+          vercel alias set ${{ steps.deploy.outputs.url }} www.billfixr.com --token=${{ secrets.VERCEL_TOKEN }}
+          vercel alias set ${{ steps.deploy.outputs.url }} billfixr.com --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
