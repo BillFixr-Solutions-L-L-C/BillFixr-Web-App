@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 # Cancel a superseded run on the same branch/PR rather than letting an
 # outdated push race an in-flight deploy.
@@ -91,7 +92,7 @@ jobs:
   deploy-production:
     name: Deploy production
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: production
