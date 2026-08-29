@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyAuthError } from "@/lib/authErrors";
 
 export default function ResetPasswordForm() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function ResetPasswordForm() {
     setLoading(false);
 
     if (error) {
-      setError(error.message);
+      setError(friendlyAuthError(error.message));
       return;
     }
 

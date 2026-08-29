@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyAuthError } from "@/lib/authErrors";
 
 export default function SignUpForm() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function SignUpForm() {
     });
 
     if (error) {
-      setError(error.message);
+      setError(friendlyAuthError(error.message));
       setLoading(false);
       return;
     }
