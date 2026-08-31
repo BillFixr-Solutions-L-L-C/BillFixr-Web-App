@@ -18,16 +18,13 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 const originalFetch = global.fetch;
-const originalConfirm = window.confirm;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  window.confirm = vi.fn(() => true);
 });
 
 afterEach(() => {
   global.fetch = originalFetch;
-  window.confirm = originalConfirm;
 });
 
 describe("AccountActions", () => {
@@ -58,15 +55,23 @@ describe("AccountActions", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
-  it("asks for confirmation before deleting, and does nothing if the user cancels", async () => {
-    window.confirm = vi.fn(() => false);
+  it("does not show the confirmation modal until Delete Account is clicked", () => {
+    render(<AccountActions userId="u1" initialStatus="active" canDelete />);
+    expect(screen.queryByRole("button", { name: "Yes, Delete Account" })).not.toBeInTheDocument();
+  });
+
+  it("opens a confirmation modal, and does nothing if cancelled", async () => {
     global.fetch = vi.fn();
     const user = userEvent.setup();
     render(<AccountActions userId="u1" initialStatus="active" canDelete />);
 
     await user.click(screen.getByRole("button", { name: "Delete Account" }));
+    expect(screen.getByText(/This permanently deletes the account/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(global.fetch).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Yes, Delete Account" })).not.toBeInTheDocument();
   });
 
   it("deletes the account and redirects to the customer list on confirm", async () => {
@@ -75,6 +80,7 @@ describe("AccountActions", () => {
     render(<AccountActions userId="u1" initialStatus="active" canDelete />);
 
     await user.click(screen.getByRole("button", { name: "Delete Account" }));
+    await user.click(screen.getByRole("button", { name: "Yes, Delete Account" }));
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/users"));
     expect(global.fetch).toHaveBeenCalledWith(
@@ -89,6 +95,7 @@ describe("AccountActions", () => {
     render(<AccountActions userId="u1" initialStatus="active" canDelete />);
 
     await user.click(screen.getByRole("button", { name: "Delete Account" }));
+    await user.click(screen.getByRole("button", { name: "Yes, Delete Account" }));
 
     await waitFor(() => expect(screen.getByText("forbidden")).toBeInTheDocument());
     expect(push).not.toHaveBeenCalled();

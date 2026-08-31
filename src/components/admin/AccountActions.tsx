@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function AccountActions({
   userId,
@@ -15,6 +16,7 @@ export default function AccountActions({
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -37,9 +39,6 @@ export default function AccountActions({
   }
 
   async function deleteAccount() {
-    if (!confirm("This permanently deletes the account and all associated data. Continue?")) {
-      return;
-    }
     setBusy(true);
     setError("");
     const res = await fetch("/api/admin/delete-account", {
@@ -50,6 +49,7 @@ export default function AccountActions({
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       setBusy(false);
+      setConfirmingDelete(false);
       setError(body.error ?? "Failed to delete account");
       return;
     }
@@ -72,7 +72,7 @@ export default function AccountActions({
         {canDelete && (
           <button
             type="button"
-            onClick={deleteAccount}
+            onClick={() => setConfirmingDelete(true)}
             disabled={busy}
             className="rounded-full bg-red-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50"
           >
@@ -80,6 +80,17 @@ export default function AccountActions({
           </button>
         )}
       </div>
+
+      <ConfirmModal
+        open={confirmingDelete}
+        title="Delete this account?"
+        message="This permanently deletes the account and all associated data. This cannot be undone."
+        confirmLabel="Yes, Delete Account"
+        danger
+        busy={busy}
+        onConfirm={deleteAccount}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </div>
   );
 }
