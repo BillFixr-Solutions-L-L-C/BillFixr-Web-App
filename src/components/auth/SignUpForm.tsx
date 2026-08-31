@@ -13,6 +13,7 @@ export default function SignUpForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
@@ -21,6 +22,12 @@ export default function SignUpForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (password !== confirmPassword) {
+      setError("Passwords don't match.");
+      return;
+    }
+
     setLoading(true);
 
     const supabase = createClient();
@@ -78,6 +85,13 @@ export default function SignUpForm() {
         minLength={8}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+      />
+      <PasswordInput
+        placeholder="Confirm Password"
+        required
+        minLength={8}
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
       />
 
       {error && <p className="text-sm text-danger">{error}</p>}
