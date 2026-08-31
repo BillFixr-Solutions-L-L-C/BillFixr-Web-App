@@ -73,7 +73,7 @@ export default function SettingsPage() {
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap items-start gap-8">
+        <div className="flex flex-wrap items-start gap-16">
           <div className="max-w-md flex-1">
             <h2 className="mb-4 text-sm font-semibold text-gray-700">Change Password</h2>
             <div className="flex flex-col gap-5">
@@ -88,7 +88,9 @@ export default function SettingsPage() {
             </button>
           </div>
 
-          <DeleteMyAccount />
+          <div className="mt-9">
+            <DeleteMyAccount />
+          </div>
         </div>
       )}
     </div>
