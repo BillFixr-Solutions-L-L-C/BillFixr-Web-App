@@ -3,6 +3,7 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 
 const serverMock = createSupabaseMock();
 const adminMock = createSupabaseMock();
+const sendEmail = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => serverMock.client),
@@ -10,6 +11,7 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(() => adminMock.client),
 }));
+vi.mock("@/lib/email", () => ({ sendEmail }));
 
 const { POST } = await import("./route");
 
@@ -24,7 +26,9 @@ const CALLER = { id: "admin-1" };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // every empty table lookup used by the cascade cleanup defaults to no rows
+  // the cascade's profile lookup (for the deletion-confirmation email),
+  // then every empty table lookup it does, default to no rows
+  adminMock.queueResult("profiles", { data: { name: "Target User", email: "target@example.com" }, error: null });
   for (const table of ["cases", "support_tickets", "chat_messages", "communication_logs", "follow_ups", "payment_records", "notifications", "testimonials", "bills"]) {
     adminMock.queueResult(table, { data: [], error: null });
   }
@@ -62,11 +66,15 @@ describe("POST /api/admin/delete-account", () => {
     serverMock.getUser.mockResolvedValue({ data: { user: CALLER } });
     serverMock.rpc.mockResolvedValue({ data: true, error: null });
     adminMock.deleteUser.mockResolvedValue({ error: null });
+    sendEmail.mockResolvedValue({ id: "email-1" });
 
     const res = await POST(makeRequest({ userId: "target-1" }));
 
     expect(res.status).toBe(200);
     expect(adminMock.deleteUser).toHaveBeenCalledWith("target-1");
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "target@example.com", subject: "Your BillFixr account has been deleted" }),
+    );
   });
 
   it("returns 500 and does not hide an Admin API failure", async () => {
@@ -77,5 +85,17 @@ describe("POST /api/admin/delete-account", () => {
     const res = await POST(makeRequest({ userId: "target-1" }));
 
     expect(res.status).toBe(500);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("still succeeds even if the deletion-confirmation email fails to send", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: CALLER } });
+    serverMock.rpc.mockResolvedValue({ data: true, error: null });
+    adminMock.deleteUser.mockResolvedValue({ error: null });
+    sendEmail.mockRejectedValue(new Error("resend down"));
+
+    const res = await POST(makeRequest({ userId: "target-1" }));
+
+    expect(res.status).toBe(200);
   });
 });
