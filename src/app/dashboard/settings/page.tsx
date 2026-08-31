@@ -13,7 +13,7 @@ export default async function SettingsPage({
   } = await supabase.auth.getUser();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("name, email, address, city, postal_code, country")
+    .select("name, email, address, city, postal_code, country, avatar_url")
     .eq("id", user!.id)
     .single();
 
@@ -26,6 +26,7 @@ export default async function SettingsPage({
         city: profile?.city ?? "",
         postalCode: profile?.postal_code ?? "",
         country: profile?.country ?? "",
+        avatarUrl: profile?.avatar_url ?? null,
       }}
       showCompletionNotice={complete_profile === "1"}
     />

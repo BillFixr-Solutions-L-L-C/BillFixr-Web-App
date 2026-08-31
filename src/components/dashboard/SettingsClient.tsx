@@ -13,6 +13,7 @@ type Profile = {
   city: string;
   postalCode: string;
   country: string;
+  avatarUrl: string | null;
 };
 
 export default function SettingsClient({

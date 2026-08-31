@@ -18,14 +18,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   let name = "";
   let status: "active" | "suspended" = "active";
+  let avatarUrl: string | null = null;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("name, status, address, city, postal_code, country, profile_completion_exempt")
+      .select("name, status, address, city, postal_code, country, profile_completion_exempt, avatar_url")
       .eq("id", user.id)
       .single();
     name = profile?.name ?? "";
     status = profile?.status ?? "active";
+    avatarUrl = profile?.avatar_url ?? null;
 
     const needsCompletion =
       profile &&
@@ -41,6 +43,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <DashboardShell user={{ name, status }}>{children}</DashboardShell>
+    <DashboardShell user={{ name, status, avatarUrl }}>{children}</DashboardShell>
   );
 }

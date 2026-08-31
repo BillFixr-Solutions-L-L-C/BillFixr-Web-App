@@ -5,7 +5,7 @@ export default function DashboardShell({
   user,
 }: {
   children: React.ReactNode;
-  user: { name: string; status: "active" | "suspended" };
+  user: { name: string; status: "active" | "suspended"; avatarUrl: string | null };
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-white md:flex-row">
