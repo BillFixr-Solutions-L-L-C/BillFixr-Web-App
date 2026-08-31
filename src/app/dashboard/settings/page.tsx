@@ -73,18 +73,20 @@ export default function SettingsPage() {
           </div>
         </div>
       ) : (
-        <div className="max-w-md">
-          <h2 className="mb-4 text-sm font-semibold text-gray-700">Change Password</h2>
-          <div className="flex flex-col gap-5">
-            <Field label="Current Password" type="password" />
-            <Field label="New Password" type="password" />
+        <div className="flex flex-wrap items-start gap-8">
+          <div className="max-w-md flex-1">
+            <h2 className="mb-4 text-sm font-semibold text-gray-700">Change Password</h2>
+            <div className="flex flex-col gap-5">
+              <Field label="Current Password" type="password" />
+              <Field label="New Password" type="password" />
+            </div>
+            <button
+              type="button"
+              className="mt-6 rounded-full bg-primary-600 px-8 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+            >
+              Save
+            </button>
           </div>
-          <button
-            type="button"
-            className="mt-6 rounded-full bg-primary-600 px-8 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-          >
-            Save
-          </button>
 
           <DeleteMyAccount />
         </div>

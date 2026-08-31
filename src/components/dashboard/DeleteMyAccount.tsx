@@ -30,7 +30,7 @@ export default function DeleteMyAccount() {
   }
 
   return (
-    <div className="mt-10 max-w-md rounded-xl border border-red-100 bg-red-50/50 p-5">
+    <div className="h-fit max-w-md rounded-xl border border-red-100 bg-red-50/50 p-5">
       <h2 className="text-sm font-semibold text-red-700">Delete Account</h2>
       <p className="mt-1 text-sm text-gray-600">
         Permanently delete your account and all of your data. This cannot be undone.
