@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 
-type QueryResult = { data?: unknown; error?: { message: string } | null; count?: number | null };
+type QueryResult = { data?: unknown; error?: { message: string; code?: string } | null; count?: number | null };
 
 const CHAIN_METHODS = [
   "select",
