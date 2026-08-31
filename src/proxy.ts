@@ -29,9 +29,10 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isDashboardRoute = pathname.startsWith("/dashboard");
   const isAdminRoute = pathname.startsWith("/admin");
+  const isTestimonialRoute = pathname.startsWith("/testimonial");
   const isAuthRoute = pathname === "/login" || pathname === "/signup";
 
-  if (!user && (isDashboardRoute || isAdminRoute)) {
+  if (!user && (isDashboardRoute || isAdminRoute || isTestimonialRoute)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
