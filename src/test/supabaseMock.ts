@@ -60,16 +60,29 @@ export function createSupabaseMock() {
   const deleteUser = vi.fn();
   const inviteUserByEmail = vi.fn();
   const verifyOtp = vi.fn();
+  const getUserById = vi.fn();
+  const generateLink = vi.fn();
 
   const client = {
     auth: {
       getUser,
       verifyOtp,
-      admin: { deleteUser, inviteUserByEmail },
+      admin: { deleteUser, inviteUserByEmail, getUserById, generateLink },
     },
     from,
     rpc,
   };
 
-  return { client, queueResult, getUser, rpc, deleteUser, inviteUserByEmail, verifyOtp, from };
+  return {
+    client,
+    queueResult,
+    getUser,
+    rpc,
+    deleteUser,
+    inviteUserByEmail,
+    verifyOtp,
+    getUserById,
+    generateLink,
+    from,
+  };
 }

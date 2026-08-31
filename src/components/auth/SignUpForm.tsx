@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyAuthError } from "@/lib/authErrors";
 import PasswordInput from "@/components/auth/PasswordInput";
+import CheckYourEmail from "@/components/auth/CheckYourEmail";
 
 export default function SignUpForm() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function SignUpForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,6 +40,7 @@ export default function SignUpForm() {
     // session — the account only activates once the confirmation link is
     // clicked, so there's nothing to redirect into yet.
     if (!data.session) {
+      setPendingUserId(data.user?.id ?? null);
       setConfirmationSent(true);
       setLoading(false);
       return;
@@ -47,19 +50,8 @@ export default function SignUpForm() {
     router.refresh();
   }
 
-  if (confirmationSent) {
-    return (
-      <div className="mt-8 flex flex-col gap-4 text-center">
-        <h2 className="text-lg font-semibold text-primary-900">Check your email</h2>
-        <p className="text-sm text-gray-500">
-          We sent a confirmation link to <span className="font-medium text-primary-900">{email}</span>. Click it to
-          activate your account.
-        </p>
-        <Link href="/login" className="mt-2 text-sm font-medium text-accent-600">
-          Back to log in
-        </Link>
-      </div>
-    );
+  if (confirmationSent && pendingUserId) {
+    return <CheckYourEmail email={email} userId={pendingUserId} />;
   }
 
   return (
