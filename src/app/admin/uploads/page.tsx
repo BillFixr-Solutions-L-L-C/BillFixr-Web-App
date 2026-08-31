@@ -1,9 +1,11 @@
 import UploadsTable, { type UploadRow } from "@/components/admin/UploadsTable";
 import { createClient } from "@/lib/supabase/server";
+import { getBillDocuments } from "@/lib/billDocuments";
 
 type BillWithProfile = {
   id: string;
   filename: string;
+  storage_url: string | null;
   provider_name: string | null;
   status: string;
   uploaded_at: string;
@@ -14,16 +16,21 @@ export default async function AdminUploadsPage() {
   const supabase = await createClient();
   const { data: bills } = await supabase
     .from("bills")
-    .select("id, filename, provider_name, status, uploaded_at, profiles(name)")
+    .select("id, filename, storage_url, provider_name, status, uploaded_at, profiles(name)")
     .order("uploaded_at", { ascending: false });
 
-  const uploads: UploadRow[] = ((bills ?? []) as unknown as BillWithProfile[]).map((b) => ({
+  const billRows = (bills ?? []) as unknown as BillWithProfile[];
+  const documents = await getBillDocuments(supabase, billRows);
+  const documentById = new Map(documents.map((doc) => [doc.id, doc]));
+
+  const uploads: UploadRow[] = billRows.map((b) => ({
     id: b.id,
     customer: b.profiles?.name ?? "Unknown",
     filename: b.filename,
     providerName: b.provider_name,
     status: b.status,
     uploadedAt: b.uploaded_at,
+    doc: documentById.get(b.id) ?? null,
   }));
 
   return (

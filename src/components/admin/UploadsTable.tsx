@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import BillPreview from "@/components/dashboard/BillPreview";
+import type { BillDocument } from "@/lib/billDocuments";
 
 export type UploadRow = {
   id: string;
@@ -10,6 +10,7 @@ export type UploadRow = {
   providerName: string | null;
   status: string;
   uploadedAt: string;
+  doc: BillDocument | null;
 };
 
 export default function UploadsTable({ uploads }: { uploads: UploadRow[] }) {
@@ -112,13 +113,47 @@ export default function UploadsTable({ uploads }: { uploads: UploadRow[] }) {
               </div>
             </div>
 
-            <div className="mt-4">
-              <p className="text-sm text-gray-400">File</p>
-              <p className="mt-1 text-sm font-medium text-gray-800">{selected.filename}</p>
+            <div className="mt-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">File</p>
+                <p className="mt-1 text-sm font-medium text-gray-800">{selected.filename}</p>
+              </div>
+              {selected.doc?.downloadUrl && (
+                <a
+                  href={selected.doc.downloadUrl}
+                  className="flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"
+                >
+                  ⬇ Download
+                </a>
+              )}
             </div>
 
             <div className="mt-4 max-h-64 max-w-[220px] overflow-hidden rounded-xl">
-              <BillPreview />
+              {selected.doc?.previewUrl ? (
+                selected.doc.isImage ? (
+                  <a href={selected.doc.previewUrl} target="_blank" rel="noopener noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selected.doc.previewUrl}
+                      alt={selected.filename}
+                      className="aspect-[3/4] w-full rounded-xl border border-gray-100 object-cover"
+                    />
+                  </a>
+                ) : (
+                  <a
+                    href={selected.doc.previewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-2 rounded-xl border border-gray-100 bg-gray-50 p-4 text-center text-xs text-gray-500 hover:bg-gray-100"
+                  >
+                    <span>View file</span>
+                  </a>
+                )
+              ) : (
+                <div className="flex aspect-[3/4] w-full items-center justify-center rounded-xl border border-dashed border-gray-200 p-4 text-center text-xs text-gray-400">
+                  File unavailable
+                </div>
+              )}
             </div>
           </div>
         </div>

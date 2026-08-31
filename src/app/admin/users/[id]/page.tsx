@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
-import BillPreview from "@/components/dashboard/BillPreview";
-import LetterPreview from "@/components/admin/LetterPreview";
 import AccountActions from "@/components/admin/AccountActions";
 import PromoteToAdmin from "@/components/admin/PromoteToAdmin";
+import BillDocumentCard from "@/components/admin/BillDocumentCard";
+import PendingDocumentCard from "@/components/admin/PendingDocumentCard";
 import { createClient } from "@/lib/supabase/server";
+import { getBillDocuments } from "@/lib/billDocuments";
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
@@ -18,13 +19,6 @@ function Field({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-const documents = [
-  { label: "Original Bill", preview: <BillPreview /> },
-  { label: "Adjusted Bill", preview: <BillPreview /> },
-  { label: "AI Generated Letter", preview: <LetterPreview /> },
-  { label: "Provider Letter", preview: <LetterPreview /> },
-];
 
 export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -41,10 +35,13 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     notFound();
   }
 
-  const { count: billsCount } = await supabase
+  const { data: billRows } = await supabase
     .from("bills")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", id);
+    .select("id, filename, storage_url, status, uploaded_at")
+    .eq("user_id", id)
+    .order("uploaded_at", { ascending: false });
+  const bills = await getBillDocuments(supabase, billRows ?? []);
+  const billsCount = bills.length;
 
   const { count: casesCount } = await supabase
     .from("cases")
@@ -88,18 +85,22 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
         <Field label="Status" value={profile.status === "active" ? "Active" : "Suspended"} />
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {documents.map((doc) => (
-          <div key={doc.label} className="rounded-xl border border-gray-100 bg-white p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary-700">{doc.label}</p>
-              <button type="button" className="flex items-center gap-1 text-xs text-primary-600">
-                ⬇ Download as PDF
-              </button>
-            </div>
-            {doc.preview}
+      <div className="mt-8">
+        <h2 className="mb-3 text-sm font-semibold text-gray-700">Documents</h2>
+        {bills.length === 0 ? (
+          <p className="text-sm text-gray-400">No bills uploaded yet.</p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {bills.map((bill, i) => (
+              <BillDocumentCard key={bill.id} doc={bill} label={`Bill ${i + 1}`} />
+            ))}
           </div>
-        ))}
+        )}
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <PendingDocumentCard label="AI Generated Letter" />
+          <PendingDocumentCard label="Provider Letter" />
+        </div>
       </div>
 
       <div className="mt-8 flex flex-wrap items-start gap-4">

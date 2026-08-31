@@ -7,6 +7,7 @@ const CHAIN_METHODS = [
   "eq",
   "neq",
   "in",
+  "or",
   "order",
   "limit",
   "update",
