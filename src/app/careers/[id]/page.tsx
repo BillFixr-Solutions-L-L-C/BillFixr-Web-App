@@ -1,12 +1,17 @@
+import { notFound } from "next/navigation";
 import Navbar from "@/components/landing/Navbar";
 import BeforeYouPay from "@/components/landing/BeforeYouPay";
 import Footer from "@/components/landing/Footer";
 import ApplyForm from "@/components/careers/ApplyForm";
-import { jobs } from "@/lib/jobs";
+import { getJobPosting } from "@/lib/jobs";
 
 export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const job = jobs.find((j) => j.id === id) ?? jobs[0];
+  const job = await getJobPosting(id);
+
+  if (!job) {
+    notFound();
+  }
 
   return (
     <main className="bg-primary-50">

@@ -3,7 +3,7 @@ import Link from "next/link";
 import Navbar from "@/components/landing/Navbar";
 import BeforeYouPay from "@/components/landing/BeforeYouPay";
 import Footer from "@/components/landing/Footer";
-import { jobs } from "@/lib/jobs";
+import { getOpenJobs } from "@/lib/jobs";
 
 function BriefcaseIcon() {
   return (
@@ -15,7 +15,9 @@ function BriefcaseIcon() {
   );
 }
 
-export default function CareersPage() {
+export default async function CareersPage() {
+  const jobs = await getOpenJobs();
+
   return (
     <main className="bg-primary-50">
       <Navbar />
@@ -48,6 +50,9 @@ export default function CareersPage() {
         </div>
 
         <div className="mt-10 space-y-5">
+          {jobs.length === 0 && (
+            <p className="text-center text-primary-900/60">No open positions right now — check back soon.</p>
+          )}
           {jobs.map((job) => (
             <div
               key={job.id}
