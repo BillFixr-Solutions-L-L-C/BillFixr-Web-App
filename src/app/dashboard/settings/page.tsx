@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import PageHeading from "@/components/dashboard/PageHeading";
+import DeleteMyAccount from "@/components/dashboard/DeleteMyAccount";
 
 function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
@@ -84,6 +85,8 @@ export default function SettingsPage() {
           >
             Save
           </button>
+
+          <DeleteMyAccount />
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { deleteAccountCascade } from "@/lib/deleteAccountCascade";
 
 // Deleting an auth user is only possible via the service-role Admin API
 // (not exposed through RLS-governed REST at all), and account deletion is
@@ -8,7 +9,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // than trusting the UI to only show the button to the right people.
 // Gated by can_delete_accounts() (see roles.can_delete_accounts), not just
 // is_admin() — per the Suspend-vs-Delete distinction in
-// docs/DESIGN-SYSTEM.md history / BACKEND-PLAN.md's RBAC notes.
+// docs/DESIGN-SYSTEM.md history / BACKEND-PLAN.md's RBAC notes. For a
+// user deleting their own account, see /api/account/delete instead —
+// that one doesn't need this permission check at all, since anyone can
+// always delete their own data.
 export async function POST(request: Request) {
   const { userId } = await request.json();
   if (typeof userId !== "string") {
@@ -33,29 +37,7 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
-
-  const { data: cases } = await admin.from("cases").select("id").eq("user_id", userId);
-  const caseIds = (cases ?? []).map((c) => c.id);
-  const { data: tickets } = await admin.from("support_tickets").select("id").eq("user_id", userId);
-  const ticketIds = (tickets ?? []).map((t) => t.id);
-
-  if (ticketIds.length) {
-    await admin.from("chat_messages").delete().in("ticket_id", ticketIds);
-  }
-  if (caseIds.length) {
-    await admin.from("communication_logs").delete().in("case_id", caseIds);
-    await admin.from("follow_ups").delete().in("case_id", caseIds);
-  }
-  await admin.from("payment_records").delete().eq("user_id", userId);
-  await admin.from("support_tickets").delete().eq("user_id", userId);
-  await admin.from("notifications").delete().eq("user_id", userId);
-  await admin.from("testimonials").delete().eq("user_id", userId);
-  if (caseIds.length) {
-    await admin.from("cases").delete().eq("user_id", userId);
-  }
-  await admin.from("bills").delete().eq("user_id", userId);
-
-  const { error } = await admin.auth.admin.deleteUser(userId);
+  const { error } = await deleteAccountCascade(admin, userId);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
