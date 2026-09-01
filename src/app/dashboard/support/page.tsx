@@ -4,11 +4,17 @@ import { useState } from "react";
 import PageHeading from "@/components/dashboard/PageHeading";
 import { createClient } from "@/lib/supabase/client";
 
+// Shown until a real chat_messages history exists for this user's live-chat
+// ticket — Step 7 contract stub, not an AI-generated greeting.
 const seedMessages = [
   { from: "agent", text: "How can i help you?" },
   { from: "user", text: "Am i making payment before i will have access to the new bill adjusted?" },
   { from: "agent", text: "Yes, after your bill has been adjusted.. you will make payment and get the adjust bill." },
 ];
+
+// Sent automatically after a real user message — a static acknowledgment,
+// not an AI reply. Real AI/agent responses are a separate, later workstream.
+const CANNED_AGENT_REPLY = "Thanks for your message — a member of our support team will follow up here shortly.";
 
 function Avatar({ className = "" }: { className?: string }) {
   return (
@@ -22,8 +28,10 @@ const complaintOptions = ["Payment issue", "Case status question", "Document acc
 
 export default function SupportPage() {
   const [chatOpen, setChatOpen] = useState(false);
-  const [messages, setMessages] = useState(seedMessages);
+  const [messages, setMessages] = useState<{ from: string; text: string }[]>(seedMessages);
   const [draft, setDraft] = useState("");
+  const [chatTicketId, setChatTicketId] = useState<string | null>(null);
+  const [chatLoaded, setChatLoaded] = useState(false);
 
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -31,12 +39,60 @@ export default function SupportPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  const sendMessage = () => {
+  async function openChat() {
+    setChatOpen(true);
+    if (chatLoaded) return;
+    setChatLoaded(true);
+
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: existingTicket } = await supabase
+      .from("support_tickets")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("subject", "Live Chat")
+      .limit(1)
+      .maybeSingle();
+
+    let ticketId = existingTicket?.id ?? null;
+    if (!ticketId) {
+      const { data: newTicket } = await supabase
+        .from("support_tickets")
+        .insert({ user_id: user.id, subject: "Live Chat", message: "(live chat)", status: "open" })
+        .select("id")
+        .single();
+      ticketId = newTicket?.id ?? null;
+    }
+    if (!ticketId) return;
+    setChatTicketId(ticketId);
+
+    const { data: history } = await supabase
+      .from("chat_messages")
+      .select("from, text")
+      .eq("ticket_id", ticketId)
+      .order("created_at", { ascending: true });
+
+    if (history && history.length > 0) {
+      setMessages(history);
+    }
+  }
+
+  async function sendMessage() {
     const text = draft.trim();
-    if (!text) return;
-    setMessages((m) => [...m, { from: "user", text }]);
+    if (!text || !chatTicketId) return;
     setDraft("");
-  };
+    setMessages((m) => [...m, { from: "user", text }, { from: "agent", text: CANNED_AGENT_REPLY }]);
+
+    const supabase = createClient();
+    await supabase.from("chat_messages").insert([
+      { ticket_id: chatTicketId, from: "user", text },
+      { ticket_id: chatTicketId, from: "agent", text: CANNED_AGENT_REPLY },
+    ]);
+  }
 
   async function handleSubmitTicket() {
     setError(null);
@@ -130,7 +186,7 @@ export default function SupportPage() {
       {!chatOpen && (
         <button
           type="button"
-          onClick={() => setChatOpen(true)}
+          onClick={openChat}
           aria-label="Open live chat"
           className="fixed bottom-6 right-6 z-40 flex items-center gap-3 rounded-full bg-primary-600 py-2 pl-2 pr-5 text-sm font-semibold text-white shadow-lg hover:bg-primary-700"
         >

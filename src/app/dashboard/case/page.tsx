@@ -13,14 +13,31 @@ type CaseRow = {
   id: string;
   status: string;
   bills: { filename: string } | null;
+  errors_detected: number | null;
+  savings_found: number | null;
+  appeal_letter_text: string | null;
+  ai_summary_text: string | null;
 };
 
-const stats = [
-  { label: "Bill Analyzed", value: "1" },
-  { label: "Errors Detected", value: "2" },
-  { label: "Savings Found", value: "$2590" },
-  { label: "Appeal Generated", value: "1" },
-];
+// Phase 2 (AI) fields — errors_detected/savings_found/appeal_letter_text/
+// ai_summary_text are real columns on cases, always null until the AI/OCR
+// workstream populates them. These are the exact values shown until then.
+const MOCK_ERRORS_DETECTED = "2";
+const MOCK_SAVINGS_FOUND = "$2590";
+const MOCK_APPEAL_LETTER = `Dave J. Collins
+Crown Med Hospital Center
+July 14, 2026
+
+The Billing Manager,
+
+I am writing regarding the itemized bill from Crown Med Hospital Center dated July 14, 2026. Our review identified 2 billing discrepancies, including a mathematical error and an insurance coverage error, resulting in an overcharge of $5,590. We request a corrected statement reflecting an adjusted balance of $2,500.
+
+We look forward to your response.
+
+Yours faithfully,
+Dave J. Collins`;
+const MOCK_AI_SUMMARY =
+  "The provider has acknowledged the mathematical error and insurance coverage discrepancy identified in your bill. They have agreed to adjust the total charge from $5,590 to $2,500, reflecting a correction of the duplicate lab fee and the misclassified insurance rate.";
 
 const files = [
   { name: "Crown Med Hosp...", size: "205kb", status: "Uploaded" },
@@ -53,7 +70,7 @@ export default function ActiveCasePage() {
       }
       const { data } = await supabase
         .from("cases")
-        .select("id, status, bills(filename)")
+        .select("id, status, bills(filename), errors_detected, savings_found, appeal_letter_text, ai_summary_text")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setCases((data as unknown as CaseRow[]) ?? []);
@@ -61,6 +78,8 @@ export default function ActiveCasePage() {
     }
     load();
   }, []);
+
+  const selectedCase = cases.find((c) => c.id === selectedCaseId) ?? null;
 
   async function advanceCase(toStatus: "response_received" | "paid") {
     if (!selectedCaseId) return;
@@ -276,7 +295,18 @@ export default function ActiveCasePage() {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          {stats.map((stat) => (
+          {[
+            { label: "Bill Analyzed", value: "1" },
+            {
+              label: "Errors Detected",
+              value: selectedCase?.errors_detected != null ? String(selectedCase.errors_detected) : MOCK_ERRORS_DETECTED,
+            },
+            {
+              label: "Savings Found",
+              value: selectedCase?.savings_found != null ? `$${selectedCase.savings_found}` : MOCK_SAVINGS_FOUND,
+            },
+            { label: "Appeal Generated", value: "1" },
+          ].map((stat) => (
             <div key={stat.label} className="rounded-2xl bg-white p-4 shadow-sm">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
                 {stat.label}
@@ -338,27 +368,7 @@ export default function ActiveCasePage() {
 
         {view === "letter" && (
           <div className="mt-4 rounded-xl border border-gray-100 p-6 text-sm leading-relaxed text-gray-700">
-            <p className="text-right text-gray-500">
-              Dave J. Collins
-              <br />
-              Crown Med Hospital Center
-              <br />
-              July 14, 2026
-            </p>
-            <p className="mt-6">The Billing Manager,</p>
-            <p className="mt-4">
-              I am writing regarding the itemized bill from Crown Med Hospital Center dated
-              July 14, 2026. Our review identified 2 billing discrepancies, including a
-              mathematical error and an insurance coverage error, resulting in an
-              overcharge of $5,590. We request a corrected statement reflecting an adjusted
-              balance of $2,500.
-            </p>
-            <p className="mt-4">We look forward to your response.</p>
-            <p className="mt-6">
-              Yours faithfully,
-              <br />
-              Dave J. Collins
-            </p>
+            <p className="whitespace-pre-line">{selectedCase?.appeal_letter_text ?? MOCK_APPEAL_LETTER}</p>
             <div className="mt-8 flex justify-end">
               <button
                 type="button"
@@ -375,10 +385,7 @@ export default function ActiveCasePage() {
             <div className="mt-6">
               <p className="text-sm font-semibold text-primary-700">AI Summary of Response</p>
               <p className="mt-3 text-sm text-gray-500">
-                The provider has acknowledged the mathematical error and insurance coverage
-                discrepancy identified in your bill. They have agreed to adjust the total
-                charge from $5,590 to $2,500, reflecting a correction of the duplicate lab
-                fee and the misclassified insurance rate.
+                {selectedCase?.ai_summary_text ?? MOCK_AI_SUMMARY}
               </p>
             </div>
 
