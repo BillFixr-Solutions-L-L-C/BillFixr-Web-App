@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 function EyeIcon() {
   return (
@@ -48,10 +48,28 @@ type PasswordInputProps = {
 
 export default function PasswordInput({ placeholder, value, onChange, required, minLength }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function toggleVisible() {
+    const input = inputRef.current;
+    const start = input?.selectionStart ?? null;
+    const end = input?.selectionEnd ?? null;
+    setVisible((v) => !v);
+    // Switching an <input>'s type between "password" and "text" resets its
+    // cursor position to 0 as a browser side effect, even though the value
+    // itself is unchanged — restore where the user actually was.
+    requestAnimationFrame(() => {
+      input?.focus();
+      if (start !== null && end !== null) {
+        input?.setSelectionRange(start, end);
+      }
+    });
+  }
 
   return (
     <div className="relative">
       <input
+        ref={inputRef}
         type={visible ? "text" : "password"}
         placeholder={placeholder}
         required={required}
@@ -62,11 +80,12 @@ export default function PasswordInput({ placeholder, value, onChange, required, 
       />
       <button
         type="button"
-        onClick={() => setVisible((v) => !v)}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={toggleVisible}
         aria-label={visible ? "Hide password" : "Show password"}
         className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center text-gray-400 hover:text-gray-600"
       >
-        {visible ? <EyeOffIcon /> : <EyeIcon />}
+        {visible ? <EyeIcon /> : <EyeOffIcon />}
       </button>
     </div>
   );
