@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createAuthEmailClient } from "@/lib/supabase/authEmailClient";
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -15,7 +15,7 @@ export default function ForgotPasswordForm() {
     setError(null);
     setLoading(true);
 
-    const supabase = createClient();
+    const supabase = createAuthEmailClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email);
 
     setLoading(false);

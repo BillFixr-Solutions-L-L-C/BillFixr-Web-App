@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createAuthEmailClient } from "@/lib/supabase/authEmailClient";
 import { friendlyAuthError } from "@/lib/authErrors";
 import PasswordInput from "@/components/auth/PasswordInput";
 import CheckYourEmail from "@/components/auth/CheckYourEmail";
@@ -30,7 +30,7 @@ export default function SignUpForm() {
 
     setLoading(true);
 
-    const supabase = createClient();
+    const supabase = createAuthEmailClient();
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

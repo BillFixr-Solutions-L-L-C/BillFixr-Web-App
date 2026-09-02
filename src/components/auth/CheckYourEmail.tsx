@@ -2,13 +2,38 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { createAuthEmailClient } from "@/lib/supabase/authEmailClient";
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLLS = 300; // ~15 minutes, matching the pairing row's server-side expiry
+const RESEND_COOLDOWN_SECONDS = 90;
 
 export default function CheckYourEmail({ email, userId }: { email: string; userId: string }) {
   const [confirmedElsewhere, setConfirmedElsewhere] = useState(false);
   const pollCount = useRef(0);
+  const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN_SECONDS);
+  const [resending, setResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  async function handleResend() {
+    setResending(true);
+    setResendMessage(null);
+    const supabase = createAuthEmailClient();
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    setResending(false);
+    if (error) {
+      setResendMessage(error.message);
+      return;
+    }
+    setResendMessage("Confirmation email resent.");
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
+  }
 
   useEffect(() => {
     // Deliberately no "only run once" ref guard here — in React's dev-mode
@@ -76,6 +101,25 @@ export default function CheckYourEmail({ email, userId }: { email: string; userI
         We sent a confirmation link to <span className="font-medium text-primary-900">{email}</span>. Click it to
         activate your account — if you open it on another device, this page will pick it up automatically.
       </p>
+
+      {!confirmedElsewhere && (
+        <div>
+          {resendCooldown > 0 ? (
+            <p className="text-sm text-gray-400">Didn&apos;t get it? You can resend in {resendCooldown}s</p>
+          ) : (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending}
+              className="text-sm font-medium text-accent-600 hover:text-accent-700 disabled:opacity-60"
+            >
+              {resending ? "Resending…" : "Resend confirmation email"}
+            </button>
+          )}
+          {resendMessage && <p className="mt-1 text-sm text-gray-500">{resendMessage}</p>}
+        </div>
+      )}
+
       <Link href="/login" className="mt-2 text-sm font-medium text-accent-600">
         Back to log in
       </Link>
