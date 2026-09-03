@@ -64,6 +64,15 @@ body {
   color: var(--foreground);
 }
 
+/* Browsers don't give <button> a pointer cursor the way <a> gets one for
+   free — every button site-wide was showing the default arrow instead of
+   the hand cursor links use, an inconsistency users notice even without
+   being able to name it. Disabled buttons are left alone (still the
+   default arrow, correctly signaling they're not interactive). */
+button:not(:disabled) {
+  cursor: pointer;
+}
+
 @keyframes float {
   0%,
   100% {
