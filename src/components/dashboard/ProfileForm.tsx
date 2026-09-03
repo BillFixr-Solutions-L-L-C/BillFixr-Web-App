@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
@@ -28,6 +29,7 @@ type Profile = {
 };
 
 export default function ProfileForm({ profile }: { profile: Profile }) {
+  const router = useRouter();
   const [form, setForm] = useState(profile);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -55,6 +57,16 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
       return;
     }
     setSaved(true);
+    // Two separate things need clearing after a save that completes the
+    // required fields: (1) the dashboard layout's server-side completion
+    // check, which the client-side router cache would otherwise keep
+    // serving a stale "incomplete" result for, and (2) the on-page
+    // "please complete your profile" banner, which is driven purely by
+    // the ?complete_profile=1 URL param rather than real profile state
+    // and so never clears on its own. Replacing to the bare path fixes
+    // both — it drops the param (clearing the banner) and forces a fresh
+    // server render (clearing the layout's stale check).
+    router.replace("/dashboard/settings");
   }
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
