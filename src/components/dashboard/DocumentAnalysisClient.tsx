@@ -10,10 +10,12 @@ export default function DocumentAnalysisClient({
   analysis,
   headerInfo,
   doc,
+  locked = false,
 }: {
   analysis: BillAnalysis;
   headerInfo: HeaderField[];
   doc: BillDocument;
+  locked?: boolean;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -50,14 +52,23 @@ export default function DocumentAnalysisClient({
               </div>
             </div>
             <div className="flex items-center gap-3 text-xs">
-              <span className="text-primary-600">✓ Uploaded</span>
-              {doc.previewUrl && (
+              {locked ? (
+                <span className="text-accent-600">🔒 Locked</span>
+              ) : (
+                <span className="text-primary-600">✓ Uploaded</span>
+              )}
+              {!locked && doc.previewUrl && (
                 <button type="button" onClick={() => setPreviewOpen(true)} className="text-primary-600">
                   👁 View
                 </button>
               )}
             </div>
           </div>
+          {locked && (
+            <p className="mt-3 text-xs text-gray-400">
+              Complete your success fee payment to unlock this document.
+            </p>
+          )}
         </div>
       </div>
 

@@ -6,13 +6,15 @@ import PageHeading from "@/components/dashboard/PageHeading";
 import PaymentForm from "@/components/dashboard/PaymentForm";
 import BillPreview from "@/components/dashboard/BillPreview";
 import { createClient } from "@/lib/supabase/client";
+import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
+import { getBillDocuments, type BillDocument } from "@/lib/billDocuments";
 
 type View = "list" | "pending" | "received" | "letter" | "summary" | "savings" | "payment" | "paid";
 
 type CaseRow = {
   id: string;
   status: string;
-  bills: { filename: string } | null;
+  bills: { filename: string; storage_url: string | null; uploaded_at: string } | null;
   errors_detected: number | null;
   savings_found: number | null;
   appeal_letter_text: string | null;
@@ -39,11 +41,6 @@ Dave J. Collins`;
 const MOCK_AI_SUMMARY =
   "The provider has acknowledged the mathematical error and insurance coverage discrepancy identified in your bill. They have agreed to adjust the total charge from $5,590 to $2,500, reflecting a correction of the duplicate lab fee and the misclassified insurance rate.";
 
-const files = [
-  { name: "Crown Med Hosp...", size: "205kb", status: "Uploaded" },
-  { name: "Appeal Letter 1", size: "205kb", status: "Sent" },
-];
-
 function viewForStatus(status: string): View {
   if (status === "response_received" || status === "resolved" || status === "payment_pending" || status === "paid" || status === "closed") {
     return "received";
@@ -56,7 +53,12 @@ export default function ActiveCasePage() {
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [view, setView] = useState<View>("list");
-  const [previewOpen, setPreviewOpen] = useState<string | null>(null);
+  const [billDoc, setBillDoc] = useState<BillDocument | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [intentId, setIntentId] = useState<string | null>(null);
+  const [chargeAmount, setChargeAmount] = useState<number | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -70,7 +72,9 @@ export default function ActiveCasePage() {
       }
       const { data } = await supabase
         .from("cases")
-        .select("id, status, bills(filename), errors_detected, savings_found, appeal_letter_text, ai_summary_text")
+        .select(
+          "id, status, bills(filename, storage_url, uploaded_at), errors_detected, savings_found, appeal_letter_text, ai_summary_text",
+        )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setCases((data as unknown as CaseRow[]) ?? []);
@@ -80,6 +84,26 @@ export default function ActiveCasePage() {
   }, []);
 
   const selectedCase = cases.find((c) => c.id === selectedCaseId) ?? null;
+
+  useEffect(() => {
+    if (!selectedCase?.bills) return;
+    const bill = selectedCase.bills;
+    const supabase = createClient();
+    let cancelled = false;
+    getBillDocuments(supabase, [
+      { id: selectedCase.id, filename: bill.filename, storage_url: bill.storage_url, status: "uploaded", uploaded_at: bill.uploaded_at },
+    ]).then(([doc]) => {
+      if (!cancelled) setBillDoc(doc ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCase]);
+
+  // Key the fetched doc to the currently selected case so switching cases
+  // doesn't briefly show the previous case's file while the new fetch is
+  // still in flight.
+  const activeBillDoc = billDoc?.id === selectedCase?.id ? billDoc : null;
 
   async function advanceCase(toStatus: "response_received" | "paid") {
     if (!selectedCaseId) return;
@@ -100,8 +124,62 @@ export default function ActiveCasePage() {
     setView("received");
   }
 
-  async function handlePaid() {
-    await advanceCase("paid");
+  // Real success-fee flow — only actually chargeable once the case has
+  // real errors_detected/savings_found (Phase 2/AI territory, always null
+  // today). Until then this reliably 409s and the "savings" view's mock
+  // amounts stay exactly as they are — that content is Phase 2's, not
+  // this step's, to make real.
+  async function handlePayWithCard() {
+    setPaymentError(null);
+    if (!selectedCaseId) return;
+
+    const res = await fetch("/api/payments/create-intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "success_fee", caseId: selectedCaseId }),
+    });
+    const body = await res.json();
+
+    if (!res.ok) {
+      setPaymentError(
+        res.status === 409
+          ? "This case hasn't finished being analyzed yet — payment isn't available until it has."
+          : (body?.error ?? "Failed to start payment. Please try again."),
+      );
+      return;
+    }
+    if (body.noFeeOwed || body.alreadyPaid) {
+      setCases((prev) => prev.map((c) => (c.id === selectedCaseId ? { ...c, status: "paid" } : c)));
+      setView("paid");
+      return;
+    }
+    setClientSecret(body.clientSecret);
+    setIntentId(body.intentId);
+    setChargeAmount(body.amount ?? null);
+    setView("payment");
+  }
+
+  async function handlePaymentConfirmed() {
+    setConfirmingPayment(true);
+    setPaymentError(null);
+    if (!intentId) {
+      setConfirmingPayment(false);
+      return;
+    }
+
+    const result = await pollPaymentStatus(intentId);
+    setConfirmingPayment(false);
+
+    if (result.status === "failed") {
+      setPaymentError("Payment failed. Please try again.");
+      return;
+    }
+    if (result.status === "pending") {
+      setPaymentError("Still confirming your payment — please wait a moment and try again.");
+      return;
+    }
+
+    setCases((prev) => prev.map((c) => (c.id === selectedCaseId ? { ...c, status: "paid" } : c)));
     setView("paid");
   }
 
@@ -153,7 +231,15 @@ export default function ActiveCasePage() {
                         {row.bills?.filename ?? "Bill"}
                       </td>
                       <td className="px-4 py-3 text-gray-600">Crown health...</td>
-                      <td className="px-4 py-3 text-gray-600">Jul 14, 2026</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {row.bills?.uploaded_at
+                          ? new Date(row.bills.uploaded_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })
+                          : "—"}
+                      </td>
                       <td className="px-4 py-3 font-medium text-primary-600">Sent</td>
                       <td className={`px-4 py-3 font-medium ${responseLabel === "Received" ? "text-primary-600" : "text-accent-600"}`}>
                         {responseLabel}
@@ -181,9 +267,23 @@ export default function ActiveCasePage() {
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold uppercase tracking-wide text-primary-700">Original Bill</p>
-              <button type="button" className="rounded-full border border-primary-600 px-4 py-2 text-xs font-semibold text-primary-700">
-                ⬇ Download as PDF
-              </button>
+              {activeBillDoc?.downloadUrl ? (
+                <a
+                  href={activeBillDoc.downloadUrl}
+                  className="rounded-full border border-primary-600 px-4 py-2 text-xs font-semibold text-primary-700"
+                >
+                  ⬇ Download as PDF
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title="Original bill file unavailable"
+                  className="cursor-not-allowed rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-400"
+                >
+                  ⬇ Download as PDF
+                </button>
+              )}
             </div>
             <div className="mt-4">
               <BillPreview />
@@ -192,7 +292,12 @@ export default function ActiveCasePage() {
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold uppercase tracking-wide text-primary-700">Adjusted Bill</p>
-              <button type="button" className="rounded-full border border-primary-600 px-4 py-2 text-xs font-semibold text-primary-700">
+              <button
+                type="button"
+                disabled
+                title="Available once your appeal negotiation produces an adjusted bill"
+                className="cursor-not-allowed rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-400"
+              >
                 ⬇ Download as PDF
               </button>
             </div>
@@ -211,9 +316,10 @@ export default function ActiveCasePage() {
             <p className="text-xs text-gray-400">
               Please note the 20% of the adjusted bill will charged for services
             </p>
+            {paymentError && <p className="mt-2 max-w-xs text-xs text-danger">{paymentError}</p>}
             <button
               type="button"
-              onClick={() => setView("payment")}
+              onClick={handlePayWithCard}
               className="mt-2 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
             >
               Pay with Card
@@ -225,18 +331,27 @@ export default function ActiveCasePage() {
   }
 
   if (view === "payment") {
+    const total = chargeAmount != null ? `$${chargeAmount.toFixed(2)}` : "$1,000";
     return (
       <div>
         <PageHeading title="Active Case" />
         <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <PaymentForm
-            lineItems={[
-              { label: "Adjusted Bill", value: "$5,000" },
-              { label: "Charges", value: "$1,000" },
-            ]}
-            total="$1,000"
-            onConfirm={handlePaid}
-          />
+          {clientSecret ? (
+            <>
+              <PaymentForm
+                clientSecret={clientSecret}
+                lineItems={[{ label: "Success fee", value: total }]}
+                total={total}
+                onSuccess={handlePaymentConfirmed}
+              />
+              {confirmingPayment && (
+                <p className="mt-3 text-center text-sm text-gray-500">Confirming your payment…</p>
+              )}
+              {paymentError && <p className="mt-3 text-center text-sm text-danger">{paymentError}</p>}
+            </>
+          ) : (
+            <p className="py-10 text-center text-sm text-gray-400">Loading payment form…</p>
+          )}
         </div>
       </div>
     );
@@ -268,30 +383,31 @@ export default function ActiveCasePage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_auto]">
         <div className="rounded-2xl bg-white p-6 shadow-sm">
-          {files.map((file) => (
-            <div
-              key={file.name}
-              className="flex items-center justify-between border-b border-gray-50 py-3 last:border-0"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-accent-500">📄</span>
-                <div>
-                  <p className="text-sm font-medium text-gray-800">{file.name}</p>
-                  <p className="flex items-center gap-1 text-xs text-gray-400">
-                    {file.size}
-                    <span className="text-primary-600">✓ {file.status}</span>
-                  </p>
-                </div>
+          <div className="flex items-center justify-between border-b border-gray-50 py-3 last:border-0">
+            <div className="flex items-center gap-3">
+              <span className="text-accent-500">📄</span>
+              <div>
+                <p className="text-sm font-medium text-gray-800">
+                  {selectedCase?.bills?.filename ?? "Original bill"}
+                </p>
+                {activeBillDoc?.previewUrl && <p className="text-xs text-primary-600">✓ Uploaded</p>}
               </div>
-              <button
-                type="button"
-                onClick={() => setPreviewOpen(file.name)}
-                className="text-sm font-medium text-primary-600"
-              >
-                👁 View
-              </button>
             </div>
-          ))}
+            {activeBillDoc?.previewUrl ? (
+              <div className="flex shrink-0 items-center gap-4">
+                <a href={activeBillDoc.previewUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary-600">
+                  👁 View
+                </a>
+                {activeBillDoc.downloadUrl && (
+                  <a href={activeBillDoc.downloadUrl} className="text-sm font-medium text-primary-600">
+                    ⬇ Download
+                  </a>
+                )}
+              </div>
+            ) : (
+              <span className="text-sm text-gray-400">Unavailable</span>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -372,7 +488,9 @@ export default function ActiveCasePage() {
             <div className="mt-8 flex justify-end">
               <button
                 type="button"
-                className="rounded-full border border-primary-600 px-5 py-2 text-sm font-semibold text-primary-700"
+                disabled
+                title="Available once your appeal letter is generated"
+                className="cursor-not-allowed rounded-full border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-400"
               >
                 ⬇ Download as PDF
               </button>
@@ -419,23 +537,6 @@ export default function ActiveCasePage() {
           </>
         )}
       </div>
-
-      {previewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-            <button
-              type="button"
-              onClick={() => setPreviewOpen(null)}
-              aria-label="Close"
-              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
-            >
-              ✕
-            </button>
-            <p className="mb-4 text-sm font-semibold text-gray-800">{previewOpen}</p>
-            <BillPreview />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

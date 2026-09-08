@@ -10,6 +10,7 @@ import PaymentForm from "@/components/dashboard/PaymentForm";
 import FlowCard from "@/components/dashboard/FlowCard";
 import BillPreview from "@/components/dashboard/BillPreview";
 import { createClient } from "@/lib/supabase/client";
+import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
 
 type Stage =
   | "upload"
@@ -42,7 +43,12 @@ export default function DashboardHome() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [billId, setBillId] = useState<string | null>(null);
+  const [uploadedAt, setUploadedAt] = useState<string | null>(null);
   const [caseId, setCaseId] = useState<string | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [intentId, setIntentId] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
 
   const fileName = pendingFile?.name ?? "";
 
@@ -85,7 +91,7 @@ export default function DashboardHome() {
         storage_url: path,
         status: "uploaded",
       })
-      .select("id")
+      .select("id, uploaded_at")
       .single();
     if (insertErr) {
       setUploadError(insertErr.message);
@@ -94,25 +100,60 @@ export default function DashboardHome() {
     }
 
     setBillId(billRow.id);
+    setUploadedAt(billRow.uploaded_at);
     setStage("uploaded");
   }
 
-  async function handleCommitmentFeePaid() {
-    setStage("scanning");
+  async function handleProceedToPayment() {
+    setPaymentError(null);
     if (!billId) return;
 
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
+    const res = await fetch("/api/payments/create-intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "commitment_fee", billId }),
+    });
+    const body = await res.json();
+    if (!res.ok || !body.clientSecret) {
+      setPaymentError(body?.error ?? "Failed to start payment. Please try again.");
+      return;
+    }
+    setClientSecret(body.clientSecret);
+    setIntentId(body.intentId);
+    setStage("payment");
+  }
 
-    const { data: caseRow } = await supabase
-      .from("cases")
-      .insert({ bill_id: billId, user_id: user.id, status: "scanning" })
-      .select("id")
-      .single();
+  // stripe.confirmPayment() resolving without an error only means the card
+  // was accepted for processing — the real confirmation (and the actual
+  // case creation) happens server-side via the Stripe webhook, which is
+  // the only place this app trusts a payment as genuinely completed. Poll
+  // until that lands rather than creating the case here client-side.
+  async function handlePaymentConfirmed() {
+    setConfirmingPayment(true);
+    setPaymentError(null);
+    if (!intentId) {
+      setConfirmingPayment(false);
+      return;
+    }
+
+    const result = await pollPaymentStatus(intentId);
+    setConfirmingPayment(false);
+
+    if (result.status === "failed") {
+      setPaymentError("Payment failed. Please try again.");
+      return;
+    }
+    if (result.status === "pending") {
+      // Webhook hasn't landed yet within our poll window — stay on the
+      // payment screen; a retry can reuse the same intent.
+      setPaymentError("Still confirming your payment — please wait a moment and try again.");
+      return;
+    }
+
+    const supabase = createClient();
+    const { data: caseRow } = await supabase.from("cases").select("id").eq("bill_id", billId).maybeSingle();
     if (caseRow) setCaseId(caseRow.id);
+    setStage("scanning");
   }
 
   async function handleScanComplete() {
@@ -200,7 +241,15 @@ export default function DashboardHome() {
                   <tr className="border-t border-gray-50">
                     <td className="px-4 py-3 text-gray-800">{fileName || "Crown Med Hosp..."}</td>
                     <td className="px-4 py-3 text-gray-600">Crown health...</td>
-                    <td className="px-4 py-3 text-gray-600">Jul 14, 2026</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {uploadedAt
+                        ? new Date(uploadedAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : "—"}
+                    </td>
                     <td className="px-4 py-3 font-medium text-accent-600">Negotiating</td>
                     <td className="px-4 py-3 font-medium text-red-500">2 found</td>
                     <td className="px-4 py-3 text-gray-800">$2,345</td>
@@ -353,9 +402,10 @@ export default function DashboardHome() {
           <p className="text-center text-2xl font-bold leading-snug text-[#003322]">
             Proceed to make your commitment fee while your document is being scanned
           </p>
+          {paymentError && <p className="mt-4 text-center text-sm text-danger">{paymentError}</p>}
           <button
             type="button"
-            onClick={() => setStage("payment")}
+            onClick={handleProceedToPayment}
             className="mx-auto mt-8 block rounded-full bg-[#0f7545] px-10 py-3.5 text-sm font-semibold text-white hover:opacity-90"
           >
             Proceed to Payment
@@ -365,11 +415,22 @@ export default function DashboardHome() {
 
       {stage === "payment" && (
         <Modal onClose={() => setStage("feePrompt")}>
-          <PaymentForm
-            lineItems={[{ label: "Commitment fee", value: "$5" }]}
-            total="$5"
-            onConfirm={handleCommitmentFeePaid}
-          />
+          {clientSecret ? (
+            <>
+              <PaymentForm
+                clientSecret={clientSecret}
+                lineItems={[{ label: "Commitment fee", value: "$5" }]}
+                total="$5"
+                onSuccess={handlePaymentConfirmed}
+              />
+              {confirmingPayment && (
+                <p className="mt-3 text-center text-sm text-gray-500">Confirming your payment…</p>
+              )}
+              {paymentError && <p className="mt-3 text-center text-sm text-danger">{paymentError}</p>}
+            </>
+          ) : (
+            <p className="py-10 text-center text-sm text-gray-400">Loading payment form…</p>
+          )}
         </Modal>
       )}
 

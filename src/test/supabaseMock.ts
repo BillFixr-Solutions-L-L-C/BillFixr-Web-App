@@ -14,6 +14,7 @@ const CHAIN_METHODS = [
   "delete",
   "insert",
   "single",
+  "maybeSingle",
   "lt",
   "lte",
   "gt",
