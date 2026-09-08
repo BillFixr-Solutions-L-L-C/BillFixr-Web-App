@@ -8,6 +8,50 @@ import {
   useStripe,
 } from "@stripe/react-stripe-js";
 import { getStripe } from "@/lib/stripeClient";
+import type { Appearance } from "@stripe/stripe-js";
+
+// Stripe's Payment Element renders inside its own cross-origin iframe, so
+// it can't inherit this app's Tailwind classes or CSS variables (a
+// `var(--font-sans)` reference would resolve against Stripe's iframe
+// document, not ours, and always fall through to its fallback stack) —
+// the Appearance API is the only way to theme it, and its native <select>
+// dropdowns (e.g. billing country) only take styling on their closed-box
+// state; the open popup list itself is OS/browser-rendered and can't be
+// restyled by any web page, Stripe's included.
+const STRIPE_APPEARANCE: Appearance = {
+  theme: "stripe",
+  variables: {
+    colorPrimary: "#0f7545",
+    colorText: "#111827",
+    colorTextSecondary: "#6b7280",
+    colorDanger: "#ef4444",
+    borderRadius: "8px",
+    fontSizeBase: "14px",
+  },
+  rules: {
+    ".Input": {
+      border: "1px solid #e5e7eb",
+      boxShadow: "none",
+      padding: "10px 12px",
+    },
+    ".Input:focus": {
+      border: "1px solid #0f7545",
+      boxShadow: "0 0 0 1px #0f7545",
+    },
+    ".Tab": {
+      border: "1px solid #e5e7eb",
+      boxShadow: "none",
+    },
+    ".Tab:hover": {
+      color: "#0f7545",
+    },
+    ".Tab--selected": {
+      border: "1px solid #0f7545",
+      backgroundColor: "#f0fdf6",
+      boxShadow: "none",
+    },
+  },
+};
 
 type LineItem = { label: string; value: string };
 
@@ -144,7 +188,7 @@ export default function PaymentForm({
       <h2 className="text-xl font-bold text-gray-900">Payment Details</h2>
       <p className="mt-1 text-sm text-gray-500">Enter your card information to continue</p>
 
-      <Elements stripe={getStripe()} options={{ clientSecret }}>
+      <Elements stripe={getStripe()} options={{ clientSecret, appearance: STRIPE_APPEARANCE }}>
         <CheckoutInner lineItems={lineItems} total={total} onSuccess={onSuccess} />
       </Elements>
     </div>
