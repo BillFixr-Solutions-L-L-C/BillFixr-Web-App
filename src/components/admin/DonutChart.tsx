@@ -1,11 +1,6 @@
-const segments = [
-  { label: "Pending", value: 10, color: "#5B7CFA" },
-  { label: "Failed", value: 3, color: "#F45B94" },
-  { label: "Success", value: 80, color: "#2DD9B0" },
-  { label: "Reviews", value: 7, color: "#F5A93F" },
-];
+export type DonutSegment = { label: string; value: number; color: string };
 
-export default function DonutChart() {
+export default function DonutChart({ segments }: { segments: DonutSegment[] }) {
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
 
@@ -42,7 +37,7 @@ export default function DonutChart() {
         {segments.map((s) => (
           <li key={s.label} className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
-            {s.value}{s.label === "Reviews" ? "" : "%"} {s.label}
+            {s.value}% {s.label}
           </li>
         ))}
       </ul>

@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
   const { data: dueFollowUps, error } = await supabase
     .from("follow_ups")
-    .select("id, cadence_day, cases(id, bills(filename), profiles(name, email))")
+    .select("id, cadence_day, cases(id, bills(filename), profiles!cases_user_id_fkey(name, email))")
     .eq("sent", false)
     .lte("scheduled_at", new Date().toISOString());
 

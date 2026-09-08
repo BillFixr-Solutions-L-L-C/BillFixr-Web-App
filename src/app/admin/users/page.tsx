@@ -14,14 +14,7 @@ export default async function AdminUsersPage() {
       <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Customers</h1>
 
       <div className="rounded-2xl bg-white p-6 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-800">User List</h2>
-          <select className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500">
-            <option>1 Month</option>
-            <option>3 Months</option>
-            <option>1 Year</option>
-          </select>
-        </div>
+        <h2 className="mb-4 text-sm font-semibold text-gray-800">User List</h2>
 
         {!customers || customers.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">No customers yet.</p>

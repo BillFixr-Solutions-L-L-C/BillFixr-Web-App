@@ -5,9 +5,15 @@ import OpsPanel from "@/components/admin/OpsPanel";
 import { WalletIcon, UploadsIcon, SupportIcon } from "@/components/admin/icons";
 import { createClient } from "@/lib/supabase/server";
 import { COMPLETED_STATUSES, PENDING_REVIEW_STATUSES } from "@/lib/caseStatus";
+import { bucketRevenueByMonth, caseStatusSegments } from "@/lib/adminAnalytics";
+
+const REVENUE_MONTHS = 7;
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
+
+  const revenueWindowStart = new Date();
+  revenueWindowStart.setMonth(revenueWindowStart.getMonth() - (REVENUE_MONTHS - 1), 1);
 
   const [
     { count: totalCases },
@@ -16,6 +22,9 @@ export default async function AdminDashboardPage() {
     { count: uploadCount },
     { count: supportTicketCount },
     { data: paidPayments },
+    { count: activeAccounts },
+    { count: pendingPayments },
+    { data: revenueHistory },
   ] = await Promise.all([
     supabase.from("cases").select("id", { count: "exact", head: true }),
     supabase.from("cases").select("id", { count: "exact", head: true }).in("status", COMPLETED_STATUSES),
@@ -23,10 +32,23 @@ export default async function AdminDashboardPage() {
     supabase.from("bills").select("id", { count: "exact", head: true }),
     supabase.from("support_tickets").select("id", { count: "exact", head: true }),
     supabase.from("payment_records").select("amount").eq("status", "paid"),
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "customer").eq("status", "active"),
+    supabase.from("payment_records").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    supabase
+      .from("payment_records")
+      .select("amount, created_at")
+      .eq("status", "paid")
+      .gte("created_at", revenueWindowStart.toISOString()),
   ]);
 
   const totalRevenue = (paidPayments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
   const openCases = (totalCases ?? 0) - (completedCases ?? 0);
+  const revenueMonths = bucketRevenueByMonth(revenueHistory ?? [], REVENUE_MONTHS);
+  const statusSegments = caseStatusSegments({
+    total: totalCases ?? 0,
+    completed: completedCases ?? 0,
+    pendingReview: pendingReviewCases ?? 0,
+  });
 
   const stats = [
     { label: "Total Cases", value: (totalCases ?? 0).toLocaleString(), tone: "text-gray-900" },
@@ -89,11 +111,11 @@ export default async function AdminDashboardPage() {
           <div className="grid min-w-0 gap-4 md:grid-cols-2">
             <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-sm font-semibold text-gray-800">System Health & Reporting</h2>
-              <RevenueChart />
+              <RevenueChart months={revenueMonths} />
             </div>
             <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-sm font-semibold text-gray-800">Today&apos;s Status Distribution</h2>
-              <DonutChart />
+              <h2 className="mb-4 text-sm font-semibold text-gray-800">Case Status Distribution</h2>
+              <DonutChart segments={statusSegments} />
             </div>
           </div>
 
@@ -102,7 +124,7 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        <OpsPanel />
+        <OpsPanel activeAccounts={activeAccounts ?? 0} pendingPayments={pendingPayments ?? 0} />
       </div>
     </div>
   );

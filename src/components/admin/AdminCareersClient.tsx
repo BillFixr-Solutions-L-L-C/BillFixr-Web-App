@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import ResumePreview from "@/components/admin/ResumePreview";
 import JobPostingsPanel from "@/components/admin/JobPostingsPanel";
 
 type Posting = {
@@ -15,47 +14,91 @@ type Posting = {
   status: "open" | "closed";
 };
 
-const applicants = [
-  { id: "#000189", customer: "Charlene Reed", email: "charlenereed@gmail.com", role: "DevOps Engineer", date: "08/07/2025", status: "New" },
-  { id: "#000186", customer: "Emeka James", email: "emekajames@gmail.com", role: "DevOps Engineer", date: "09/07/2025", status: "Reviewed" },
-  { id: "#000184", customer: "Victory Jude", email: "victoryjude@gmail.com", role: "DevOps Engineer", date: "09/07/2025", status: "New" },
-  { id: "#000181", customer: "Sam Kenny", email: "samkenny@gmail.com", role: "DevOps Engineer", date: "09/07/2025", status: "Reviewed" },
-];
-
-const statusTone: Record<string, string> = {
-  New: "text-accent-600",
-  Reviewed: "text-primary-600",
+type Applicant = {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  createdAt: string;
+  status: "received" | "reviewed";
+  cvFilename: string;
+  cvPreviewUrl: string | null;
+  cvDownloadUrl: string | null;
 };
 
-export default function AdminCareersClient({ initialPostings }: { initialPostings: Posting[] }) {
+const statusTone: Record<Applicant["status"], string> = {
+  received: "text-accent-600",
+  reviewed: "text-primary-600",
+};
+
+const statusLabel: Record<Applicant["status"], string> = {
+  received: "New",
+  reviewed: "Reviewed",
+};
+
+export default function AdminCareersClient({
+  initialPostings,
+  initialApplicants,
+}: {
+  initialPostings: Posting[];
+  initialApplicants: Applicant[];
+}) {
   const [tab, setTab] = useState<"applicants" | "postings">("applicants");
-  const [active, setActive] = useState<(typeof applicants)[number] | null>(null);
-  const [cvOpen, setCvOpen] = useState(false);
+  const [applicants, setApplicants] = useState(initialApplicants);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const active = applicants.find((a) => a.id === activeId) ?? null;
+
+  async function markReviewed() {
+    if (!active) return;
+    setSaving(true);
+    const res = await fetch(`/api/admin/job-applications/${active.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "reviewed" }),
+    });
+    setSaving(false);
+    if (!res.ok) return;
+    const id = active.id;
+    setApplicants((prev) => prev.map((a) => (a.id === id ? { ...a, status: "reviewed" } : a)));
+  }
 
   if (active) {
     return (
       <div>
         <h1 className="mb-2 font-serif text-3xl font-bold text-gray-900">Careers</h1>
-        <p className="mb-6 text-sm font-semibold text-gray-500">Applicants Upload</p>
+        <p className="mb-6 text-sm font-semibold text-gray-500">Applicants</p>
 
         <div className="rounded-2xl bg-white p-8 shadow-sm">
-          <div className="flex gap-8 text-sm">
-            <p>
-              Ticket ID: <span className="font-medium text-gray-900">{active.id}</span>
-            </p>
+          <div className="flex flex-wrap gap-8 text-sm">
             <p>
               Role: <span className="font-medium text-gray-900">{active.role}</span>
+            </p>
+            <p>
+              Applied:{" "}
+              <span className="font-medium text-gray-900">
+                {new Date(active.createdAt).toLocaleDateString("en-US", {
+                  month: "2-digit",
+                  day: "2-digit",
+                  year: "numeric",
+                })}
+              </span>
+            </p>
+            <p>
+              Status: <span className={`font-medium ${statusTone[active.status]}`}>{statusLabel[active.status]}</span>
             </p>
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <p className="text-sm text-gray-600">Customer Name</p>
-              <input readOnly defaultValue={active.customer} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+              <p className="text-sm text-gray-600">Applicant Name</p>
+              <input readOnly defaultValue={active.fullName} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
             </div>
             <div>
               <p className="text-sm text-gray-600">Phone</p>
-              <input readOnly defaultValue="+234 816907650" className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+              <input readOnly defaultValue={active.phone ?? "—"} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
             </div>
             <div>
               <p className="text-sm text-gray-600">Email</p>
@@ -64,55 +107,54 @@ export default function AdminCareersClient({ initialPostings }: { initialPosting
           </div>
 
           <div className="mt-6 rounded-xl border border-gray-100 p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <span className="text-accent-500">📄</span>
                 <div>
-                  <p className="text-sm font-medium text-gray-800">
-                    {active.customer.replace(" ", "_")}_CV.pdf
-                  </p>
-                  <p className="flex items-center gap-1 text-xs text-gray-400">
-                    205kb
-                    <span className="text-primary-600">✓ Uploaded</span>
-                  </p>
+                  <p className="text-sm font-medium text-gray-800">{active.cvFilename || "No CV on file"}</p>
+                  {active.cvPreviewUrl && <p className="text-xs text-primary-600">✓ Uploaded</p>}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setCvOpen(true)}
-                className="text-sm font-medium text-primary-600"
-              >
-                👁 View
-              </button>
+              {active.cvPreviewUrl && (
+                <div className="flex shrink-0 items-center gap-4">
+                  <a
+                    href={active.cvPreviewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-primary-600"
+                  >
+                    👁 View
+                  </a>
+                  {active.cvDownloadUrl && (
+                    <a href={active.cvDownloadUrl} className="text-sm font-medium text-primary-600">
+                      ⬇ Download
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="mt-8 flex justify-center">
+          <div className="mt-8 flex justify-center gap-4">
             <button
               type="button"
-              onClick={() => setActive(null)}
-              className="rounded-full bg-primary-600 px-8 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+              onClick={() => setActiveId(null)}
+              className="rounded-full border border-gray-200 px-8 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
             >
               Back to Applicants
             </button>
-          </div>
-        </div>
-
-        {cvOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-8 shadow-xl">
+            {active.status === "received" && (
               <button
                 type="button"
-                onClick={() => setCvOpen(false)}
-                aria-label="Close"
-                className="absolute right-6 top-6 text-gray-400 hover:text-gray-600"
+                disabled={saving}
+                onClick={markReviewed}
+                className="rounded-full bg-primary-600 px-8 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
               >
-                ✕
+                {saving ? "Saving…" : "Mark Reviewed"}
               </button>
-              <ResumePreview />
-            </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     );
   }
@@ -140,43 +182,46 @@ export default function AdminCareersClient({ initialPostings }: { initialPosting
         <JobPostingsPanel initialPostings={initialPostings} />
       ) : (
         <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-800">Applicants Upload</h2>
-            <select className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500">
-              <option>Day</option>
-            </select>
-          </div>
+          <h2 className="mb-4 text-sm font-semibold text-gray-800">Applicants</h2>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead>
-                <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  <th className="py-3 pr-4">SN</th>
-                  <th className="py-3 pr-4">Ticket ID</th>
-                  <th className="py-3 pr-4">Applicant</th>
-                  <th className="py-3 pr-4">Role</th>
-                  <th className="py-3 pr-4">Date</th>
-                  <th className="py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {applicants.map((a, i) => (
-                  <tr
-                    key={i}
-                    onClick={() => setActive(a)}
-                    className="cursor-pointer border-t border-gray-50 hover:bg-gray-50"
-                  >
-                    <td className="py-3 pr-4 text-gray-500">{String(i + 1).padStart(3, "0")}</td>
-                    <td className="py-3 pr-4 text-gray-800">{a.id}</td>
-                    <td className="py-3 pr-4 text-gray-800">{a.customer}</td>
-                    <td className="py-3 pr-4 text-gray-500">{a.role}</td>
-                    <td className="py-3 pr-4 text-gray-500">{a.date}</td>
-                    <td className={`py-3 font-medium ${statusTone[a.status]}`}>{a.status}</td>
+          {applicants.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-400">No applications submitted yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead>
+                  <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <th className="py-3 pr-4">SN</th>
+                    <th className="py-3 pr-4">Applicant</th>
+                    <th className="py-3 pr-4">Role</th>
+                    <th className="py-3 pr-4">Date</th>
+                    <th className="py-3">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {applicants.map((a, i) => (
+                    <tr
+                      key={a.id}
+                      onClick={() => setActiveId(a.id)}
+                      className="cursor-pointer border-t border-gray-50 hover:bg-gray-50"
+                    >
+                      <td className="py-3 pr-4 text-gray-500">{String(i + 1).padStart(3, "0")}</td>
+                      <td className="py-3 pr-4 text-gray-800">{a.fullName}</td>
+                      <td className="py-3 pr-4 text-gray-500">{a.role}</td>
+                      <td className="py-3 pr-4 text-gray-500">
+                        {new Date(a.createdAt).toLocaleDateString("en-US", {
+                          month: "2-digit",
+                          day: "2-digit",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td className={`py-3 font-medium ${statusTone[a.status]}`}>{statusLabel[a.status]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

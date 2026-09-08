@@ -44,8 +44,11 @@ export default function AdminSupportPage() {
 
   async function updateStatus(status: string) {
     if (!active) return;
-    const supabase = createClient();
-    await supabase.from("support_tickets").update({ status }).eq("id", active.id);
+    await fetch(`/api/admin/support-tickets/${active.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
     setTickets((prev) => prev.map((t) => (t.id === active.id ? { ...t, status } : t)));
     setActive(null);
   }
@@ -130,12 +133,7 @@ export default function AdminSupportPage() {
       <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Support</h1>
 
       <div className="rounded-2xl bg-white p-6 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-800">Customer Tickets</h2>
-          <select className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500">
-            <option>Day</option>
-          </select>
-        </div>
+        <h2 className="mb-4 text-sm font-semibold text-gray-800">Customer Tickets</h2>
 
         {loading ? (
           <p className="py-6 text-center text-sm text-gray-400">Loading…</p>

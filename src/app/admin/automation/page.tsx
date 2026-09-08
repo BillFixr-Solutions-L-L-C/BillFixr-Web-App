@@ -24,6 +24,26 @@ const logs = [
   { timestamp: "12:09:098", step: "Claim 7536 OCR Time-out" },
 ];
 
+// This page monitors the AI/OCR automation pipeline, which doesn't exist
+// yet (see BACKEND-PLAN.md Step 8) — these two charts stay explicit mock
+// data here, unlike the real admin dashboard's versions of the same
+// components, since there's no real pipeline event stream to plot.
+const mockRevenueMonths = [
+  { label: "Jul", total: 12 },
+  { label: "Aug", total: 18 },
+  { label: "Sep", total: 14 },
+  { label: "Oct", total: 22 },
+  { label: "Nov", total: 30 },
+  { label: "Dec", total: 26 },
+  { label: "Jan", total: 34 },
+];
+const mockStatusSegments = [
+  { label: "Pending", value: 10, color: "#5B7CFA" },
+  { label: "Failed", value: 3, color: "#F45B94" },
+  { label: "Success", value: 80, color: "#2DD9B0" },
+  { label: "Reviews", value: 7, color: "#F5A93F" },
+];
+
 export default function AutomationMonitoringPage() {
   const [failedTasks, setFailedTasks] = useState(initialFailedTasks);
 
@@ -60,7 +80,7 @@ export default function AutomationMonitoringPage() {
 
         <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-gray-900">System Health &amp; Reporting</h2>
-          <RevenueChart />
+          <RevenueChart months={mockRevenueMonths} />
         </div>
       </div>
 
@@ -68,7 +88,7 @@ export default function AutomationMonitoringPage() {
         <div className="min-w-0">
           <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">Today&apos;s Status Distribution</h2>
-            <DonutChart />
+            <DonutChart segments={mockStatusSegments} />
           </div>
 
           <div className="mt-6 min-w-0 rounded-2xl bg-white p-6 shadow-sm">

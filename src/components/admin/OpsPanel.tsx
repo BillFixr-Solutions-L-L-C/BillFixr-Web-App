@@ -42,7 +42,13 @@ const alerts = [
   { tone: "success" as const, title: "Workflow events: Case8812 - isjbc Character completed" },
 ];
 
-export default function OpsPanel() {
+export default function OpsPanel({
+  activeAccounts,
+  pendingPayments,
+}: {
+  activeAccounts: number;
+  pendingPayments: number;
+}) {
   const [failedTasks, setFailedTasks] = useState(2);
 
   return (
@@ -67,8 +73,8 @@ export default function OpsPanel() {
       </Card>
 
       <Card title="User Management Snapshots">
-        <Row label="Active Accounts" value="150" />
-        <Row label="Pending Payments" value="5" />
+        <Row label="Active Accounts" value={activeAccounts.toLocaleString()} />
+        <Row label="Pending Payments" value={pendingPayments.toLocaleString()} highlight={pendingPayments > 0} />
       </Card>
 
       <Card title="Automation Alerts">
