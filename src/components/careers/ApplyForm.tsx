@@ -40,17 +40,16 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
       return;
     }
 
-    const { error: insertError } = await supabase.from("job_applications").insert({
-      job_id: jobId,
-      full_name: fullName,
-      email,
-      phone,
-      cv_storage_url: path,
+    const res = await fetch("/api/careers/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jobId, fullName, email, phone, cvPath: path }),
     });
 
     setLoading(false);
-    if (insertError) {
-      setError(insertError.message);
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setError(body?.error ?? "Failed to submit application. Please try again.");
       return;
     }
 

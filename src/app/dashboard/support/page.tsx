@@ -3,6 +3,7 @@
 import { useState } from "react";
 import PageHeading from "@/components/dashboard/PageHeading";
 import { createClient } from "@/lib/supabase/client";
+import { CANNED_AGENT_REPLY } from "@/lib/support";
 
 // Shown until a real chat_messages history exists for this user's live-chat
 // ticket — Step 7 contract stub, not an AI-generated greeting.
@@ -11,10 +12,6 @@ const seedMessages = [
   { from: "user", text: "Am i making payment before i will have access to the new bill adjusted?" },
   { from: "agent", text: "Yes, after your bill has been adjusted.. you will make payment and get the adjust bill." },
 ];
-
-// Sent automatically after a real user message — a static acknowledgment,
-// not an AI reply. Real AI/agent responses are a separate, later workstream.
-const CANNED_AGENT_REPLY = "Thanks for your message — a member of our support team will follow up here shortly.";
 
 function Avatar({ className = "" }: { className?: string }) {
   return (
@@ -87,11 +84,11 @@ export default function SupportPage() {
     setDraft("");
     setMessages((m) => [...m, { from: "user", text }, { from: "agent", text: CANNED_AGENT_REPLY }]);
 
-    const supabase = createClient();
-    await supabase.from("chat_messages").insert([
-      { ticket_id: chatTicketId, from: "user", text },
-      { ticket_id: chatTicketId, from: "agent", text: CANNED_AGENT_REPLY },
-    ]);
+    await fetch("/api/dashboard/chat/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticketId: chatTicketId, text }),
+    });
   }
 
   async function handleSubmitTicket() {

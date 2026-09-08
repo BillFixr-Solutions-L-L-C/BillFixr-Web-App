@@ -260,10 +260,9 @@ pass = "env(RESEND_API_KEY)"
 admin_email = "notifications@billfixr.com"
 sender_name = "BillFixr"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+[auth.email.template.invite]
+subject = "You've been invited to BillFixr admin"
+content_path = "./supabase/templates/invite.html"
 
 [auth.email.template.confirmation]
 subject = "Welcome to BillFixr - confirm your account"

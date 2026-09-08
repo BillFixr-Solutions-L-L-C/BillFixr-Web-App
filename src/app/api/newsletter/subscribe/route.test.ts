@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock } from "@/test/supabaseMock";
 
 const serverMock = createSupabaseMock();
+const sendEmail = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => serverMock.client),
 }));
+vi.mock("@/lib/email", () => ({ sendEmail }));
 
 const { POST } = await import("./route");
 
@@ -31,7 +33,7 @@ describe("POST /api/newsletter/subscribe", () => {
     expect(res.status).toBe(400);
   });
 
-  it("subscribes a new email", async () => {
+  it("subscribes a new email and sends a confirmation", async () => {
     serverMock.queueResult("newsletter_subscribers", { data: null, error: null });
 
     const res = await POST(makeRequest({ email: "reader@example.org" }));
@@ -39,13 +41,25 @@ describe("POST /api/newsletter/subscribe", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
     expect(serverMock.from).toHaveBeenCalledWith("newsletter_subscribers");
+    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: "reader@example.org" }));
   });
 
-  it("treats an already-subscribed email as success", async () => {
+  it("treats an already-subscribed email as success without re-sending", async () => {
     serverMock.queueResult("newsletter_subscribers", {
       data: null,
       error: { message: "duplicate key value violates unique constraint", code: "23505" },
     });
+
+    const res = await POST(makeRequest({ email: "reader@example.org" }));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("still subscribes even when the confirmation email fails to send", async () => {
+    serverMock.queueResult("newsletter_subscribers", { data: null, error: null });
+    sendEmail.mockRejectedValue(new Error("resend down"));
 
     const res = await POST(makeRequest({ email: "reader@example.org" }));
 

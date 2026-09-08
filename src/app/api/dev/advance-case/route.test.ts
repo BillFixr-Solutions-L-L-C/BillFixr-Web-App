@@ -3,6 +3,7 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 
 const serverMock = createSupabaseMock();
 const adminMock = createSupabaseMock();
+const sendEmail = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => serverMock.client),
@@ -10,6 +11,7 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(() => adminMock.client),
 }));
+vi.mock("@/lib/email", () => ({ sendEmail }));
 
 const { POST } = await import("./route");
 
@@ -77,5 +79,30 @@ describe("POST /api/dev/advance-case", () => {
     const res = await POST(makeRequest({ caseId: "case-1", toStatus: "paid" }));
 
     expect(res.status).toBe(500);
+  });
+
+  it("emails the customer after a successful status change", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    serverMock.queueResult("cases", { data: { id: "case-1", user_id: USER.id }, error: null });
+    adminMock.queueResult("cases", { data: null, error: null });
+    serverMock.queueResult("profiles", { data: { name: "Jane", email: "jane@example.com" }, error: null });
+
+    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "response_received" }));
+
+    expect(res.status).toBe(200);
+    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: "jane@example.com" }));
+  });
+
+  it("still returns ok when the status-change email fails to send", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    serverMock.queueResult("cases", { data: { id: "case-1", user_id: USER.id }, error: null });
+    adminMock.queueResult("cases", { data: null, error: null });
+    serverMock.queueResult("profiles", { data: { name: "Jane", email: "jane@example.com" }, error: null });
+    sendEmail.mockRejectedValue(new Error("resend down"));
+
+    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "paid" }));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
   });
 });
