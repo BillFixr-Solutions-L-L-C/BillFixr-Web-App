@@ -1,6 +1,30 @@
 import UserManagementTable, { type AccountRow } from "@/components/admin/UserManagementTable";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { timeAgo } from "@/lib/timeAgo";
+
+type ActivityLogRow = {
+  id: string;
+  actor_name: string;
+  action: string;
+  target_name: string | null;
+  created_at: string;
+};
+
+const ACTION_VERB: Record<string, string> = {
+  login: "logged in",
+  invited_admin: "invited",
+  resent_invite: "resent an invite to",
+  promoted_to_admin: "promoted",
+  deleted_account: "deleted",
+  suspended_account: "suspended",
+  reactivated_account: "reactivated",
+};
+
+function describeActivity(row: ActivityLogRow) {
+  const verb = ACTION_VERB[row.action] ?? row.action;
+  return row.target_name ? `${row.actor_name} ${verb} ${row.target_name}` : `${row.actor_name} ${verb}`;
+}
 
 type AdminProfile = {
   id: string;
@@ -17,10 +41,15 @@ export default async function UserManagementPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: adminProfiles }, { data: roles }, { data: domainAccess }] = await Promise.all([
+  const [{ data: adminProfiles }, { data: roles }, { data: domainAccess }, { data: activityLog }] = await Promise.all([
     supabase.from("profiles").select("id, name, email, status, role_id, roles(name)").eq("role", "admin"),
     supabase.from("roles").select("id, name").order("name"),
     supabase.from("role_domain_access").select("role_id, domain, access_level"),
+    supabase
+      .from("admin_activity_log")
+      .select("id, actor_name, action, target_name, created_at")
+      .order("created_at", { ascending: false })
+      .limit(15),
   ]);
 
   const domainCounts = new Map<string, number>();
@@ -74,7 +103,18 @@ export default async function UserManagementPage() {
         <div className="flex min-w-0 flex-col gap-6">
           <div className="min-w-0 rounded-2xl bg-white p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold text-gray-900">User Activity &amp; Login Logs</h2>
-            <p className="text-xs text-gray-400">Activity logging isn&apos;t enabled yet.</p>
+            {(activityLog ?? []).length === 0 ? (
+              <p className="text-xs text-gray-400">No activity recorded yet.</p>
+            ) : (
+              <ul className="max-h-64 space-y-2.5 overflow-y-auto text-xs">
+                {(activityLog as ActivityLogRow[]).map((row) => (
+                  <li key={row.id} className="flex items-start justify-between gap-3">
+                    <span className="text-gray-700">{describeActivity(row)}</span>
+                    <span className="shrink-0 text-gray-400">{timeAgo(row.created_at)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="min-w-0 rounded-2xl bg-white p-5 shadow-sm">

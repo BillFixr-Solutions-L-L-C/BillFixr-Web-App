@@ -35,9 +35,17 @@ export default function LoginForm() {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, name")
       .eq("id", data.user.id)
       .single();
+
+    if (profile?.role === "admin") {
+      // Best-effort — feeds the "User Activity & Login Logs" panel on
+      // admin/user-management, not something that should ever block login.
+      await supabase
+        .from("admin_activity_log")
+        .insert({ actor_id: data.user.id, actor_name: profile.name, action: "login" });
+    }
 
     router.push(profile?.role === "admin" ? "/admin" : "/dashboard");
     router.refresh();

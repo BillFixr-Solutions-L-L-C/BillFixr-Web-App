@@ -53,15 +53,24 @@ describe("POST /api/admin/resend-invite", () => {
     expect(res.status).toBe(404);
   });
 
-  it("resends the invite to the target's real email", async () => {
+  it("resends the invite to the target's real email and logs the activity", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: CALLER } });
-    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
-    adminMock.queueResult("profiles", { data: { email: "pending.admin@example.com" }, error: null });
+    serverMock.queueResult("profiles", { data: { role: "admin", name: "Existing Admin" }, error: null });
+    adminMock.queueResult("profiles", { data: { name: "Pending Admin", email: "pending.admin@example.com" }, error: null });
     adminMock.inviteUserByEmail.mockResolvedValue({ data: {}, error: null });
 
     const res = await POST(makeRequest({ userId: "target-1" }));
 
     expect(res.status).toBe(200);
     expect(adminMock.inviteUserByEmail).toHaveBeenCalledWith("pending.admin@example.com");
+
+    const logInsert = serverMock.from.mock.results[1].value.insert as ReturnType<typeof vi.fn>;
+    expect(logInsert).toHaveBeenCalledWith({
+      actor_id: CALLER.id,
+      actor_name: "Existing Admin",
+      action: "resent_invite",
+      target_id: "target-1",
+      target_name: "Pending Admin",
+    });
   });
 });

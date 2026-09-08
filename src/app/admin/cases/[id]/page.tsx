@@ -4,6 +4,7 @@ import { getBillDocuments } from "@/lib/billDocuments";
 import { MOCK_ADMIN_CASE_ANALYSIS, type AdminCaseAnalysis } from "@/lib/adminCaseAnalysis";
 import { isCaseCompleted } from "@/lib/caseStatus";
 import BillDocumentCard from "@/components/admin/BillDocumentCard";
+import ManualOverridePanel from "@/components/admin/ManualOverridePanel";
 
 const RISK_COLOR: Record<string, string> = {
   High: "text-red-500",
@@ -17,7 +18,9 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
   const { data: caseRow } = await supabase
     .from("cases")
-    .select("id, status, admin_analysis, profiles(name), bills(id, filename, storage_url, status, uploaded_at)")
+    .select(
+      "id, status, admin_analysis, manual_notes, override_reason, approval_chain, manual_review_status, profiles!cases_user_id_fkey(name), bills(id, filename, storage_url, status, uploaded_at)",
+    )
     .eq("id", id)
     .single();
 
@@ -121,32 +124,13 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
         </div>
 
         <div className="flex flex-col gap-6">
-          <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-sm font-semibold text-gray-900">
-              Manual Override &amp; Administrative Controls
-            </h2>
-            <label className="text-sm text-gray-600">Manual Notes</label>
-            <textarea rows={3} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-            <label className="mt-3 block text-sm text-gray-600">Override Reason</label>
-            <input className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-            <label className="mt-3 block text-sm text-gray-600">Approval Chain</label>
-            <input className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-
-            <div className="mt-4 flex flex-col gap-2">
-              <button type="button" className="rounded-full bg-primary-600 py-2 text-sm font-semibold text-white">
-                Manual Approve
-              </button>
-              <button type="button" className="rounded-full bg-red-500 py-2 text-sm font-semibold text-white">
-                Reject
-              </button>
-              <button type="button" className="rounded-full bg-red-100 py-2 text-sm font-semibold text-red-500">
-                Deny &amp; Escalate
-              </button>
-              <button type="button" className="rounded-full bg-gray-100 py-2 text-sm font-semibold text-gray-400">
-                Re-Run AI Analysis
-              </button>
-            </div>
-          </div>
+          <ManualOverridePanel
+            caseId={id}
+            initialNotes={caseRow.manual_notes ?? ""}
+            initialOverrideReason={caseRow.override_reason ?? ""}
+            initialApprovalChain={caseRow.approval_chain ?? ""}
+            initialDecision={caseRow.manual_review_status as "approved" | "rejected" | "escalated" | null}
+          />
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold text-gray-900">Reply Drafts</h2>
@@ -154,7 +138,12 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
               {analysis.replyDrafts.map((d, i) => (
                 <div key={i} className="flex items-center justify-between gap-3 border-t border-gray-50 pt-3 first:border-0 first:pt-0">
                   <p className="text-xs text-gray-500">{d}</p>
-                  <button type="button" className="shrink-0 rounded-lg border border-gray-200 px-3 py-1 text-xs">
+                  <button
+                    type="button"
+                    disabled
+                    title="Not available yet — reply drafts aren't editable until real AI-generated content exists"
+                    className="shrink-0 cursor-not-allowed rounded-lg border border-gray-100 px-3 py-1 text-xs text-gray-300"
+                  >
                     Edit
                   </button>
                 </div>

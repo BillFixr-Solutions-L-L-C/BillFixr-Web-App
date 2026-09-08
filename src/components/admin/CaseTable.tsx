@@ -13,7 +13,7 @@ export default async function CaseTable() {
   const supabase = await createClient();
   const { data: cases } = await supabase
     .from("cases")
-    .select("id, status, created_at, profiles(name)")
+    .select("id, status, created_at, profiles!cases_user_id_fkey(name)")
     .order("created_at", { ascending: false })
     .limit(20);
 

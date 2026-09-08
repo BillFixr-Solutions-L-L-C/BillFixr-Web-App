@@ -62,9 +62,10 @@ describe("POST /api/admin/delete-account", () => {
     expect(adminMock.deleteUser).not.toHaveBeenCalled();
   });
 
-  it("deletes the auth user once authorized, for a different target account", async () => {
+  it("deletes the auth user once authorized, for a different target account, and logs the activity", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: CALLER } });
     serverMock.rpc.mockResolvedValue({ data: true, error: null });
+    serverMock.queueResult("profiles", { data: { name: "Admin Caller" }, error: null });
     adminMock.deleteUser.mockResolvedValue({ error: null });
     sendEmail.mockResolvedValue({ id: "email-1" });
 
@@ -75,6 +76,15 @@ describe("POST /api/admin/delete-account", () => {
     expect(sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({ to: "target@example.com", subject: "Your BillFixr account has been deleted" }),
     );
+
+    const logInsert = serverMock.from.mock.results[1].value.insert as ReturnType<typeof vi.fn>;
+    expect(logInsert).toHaveBeenCalledWith({
+      actor_id: CALLER.id,
+      actor_name: "Admin Caller",
+      action: "deleted_account",
+      target_id: "target-1",
+      target_name: "Target User",
+    });
   });
 
   it("returns 500 and does not hide an Admin API failure", async () => {

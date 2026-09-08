@@ -28,6 +28,10 @@ export async function deleteAccountCascade(admin: SupabaseClient, userId: string
   await admin.from("support_tickets").delete().eq("user_id", userId);
   await admin.from("notifications").delete().eq("user_id", userId);
   await admin.from("testimonials").delete().eq("user_id", userId);
+  // app_settings.updated_by is just an audit-trail pointer, not something
+  // that should block deleting an admin who ever changed a setting — null
+  // it out rather than leaving a dangling reference that fails deleteUser().
+  await admin.from("app_settings").update({ updated_by: null }).eq("updated_by", userId);
   if (caseIds.length) {
     await admin.from("cases").delete().eq("user_id", userId);
   }
@@ -49,7 +53,7 @@ export async function deleteAccountCascade(admin: SupabaseClient, userId: string
     }
   }
 
-  return result;
+  return { ...result, profileName: profile?.name ?? null };
 }
 
 function deletionEmailHtml({ name }: { name: string }) {

@@ -17,13 +17,13 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const { data: caller } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const { data: caller } = await supabase.from("profiles").select("role, name").eq("id", user.id).single();
   if (caller?.role !== "admin") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   const admin = createAdminClient();
-  const { data: target } = await admin.from("profiles").select("email").eq("id", userId).single();
+  const { data: target } = await admin.from("profiles").select("name, email").eq("id", userId).single();
   if (!target) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
@@ -32,6 +32,14 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await supabase.from("admin_activity_log").insert({
+    actor_id: user.id,
+    actor_name: caller.name,
+    action: "resent_invite",
+    target_id: userId,
+    target_name: target.name,
+  });
 
   return NextResponse.json({ ok: true });
 }

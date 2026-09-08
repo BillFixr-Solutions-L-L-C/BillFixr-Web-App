@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { timeAgo } from "@/lib/timeAgo";
 
 type Notification = {
   id: string;
@@ -10,16 +11,6 @@ type Notification = {
   read: boolean;
   created_at: string;
 };
-
-function timeAgo(iso: string) {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
 
 export default function NotificationBell({ initialNotifications }: { initialNotifications: Notification[] }) {
   const [notifications, setNotifications] = useState(initialNotifications);

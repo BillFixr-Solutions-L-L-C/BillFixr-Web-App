@@ -47,9 +47,9 @@ describe("POST /api/admin/invite-admin", () => {
     expect(adminMock.inviteUserByEmail).not.toHaveBeenCalled();
   });
 
-  it("invites the user and promotes their profile to admin with the chosen role", async () => {
+  it("invites the user, promotes their profile to admin with the chosen role, and logs the activity", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: CALLER } });
-    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    serverMock.queueResult("profiles", { data: { role: "admin", name: "Existing Admin" }, error: null });
     adminMock.inviteUserByEmail.mockResolvedValue({ data: { user: { id: "new-user-1" } }, error: null });
     adminMock.queueResult("profiles", { data: null, error: null });
 
@@ -57,6 +57,15 @@ describe("POST /api/admin/invite-admin", () => {
 
     expect(res.status).toBe(200);
     expect(adminMock.inviteUserByEmail).toHaveBeenCalledWith(VALID_BODY.email, { data: { name: VALID_BODY.name } });
+
+    const logInsert = serverMock.from.mock.results[1].value.insert as ReturnType<typeof vi.fn>;
+    expect(logInsert).toHaveBeenCalledWith({
+      actor_id: CALLER.id,
+      actor_name: "Existing Admin",
+      action: "invited_admin",
+      target_id: "new-user-1",
+      target_name: VALID_BODY.name,
+    });
   });
 
   it("returns 500 when the invite itself fails, without touching profiles", async () => {

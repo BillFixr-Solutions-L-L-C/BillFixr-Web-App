@@ -75,9 +75,9 @@ describe("POST /api/admin/promote-to-admin", () => {
     expect(res.status).toBe(404);
   });
 
-  it("promotes the account and emails the person their new role", async () => {
+  it("promotes the account, emails the person their new role, and logs the activity", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: CALLER } });
-    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    serverMock.queueResult("profiles", { data: { role: "admin", name: "Existing Admin" }, error: null });
     adminMock.queueResult("profiles", { data: { name: "Jane", email: "jane@example.com", role: "customer" }, error: null });
     adminMock.queueResult("roles", { data: { name: "Support Admin" }, error: null });
     adminMock.queueResult("profiles", { data: null, error: null }); // the role-grant update
@@ -89,6 +89,15 @@ describe("POST /api/admin/promote-to-admin", () => {
     expect(sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({ to: "jane@example.com", subject: "Welcome to your new role: Support Admin" }),
     );
+
+    const logInsert = serverMock.from.mock.results[1].value.insert as ReturnType<typeof vi.fn>;
+    expect(logInsert).toHaveBeenCalledWith({
+      actor_id: CALLER.id,
+      actor_name: "Existing Admin",
+      action: "promoted_to_admin",
+      target_id: VALID_BODY.userId,
+      target_name: "Jane",
+    });
   });
 
   it("still succeeds even if the notification email fails to send", async () => {

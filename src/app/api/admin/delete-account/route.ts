@@ -37,10 +37,20 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
-  const { error } = await deleteAccountCascade(admin, userId);
+  const { data: caller } = await supabase.from("profiles").select("name").eq("id", user.id).single();
+
+  const { error, profileName } = await deleteAccountCascade(admin, userId);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await supabase.from("admin_activity_log").insert({
+    actor_id: user.id,
+    actor_name: caller?.name ?? "Unknown",
+    action: "deleted_account",
+    target_id: userId,
+    target_name: profileName ?? "Unknown",
+  });
 
   return NextResponse.json({ ok: true });
 }

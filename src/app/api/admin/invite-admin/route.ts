@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const { data: caller } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const { data: caller } = await supabase.from("profiles").select("role, name").eq("id", user.id).single();
   if (caller?.role !== "admin") {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
@@ -41,6 +41,14 @@ export async function POST(request: Request) {
   if (profileError) {
     return NextResponse.json({ error: profileError.message }, { status: 500 });
   }
+
+  await supabase.from("admin_activity_log").insert({
+    actor_id: user.id,
+    actor_name: caller.name,
+    action: "invited_admin",
+    target_id: invited.user.id,
+    target_name: name,
+  });
 
   return NextResponse.json({ ok: true });
 }
