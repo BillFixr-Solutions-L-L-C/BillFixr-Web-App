@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = safeRedirectPath(searchParams.get("next"), origin);
 
   if (tokenHash && type) {
     const supabase = await createClient();
@@ -36,6 +36,27 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.redirect(`${origin}/login?error=invalid_or_expired_link`);
+}
+
+// `next` comes straight from the query string — a naive `${origin}${next}`
+// concatenation is an open redirect (e.g. next=@evil.com produces
+// https://billfixr.com@evil.com, which browsers parse as a redirect to
+// evil.com with billfixr.com as discarded userinfo). Resolving through the
+// URL parser and checking the result actually stays on this origin closes
+// that off — and every other bypass shape (//evil.com, an absolute URL,
+// backslash tricks) the same way, since it's real URL resolution rather
+// than a hand-rolled string check.
+function safeRedirectPath(next: string | null, origin: string): string {
+  if (!next) return "/dashboard";
+  try {
+    const resolved = new URL(next, origin);
+    if (resolved.origin === origin) {
+      return `${resolved.pathname}${resolved.search}${resolved.hash}`;
+    }
+  } catch {
+    // fall through to the default below
+  }
+  return "/dashboard";
 }
 
 // If the device that started signup registered a pairing (see

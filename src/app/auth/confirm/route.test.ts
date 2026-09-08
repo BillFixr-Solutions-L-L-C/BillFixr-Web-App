@@ -106,4 +106,31 @@ describe("GET /auth/confirm", () => {
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toBe("http://localhost/welcome");
   });
+
+  describe("open-redirect protection on next", () => {
+    it("falls back to /dashboard for a userinfo-trick next (@evil.com)", async () => {
+      serverMock.verifyOtp.mockResolvedValue({ error: null });
+      const res = await GET(makeRequest("?token_hash=abc123&type=signup&next=%40evil.com%2Fphish"));
+      const location = res.headers.get("location")!;
+      expect(new URL(location).origin).toBe("http://localhost");
+    });
+
+    it("falls back to /dashboard for a protocol-relative next (//evil.com)", async () => {
+      serverMock.verifyOtp.mockResolvedValue({ error: null });
+      const res = await GET(makeRequest("?token_hash=abc123&type=signup&next=%2F%2Fevil.com"));
+      expect(res.headers.get("location")).toBe("http://localhost/dashboard");
+    });
+
+    it("falls back to /dashboard for an absolute next pointing off-origin", async () => {
+      serverMock.verifyOtp.mockResolvedValue({ error: null });
+      const res = await GET(makeRequest("?token_hash=abc123&type=signup&next=https%3A%2F%2Fevil.com%2Fphish"));
+      expect(res.headers.get("location")).toBe("http://localhost/dashboard");
+    });
+
+    it("still allows a real relative path with query/hash through unchanged", async () => {
+      serverMock.verifyOtp.mockResolvedValue({ error: null });
+      const res = await GET(makeRequest("?token_hash=abc123&type=recovery&next=%2Fdashboard%2Fsettings%3Fx%3D1%23y"));
+      expect(res.headers.get("location")).toBe("http://localhost/dashboard/settings?x=1#y");
+    });
+  });
 });
