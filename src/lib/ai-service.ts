@@ -1,4 +1,4 @@
-import type { AiHealthResponse, AiServiceConfig } from "@/types/ai";
+import type { AiCaseProcessingResponse, AiHealthResponse, AiServiceConfig } from "@/types/ai";
 
 function trimTrailingSlash(value: string): string {
   return value.endsWith("/") ? value.slice(0, -1) : value;
@@ -44,4 +44,30 @@ export async function getAiHealth(): Promise<AiHealthResponse> {
   }
 
   return (await response.json()) as AiHealthResponse;
+}
+
+// POST /v1/cases/process — single call that stores the document(s), runs
+// extraction, and returns case-level audit/savings/draft output in one
+// response. `caseId` is passed straight through as the AI service's own
+// case_id (both sides use the same uuid — nothing to reconcile).
+export async function processCase(
+  caseId: string,
+  file: { filename: string; bytes: Blob },
+): Promise<AiCaseProcessingResponse> {
+  const body = new FormData();
+  body.append("case_id", caseId);
+  body.append("use_ai", "true");
+  body.append("files", file.bytes, file.filename);
+
+  const response = await aiServiceFetch("/v1/cases/process", {
+    method: "POST",
+    body,
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`AI service case processing failed with status ${response.status}: ${detail}`);
+  }
+
+  return (await response.json()) as AiCaseProcessingResponse;
 }

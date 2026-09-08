@@ -49,6 +49,7 @@ export default function DashboardHome() {
   const [intentId, setIntentId] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const fileName = pendingFile?.name ?? "";
 
@@ -157,8 +158,23 @@ export default function DashboardHome() {
   }
 
   async function handleScanComplete() {
+    if (!caseId) {
+      setStage("negotiating");
+      return;
+    }
+
+    setAnalyzing(true);
+    const analysisRes = await fetch("/api/dev/process-with-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId }),
+    });
+    setAnalyzing(false);
+    if (!analysisRes.ok) {
+      console.error("AI analysis failed:", await analysisRes.text());
+    }
+
     setStage("negotiating");
-    if (!caseId) return;
 
     const res = await fetch("/api/dev/advance-case", {
       method: "POST",
@@ -198,9 +214,10 @@ export default function DashboardHome() {
             <button
               type="button"
               onClick={handleScanComplete}
-              className="mt-4 text-xs text-gray-300 hover:text-gray-400"
+              disabled={analyzing}
+              className="mt-4 text-xs text-gray-300 hover:text-gray-400 disabled:opacity-50"
             >
-              (dev) simulate scan complete
+              {analyzing ? "(dev) analyzing with AI…" : "(dev) run AI analysis"}
             </button>
           </FlowCard>
         ) : (

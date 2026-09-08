@@ -64,6 +64,8 @@ export function createSupabaseMock() {
   const verifyOtp = vi.fn();
   const getUserById = vi.fn();
   const generateLink = vi.fn();
+  const storageDownload = vi.fn();
+  const storageCreateSignedUrl = vi.fn();
 
   const client = {
     auth: {
@@ -73,6 +75,12 @@ export function createSupabaseMock() {
     },
     from,
     rpc,
+    storage: {
+      from: vi.fn(() => ({
+        download: storageDownload,
+        createSignedUrl: storageCreateSignedUrl,
+      })),
+    },
   };
 
   return {
@@ -85,6 +93,8 @@ export function createSupabaseMock() {
     verifyOtp,
     getUserById,
     generateLink,
+    storageDownload,
+    storageCreateSignedUrl,
     from,
   };
 }
