@@ -173,26 +173,12 @@ async function createOrReuseIntent({
     }
   }
 
-  // Restricted to a card-only Payment Method Configuration (Dashboard/API
-  // concept, not the static `payment_method_types` array) — the whole
-  // flow's UI (branded card mockup, "Pay with Card" copy) is built around
-  // a card-only experience, and `automatic_payment_methods` alone pulls in
-  // whatever else is enabled on the Stripe account (bank, Cash App Pay,
-  // Link, ...), which the Payment Element then collapses into an overflow
-  // tab once they don't all fit. Deliberately NOT using the static
-  // `payment_method_types: ["card"]` array here — verified directly (real
-  // browser, real Stripe test-mode iframe, 40s clean wait, reproduced
-  // twice) that combination silently breaks the Payment Element's layout
-  // entirely, while this configuration-based restriction renders
-  // correctly through the same `automatic_payment_methods` code path
-  // already proven to work.
   const intent: Stripe.PaymentIntent = await stripe.paymentIntents.create(
     {
       amount: amountCents,
       currency: "usd",
       metadata,
       automatic_payment_methods: { enabled: true },
-      payment_method_configuration: process.env.STRIPE_PAYMENT_METHOD_CONFIGURATION_ID,
     },
     { idempotencyKey },
   );
