@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import WelcomeBanner from "@/components/dashboard/WelcomeBanner";
 import DashboardStats from "@/components/dashboard/DashboardStats";
@@ -49,7 +49,7 @@ export default function DashboardHome() {
   const [intentId, setIntentId] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const fileName = pendingFile?.name ?? "";
 
@@ -157,33 +157,55 @@ export default function DashboardHome() {
     setStage("scanning");
   }
 
-  async function handleScanComplete() {
-    if (!caseId) {
-      setStage("negotiating");
-      return;
-    }
+  // Runs automatically as soon as the scanning stage is reached — this
+  // used to be gated behind a manually-clicked "(dev) run AI analysis"
+  // button, which meant a real user had no actual way to trigger it (the
+  // scan just sat at a static "40%" forever). The AI service call itself
+  // can genuinely take a while, so this shows an honest in-progress state
+  // rather than a fake percentage, and a real error/retry state if it
+  // fails instead of silently advancing anyway. `scanStartedRef` (not
+  // state) guards against double-firing so the effect body never calls
+  // setState synchronously — every setState here happens after the first
+  // `await`, i.e. genuinely async from React's perspective.
+  const scanStartedRef = useRef<string | null>(null);
 
-    setAnalyzing(true);
+  async function runScan(forCaseId: string) {
     const analysisRes = await fetch("/api/dev/process-with-ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caseId }),
+      body: JSON.stringify({ caseId: forCaseId }),
     });
-    setAnalyzing(false);
     if (!analysisRes.ok) {
-      console.error("AI analysis failed:", await analysisRes.text());
+      const body = await analysisRes.json().catch(() => ({}));
+      setScanError(body?.error ?? "We couldn't analyze your bill. Please try again.");
+      scanStartedRef.current = null;
+      return;
+    }
+
+    const advanceRes = await fetch("/api/dev/advance-case", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId: forCaseId, toStatus: "awaiting_response" }),
+    });
+    if (!advanceRes.ok) {
+      console.error("Failed to advance case to awaiting_response:", await advanceRes.text());
     }
 
     setStage("negotiating");
+  }
 
-    const res = await fetch("/api/dev/advance-case", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caseId, toStatus: "awaiting_response" }),
-    });
-    if (!res.ok) {
-      console.error("Failed to advance case to awaiting_response:", await res.text());
+  useEffect(() => {
+    if (stage === "scanning" && caseId && scanStartedRef.current !== caseId) {
+      scanStartedRef.current = caseId;
+      runScan(caseId);
     }
+  }, [stage, caseId]);
+
+  function handleRetryScan() {
+    if (!caseId) return;
+    setScanError(null);
+    scanStartedRef.current = caseId;
+    runScan(caseId);
   }
 
   const hasFile = stage === "scanning" || stage === "negotiating";
@@ -205,20 +227,25 @@ export default function DashboardHome() {
             </p>
             <div className="relative mt-6 flex h-28 w-28 items-center justify-center rounded-full border-[8px] border-[#d9d9d9]">
               <div
-                className="absolute inset-0 rounded-full border-[8px] border-transparent border-t-[#0f7545] border-r-[#0f7545]"
-                style={{ transform: "rotate(-45deg)" }}
+                className={`absolute inset-0 rounded-full border-[8px] border-transparent border-t-[#0f7545] border-r-[#0f7545] ${
+                  scanError ? "" : "animate-spin"
+                }`}
               />
-              <span className="text-xl font-bold text-[#003322]">40%</span>
             </div>
-            <p className="mt-5 text-base text-[#a6b1bb]">Please wait...</p>
-            <button
-              type="button"
-              onClick={handleScanComplete}
-              disabled={analyzing}
-              className="mt-4 text-xs text-gray-300 hover:text-gray-400 disabled:opacity-50"
-            >
-              {analyzing ? "(dev) analyzing with AI…" : "(dev) run AI analysis"}
-            </button>
+            {scanError ? (
+              <>
+                <p className="mt-5 max-w-sm text-base text-danger">{scanError}</p>
+                <button
+                  type="button"
+                  onClick={handleRetryScan}
+                  className="mt-4 rounded-full bg-[#0f7545] px-8 py-3 text-base font-semibold text-white hover:opacity-90"
+                >
+                  Try again
+                </button>
+              </>
+            ) : (
+              <p className="mt-5 text-base text-[#a6b1bb]">Analyzing your bill — this can take a moment...</p>
+            )}
           </FlowCard>
         ) : (
           <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm">
