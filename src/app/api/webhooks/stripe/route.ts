@@ -67,7 +67,29 @@ async function handleSucceeded(admin: ReturnType<typeof createAdminClient>, inte
   }
   if (record.status === "paid") return;
 
-  await admin.from("payment_records").update({ status: "paid" }).eq("id", record.id);
+  // Real card brand/last-4 for the admin payments table — not from any
+  // field already on the webhook payload, since `payment_method` there is
+  // just an id string, not the expanded object. A no-op for the sub-$0.50
+  // success-fee case (Step 7), which is marked paid with no real charge
+  // and thus no `payment_method` at all.
+  let cardBrand: string | null = null;
+  let cardLast4: string | null = null;
+  if (typeof intent.payment_method === "string") {
+    try {
+      const paymentMethod = await stripe.paymentMethods.retrieve(intent.payment_method);
+      cardBrand = paymentMethod.card?.brand ?? null;
+      cardLast4 = paymentMethod.card?.last4 ?? null;
+    } catch (err) {
+      // Best-effort — the payment itself already succeeded; a failure to
+      // fetch its display details shouldn't block marking it paid.
+      console.error("Failed to retrieve payment method details for", intent.id, err);
+    }
+  }
+
+  await admin
+    .from("payment_records")
+    .update({ status: "paid", card_brand: cardBrand, card_last4: cardLast4 })
+    .eq("id", record.id);
 
   if (record.type === "commitment_fee" && record.bill_id) {
     // Defense in depth on top of the event-dedupe table above: never

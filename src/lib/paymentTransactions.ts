@@ -13,7 +13,12 @@ export type PaymentRow = {
   date: string;
   time: string;
   status: string;
+  cardLabel: string | null;
 };
+
+function capitalizeBrand(brand: string): string {
+  return brand.charAt(0).toUpperCase() + brand.slice(1);
+}
 
 // Real payment_records rows, mapped into the shape PaymentsTable.tsx
 // already expects (built for the mock paymentsData.ts, now real) —
@@ -25,7 +30,7 @@ export async function getPaymentRows(
 ): Promise<PaymentRow[]> {
   const { data } = await supabase
     .from("payment_records")
-    .select("id, amount, status, created_at, profiles!payment_records_user_id_fkey(name)")
+    .select("id, amount, status, created_at, card_brand, card_last4, profiles!payment_records_user_id_fkey(name)")
     .eq("type", type)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -35,6 +40,8 @@ export async function getPaymentRows(
     amount: number;
     status: string;
     created_at: string;
+    card_brand: string | null;
+    card_last4: string | null;
     profiles: { name: string } | null;
   };
 
@@ -47,6 +54,7 @@ export async function getPaymentRows(
       date: created.toLocaleDateString("en-US", { month: "long", day: "numeric" }),
       time: created.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
       status: STATUS_LABEL[row.status] ?? row.status,
+      cardLabel: row.card_brand && row.card_last4 ? `${capitalizeBrand(row.card_brand)} •••• ${row.card_last4}` : null,
     };
   });
 }

@@ -9,6 +9,7 @@ type Row = {
   date: string;
   time: string;
   status: string;
+  cardLabel: string | null;
 };
 
 export default function PaymentsTable({ rows }: { rows: Row[] }) {
@@ -42,7 +43,7 @@ export default function PaymentsTable({ rows }: { rows: Row[] }) {
               <td className="py-3 pr-4 text-gray-800">{row.amount}</td>
               <td className="py-3 pr-4 text-gray-500">{row.date}</td>
               <td className="py-3 pr-4 text-gray-500">{row.time}</td>
-              <td className="py-3 pr-4 text-gray-500">Card</td>
+              <td className="py-3 pr-4 text-gray-500">{row.cardLabel ? "Card" : "—"}</td>
               <td
                 className={`py-3 font-medium ${
                   row.status === "Successful" ? "text-primary-600" : "text-accent-600"
@@ -81,9 +82,7 @@ export default function PaymentsTable({ rows }: { rows: Row[] }) {
               </div>
               <div>
                 <p className="font-semibold text-gray-900">Payment Method</p>
-                <p className="mt-1 text-sm text-gray-500">
-                  Card •••• {selected.id.replace("#", "").slice(-4)}
-                </p>
+                <p className="mt-1 text-sm text-gray-500">{selected.cardLabel ?? "Not available"}</p>
               </div>
               <div>
                 <p className="font-semibold text-gray-900">Payment Date</p>
