@@ -1,4 +1,5 @@
 import type { BillDocument } from "@/lib/billDocuments";
+import DeleteBillButton from "@/components/admin/DeleteBillButton";
 
 function FileIcon() {
   return (
@@ -13,19 +14,27 @@ function FileIcon() {
   );
 }
 
-export default function BillDocumentCard({ doc, label }: { doc: BillDocument; label: string }) {
+export default function BillDocumentCard({
+  doc,
+  label,
+  canDelete = false,
+}: {
+  doc: BillDocument;
+  label: string;
+  canDelete?: boolean;
+}) {
   return (
     <div className="rounded-xl border border-gray-100 bg-white p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <p className="truncate text-xs font-semibold uppercase tracking-wide text-primary-700">{label}</p>
-        {doc.downloadUrl && (
-          <a
-            href={doc.downloadUrl}
-            className="flex shrink-0 items-center gap-1 text-xs text-primary-600 hover:text-primary-700"
-          >
-            ⬇ Download
-          </a>
-        )}
+        <div className="flex shrink-0 items-center gap-3">
+          {doc.downloadUrl && (
+            <a href={doc.downloadUrl} className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700">
+              ⬇ Download
+            </a>
+          )}
+          <DeleteBillButton billId={doc.id} filename={doc.filename} canDelete={canDelete} />
+        </div>
       </div>
 
       {doc.previewUrl ? (

@@ -26,7 +26,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, name, email, status, created_at")
+    .select("id, name, email, status, created_at, avatar_url")
     .eq("id", id)
     .eq("role", "customer")
     .single();
@@ -49,6 +49,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     .eq("user_id", id);
 
   const { data: canDelete } = await supabase.rpc("can_delete_accounts");
+  const { data: canDeleteBills } = await supabase.rpc("can_delete_bills");
   const { data: roles } = await supabase.from("roles").select("id, name").order("name");
 
   return (
@@ -56,7 +57,12 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Customers</h1>
 
       <div className="flex flex-wrap items-center gap-6">
-        <span className="h-20 w-20 shrink-0 rounded-full bg-primary-100" />
+        {profile.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={profile.avatar_url} alt="" className="h-20 w-20 shrink-0 rounded-full object-cover" />
+        ) : (
+          <span className="h-20 w-20 shrink-0 rounded-full bg-primary-100" />
+        )}
         <div className="flex flex-wrap gap-6 text-sm text-gray-500 sm:gap-10">
           <div>
             <p>Date Joined:</p>
@@ -92,7 +98,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {bills.map((bill, i) => (
-              <BillDocumentCard key={bill.id} doc={bill} label={`Bill ${i + 1}`} />
+              <BillDocumentCard key={bill.id} doc={bill} label={`Bill ${i + 1}`} canDelete={Boolean(canDeleteBills)} />
             ))}
           </div>
         )}

@@ -67,14 +67,14 @@ export async function proxy(request: NextRequest) {
   if (user && isDashboardRoute && !DASHBOARD_COMPLETION_EXEMPT_PATHS.some((p) => pathname.startsWith(p))) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("address, city, postal_code, country, profile_completion_exempt")
+      .select("address, city, postal_code, country, avatar_url, profile_completion_exempt")
       .eq("id", user.id)
       .single();
 
     const needsCompletion =
       profile &&
       !profile.profile_completion_exempt &&
-      (!profile.address || !profile.city || !profile.postal_code || !profile.country);
+      (!profile.address || !profile.city || !profile.postal_code || !profile.country || !profile.avatar_url);
 
     if (needsCompletion) {
       return NextResponse.redirect(new URL("/dashboard/settings?complete_profile=1", request.url));

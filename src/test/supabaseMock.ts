@@ -66,6 +66,7 @@ export function createSupabaseMock() {
   const generateLink = vi.fn();
   const storageDownload = vi.fn();
   const storageCreateSignedUrl = vi.fn();
+  const storageRemove = vi.fn();
 
   const client = {
     auth: {
@@ -79,6 +80,7 @@ export function createSupabaseMock() {
       from: vi.fn(() => ({
         download: storageDownload,
         createSignedUrl: storageCreateSignedUrl,
+        remove: storageRemove,
       })),
     },
   };
@@ -95,6 +97,7 @@ export function createSupabaseMock() {
     generateLink,
     storageDownload,
     storageCreateSignedUrl,
+    storageRemove,
     from,
   };
 }

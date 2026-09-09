@@ -31,7 +31,7 @@ export default function SettingsClient({
 
       {showCompletionNotice && (
         <div className="mb-6 rounded-xl border border-accent-300 bg-accent-300/10 px-4 py-3 text-sm text-accent-600">
-          Please complete your profile (name and mailing address) to continue using the dashboard.
+          Please complete your profile (name, mailing address, and a profile photo) to continue using the dashboard.
         </div>
       )}
 

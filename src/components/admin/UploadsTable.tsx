@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { BillDocument } from "@/lib/billDocuments";
+import DeleteBillButton from "@/components/admin/DeleteBillButton";
 
 export type UploadRow = {
   id: string;
@@ -13,7 +14,13 @@ export type UploadRow = {
   doc: BillDocument | null;
 };
 
-export default function UploadsTable({ uploads }: { uploads: UploadRow[] }) {
+export default function UploadsTable({
+  uploads,
+  canDeleteBills = false,
+}: {
+  uploads: UploadRow[];
+  canDeleteBills?: boolean;
+}) {
   const [selected, setSelected] = useState<UploadRow | null>(null);
 
   return (
@@ -118,14 +125,22 @@ export default function UploadsTable({ uploads }: { uploads: UploadRow[] }) {
                 <p className="text-sm text-gray-400">File</p>
                 <p className="mt-1 text-sm font-medium text-gray-800">{selected.filename}</p>
               </div>
-              {selected.doc?.downloadUrl && (
-                <a
-                  href={selected.doc.downloadUrl}
-                  className="flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"
-                >
-                  ⬇ Download
-                </a>
-              )}
+              <div className="flex items-center gap-4">
+                {selected.doc?.downloadUrl && (
+                  <a
+                    href={selected.doc.downloadUrl}
+                    className="flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"
+                  >
+                    ⬇ Download
+                  </a>
+                )}
+                <DeleteBillButton
+                  billId={selected.id}
+                  filename={selected.filename}
+                  canDelete={canDeleteBills}
+                  onDeleted={() => setSelected(null)}
+                />
+              </div>
             </div>
 
             <div className="mt-4 max-h-64 max-w-[220px] overflow-hidden rounded-xl">

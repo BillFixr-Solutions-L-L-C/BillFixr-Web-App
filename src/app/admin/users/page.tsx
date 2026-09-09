@@ -5,7 +5,7 @@ export default async function AdminUsersPage() {
   const supabase = await createClient();
   const { data: customers } = await supabase
     .from("profiles")
-    .select("id, name, email, status, created_at")
+    .select("id, name, email, status, created_at, avatar_url")
     .eq("role", "customer")
     .order("created_at", { ascending: false });
 
@@ -39,7 +39,12 @@ export default async function AdminUsersPage() {
                         href={`/admin/users/${c.id}`}
                         className="flex items-center gap-2 text-gray-800 hover:text-primary-700"
                       >
-                        <span className="h-7 w-7 shrink-0 rounded-full bg-primary-100" />
+                        {c.avatar_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={c.avatar_url} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />
+                        ) : (
+                          <span className="h-7 w-7 shrink-0 rounded-full bg-primary-100" />
+                        )}
                         {c.name}
                       </Link>
                     </td>

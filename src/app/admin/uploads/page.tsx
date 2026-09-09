@@ -33,10 +33,12 @@ export default async function AdminUploadsPage() {
     doc: documentById.get(b.id) ?? null,
   }));
 
+  const { data: canDeleteBills } = await supabase.rpc("can_delete_bills");
+
   return (
     <div>
       <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Uploads</h1>
-      <UploadsTable uploads={uploads} />
+      <UploadsTable uploads={uploads} canDeleteBills={Boolean(canDeleteBills)} />
     </div>
   );
 }
