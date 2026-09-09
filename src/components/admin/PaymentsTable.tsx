@@ -1,18 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import IssueRefundControl from "@/components/admin/IssueRefundControl";
 
 type Row = {
   id: string;
+  recordId: string;
   customer: string;
   amount: string;
   date: string;
   time: string;
   status: string;
   cardLabel: string | null;
+  refundableAmount: number;
+  refundLabel: string | null;
+  disputeLabel: string | null;
+  canRefund: boolean;
 };
 
-export default function PaymentsTable({ rows }: { rows: Row[] }) {
+export default function PaymentsTable({ rows, canIssueRefunds = false }: { rows: Row[]; canIssueRefunds?: boolean }) {
   const [selected, setSelected] = useState<Row | null>(null);
 
   return (
@@ -44,12 +50,16 @@ export default function PaymentsTable({ rows }: { rows: Row[] }) {
               <td className="py-3 pr-4 text-gray-500">{row.date}</td>
               <td className="py-3 pr-4 text-gray-500">{row.time}</td>
               <td className="py-3 pr-4 text-gray-500">{row.cardLabel ? "Card" : "—"}</td>
-              <td
-                className={`py-3 font-medium ${
-                  row.status === "Successful" ? "text-primary-600" : "text-accent-600"
-                }`}
-              >
-                {row.status}
+              <td className="py-3">
+                <span
+                  className={`font-medium ${
+                    row.status === "Successful" ? "text-primary-600" : "text-accent-600"
+                  }`}
+                >
+                  {row.status}
+                </span>
+                {row.refundLabel && <span className="ml-2 text-xs font-medium text-gray-400">{row.refundLabel}</span>}
+                {row.disputeLabel && <span className="ml-2 text-xs font-medium text-red-500">Disputed: {row.disputeLabel}</span>}
               </td>
             </tr>
           ))}
@@ -100,7 +110,25 @@ export default function PaymentsTable({ rows }: { rows: Row[] }) {
                   {selected.amount} · {selected.status}
                 </p>
               </div>
+              {(selected.refundLabel || selected.disputeLabel) && (
+                <div>
+                  <p className="font-semibold text-gray-900">Refund / Dispute</p>
+                  {selected.refundLabel && <p className="mt-1 text-sm text-gray-500">{selected.refundLabel}</p>}
+                  {selected.disputeLabel && <p className="text-sm text-red-500">Disputed: {selected.disputeLabel}</p>}
+                </div>
+              )}
             </div>
+
+            {canIssueRefunds && selected.canRefund && (
+              <div className="mt-6 border-t border-gray-100 pt-4">
+                <p className="mb-2 font-semibold text-gray-900">Issue Refund</p>
+                <IssueRefundControl
+                  paymentRecordId={selected.recordId}
+                  refundableAmount={selected.refundableAmount}
+                  canRefund={selected.canRefund}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

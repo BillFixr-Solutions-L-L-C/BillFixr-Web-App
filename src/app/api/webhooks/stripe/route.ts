@@ -37,8 +37,16 @@ export async function POST(request: Request) {
       await handleSucceeded(admin, event.data.object as Stripe.PaymentIntent);
     } else if (event.type === "payment_intent.payment_failed") {
       await handleFailed(admin, event.data.object as Stripe.PaymentIntent);
+    } else if (event.type === "charge.refunded") {
+      await handleRefunded(admin, event.data.object as Stripe.Charge);
+    } else if (
+      event.type === "charge.dispute.created" ||
+      event.type === "charge.dispute.updated" ||
+      event.type === "charge.dispute.closed"
+    ) {
+      await handleDispute(admin, event.data.object as Stripe.Dispute);
     }
-    // Every other event type is a deliberate no-op — only react to the two
+    // Every other event type is a deliberate no-op — only react to the
     // above; never error on an unrecognized type, or Stripe retries it
     // forever.
   } catch (err) {
@@ -118,4 +126,58 @@ async function handleSucceeded(admin: ReturnType<typeof createAdminClient>, inte
 
 async function handleFailed(admin: ReturnType<typeof createAdminClient>, intent: Stripe.PaymentIntent) {
   await admin.from("payment_records").update({ status: "failed" }).eq("processor_ref", intent.id).neq("status", "paid");
+}
+
+// Source of truth for how much of a payment has actually been refunded —
+// never the admin route that triggers the refund (see /api/admin/payments/
+// [id]/refund), same "the webhook confirms, nothing else does" discipline
+// as payment confirmation itself. charge.amount_refunded is cumulative (in
+// cents), so this is a plain overwrite, not an increment — safe to run
+// more than once for the same event or across multiple partial refunds.
+async function handleRefunded(admin: ReturnType<typeof createAdminClient>, charge: Stripe.Charge) {
+  if (typeof charge.payment_intent !== "string") return;
+
+  const { error } = await admin
+    .from("payment_records")
+    .update({ refunded_amount: charge.amount_refunded / 100 })
+    .eq("processor_ref", charge.payment_intent);
+
+  if (error) {
+    console.error("Failed to record refund for payment_intent", charge.payment_intent, error);
+  }
+}
+
+// Disputes are always Stripe/bank-initiated — there's no admin action that
+// creates one, only this handler ever writes payment_disputes. Upserted on
+// stripe_dispute_id so created -> updated -> closed all collapse onto the
+// same row instead of piling up duplicates for one dispute's lifecycle.
+async function handleDispute(admin: ReturnType<typeof createAdminClient>, dispute: Stripe.Dispute) {
+  if (typeof dispute.payment_intent !== "string") return;
+
+  const { data: record } = await admin
+    .from("payment_records")
+    .select("id")
+    .eq("processor_ref", dispute.payment_intent)
+    .maybeSingle();
+
+  if (!record) {
+    console.error("Dispute event with no matching payment_records row:", dispute.id);
+    return;
+  }
+
+  const { error } = await admin.from("payment_disputes").upsert(
+    {
+      payment_record_id: record.id,
+      stripe_dispute_id: dispute.id,
+      amount: dispute.amount / 100,
+      reason: dispute.reason,
+      status: dispute.status,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "stripe_dispute_id" },
+  );
+
+  if (error) {
+    console.error("Failed to upsert dispute", dispute.id, error);
+  }
 }

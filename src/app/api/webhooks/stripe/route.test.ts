@@ -157,6 +157,79 @@ describe("POST /api/webhooks/stripe", () => {
     expect(adminMock.from).toHaveBeenCalledTimes(1); // only the dedupe insert
   });
 
+  it("records the cumulative refunded amount on charge.refunded", async () => {
+    queueDedupeOk();
+    const event = makeEvent("charge.refunded", { payment_intent: "pi_1", amount_refunded: 3000 });
+    constructEvent.mockReturnValue(event);
+    adminMock.queueResult("payment_records", { data: null, error: null });
+
+    const res = await POST(makeRequest("{}"));
+
+    expect(await res.json()).toEqual({ ok: true });
+    // stripe_events, payment_records(update) <- index 1
+    const update = adminMock.from.mock.results[1].value.update as ReturnType<typeof vi.fn>;
+    expect(update).toHaveBeenCalledWith({ refunded_amount: 30 });
+  });
+
+  it("is a no-op for charge.refunded with no string payment_intent", async () => {
+    queueDedupeOk();
+    const event = makeEvent("charge.refunded", { payment_intent: null, amount_refunded: 3000 });
+    constructEvent.mockReturnValue(event);
+
+    const res = await POST(makeRequest("{}"));
+
+    expect(await res.json()).toEqual({ ok: true });
+    expect(adminMock.from).toHaveBeenCalledTimes(1); // only the dedupe insert
+  });
+
+  it("upserts a dispute row keyed on the matching payment_records row", async () => {
+    queueDedupeOk();
+    const event = makeEvent("charge.dispute.created", {
+      id: "dp_1",
+      payment_intent: "pi_1",
+      amount: 500,
+      reason: "fraudulent",
+      status: "needs_response",
+    });
+    constructEvent.mockReturnValue(event);
+    adminMock.queueResult("payment_records", { data: { id: "rec-1" }, error: null });
+    adminMock.queueResult("payment_disputes", { data: null, error: null });
+
+    const res = await POST(makeRequest("{}"));
+
+    expect(await res.json()).toEqual({ ok: true });
+    // stripe_events, payment_records(lookup), payment_disputes(upsert) <- index 2
+    const upsert = adminMock.from.mock.results[2].value.upsert as ReturnType<typeof vi.fn>;
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payment_record_id: "rec-1",
+        stripe_dispute_id: "dp_1",
+        amount: 5,
+        reason: "fraudulent",
+        status: "needs_response",
+      }),
+      { onConflict: "stripe_dispute_id" },
+    );
+  });
+
+  it("logs and does nothing for a dispute with no matching payment_records row", async () => {
+    queueDedupeOk();
+    const event = makeEvent("charge.dispute.updated", {
+      id: "dp_2",
+      payment_intent: "pi_missing",
+      amount: 500,
+      reason: "fraudulent",
+      status: "under_review",
+    });
+    constructEvent.mockReturnValue(event);
+    adminMock.queueResult("payment_records", { data: null, error: null });
+
+    const res = await POST(makeRequest("{}"));
+
+    expect(await res.json()).toEqual({ ok: true });
+    expect(adminMock.from).toHaveBeenCalledTimes(2); // stripe_events, payment_records lookup only
+  });
+
   it("still returns 200 when the handler throws internally", async () => {
     queueDedupeOk();
     const event = makeEvent("payment_intent.succeeded", { id: "pi_err" });

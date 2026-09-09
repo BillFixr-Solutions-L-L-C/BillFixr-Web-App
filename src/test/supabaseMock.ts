@@ -13,6 +13,7 @@ const CHAIN_METHODS = [
   "update",
   "delete",
   "insert",
+  "upsert",
   "single",
   "maybeSingle",
   "lt",

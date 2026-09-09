@@ -6,10 +6,11 @@ import { getPaymentRows } from "@/lib/paymentTransactions";
 
 export default async function AdminPaymentsPage() {
   const supabase = await createClient();
-  const [commitmentFees, percentageFees, { data: settings }] = await Promise.all([
+  const [commitmentFees, percentageFees, { data: settings }, { data: canIssueRefunds }] = await Promise.all([
     getPaymentRows(supabase, "commitment_fee", 5),
     getPaymentRows(supabase, "success_fee", 5),
     supabase.from("app_settings").select("success_fee_percentage").eq("id", 1).single(),
+    supabase.rpc("can_issue_refunds"),
   ]);
 
   return (
@@ -23,7 +24,7 @@ export default async function AdminPaymentsPage() {
         {commitmentFees.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">No commitment fee payments yet.</p>
         ) : (
-          <PaymentsTable rows={commitmentFees} />
+          <PaymentsTable rows={commitmentFees} canIssueRefunds={Boolean(canIssueRefunds)} />
         )}
         <Link
           href="/admin/payments/commitment"
@@ -38,7 +39,7 @@ export default async function AdminPaymentsPage() {
         {percentageFees.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">No percentage fee payments yet.</p>
         ) : (
-          <PaymentsTable rows={percentageFees} />
+          <PaymentsTable rows={percentageFees} canIssueRefunds={Boolean(canIssueRefunds)} />
         )}
         <Link
           href="/admin/payments/percentage"
