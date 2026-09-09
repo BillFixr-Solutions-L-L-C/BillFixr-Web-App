@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Elements,
   PaymentElement,
@@ -84,6 +84,73 @@ function CheckoutInner({
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [elementMounted, setElementMounted] = useState(false);
+  const [elementReady, setElementReady] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // `onReady` fires once the Payment Element is interactive, but that can
+  // land before its internal resize/layout handshake with the parent page
+  // has fully settled (real, reproducible: labels briefly wrap to one
+  // character per line, as if given ~0px of width, before snapping to
+  // their real size). Watching the wrapper's own height for a few
+  // consecutive stable readings is a direct measurement of "layout has
+  // actually stopped moving," instead of guessing a fixed delay that's
+  // sometimes too short. A fallback timer keeps this from getting stuck
+  // if resize events ever stop firing for some other reason.
+  useEffect(() => {
+    if (!elementMounted || !wrapperRef.current) return;
+    const node = wrapperRef.current;
+    let lastHeight = -1;
+    let settled = false;
+    let quietTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const markSettled = () => {
+      if (settled) return;
+      settled = true;
+      setElementReady(true);
+    };
+
+    // Debounced on real elapsed time, not a count of ResizeObserver
+    // callback firings — several callbacks can fire back-to-back within
+    // milliseconds during a still-ongoing layout pass, which would look
+    // "stable" to a simple counter without actually being done. Only
+    // settle once the height has gone genuinely quiet (no resize at all)
+    // for a real window of time.
+    const observer = new ResizeObserver(() => {
+      const height = node.offsetHeight;
+      if (Math.abs(height - lastHeight) >= 2 && quietTimer) {
+        clearTimeout(quietTimer);
+        quietTimer = null;
+      }
+      lastHeight = height;
+      if (!quietTimer) {
+        quietTimer = setTimeout(markSettled, 800);
+      }
+    });
+    observer.observe(node);
+
+    // Confirmed by direct inspection (not guessing): sometimes the
+    // Payment Element's iframe gets stuck in a genuinely broken layout
+    // (labels wrapped to one character per line) that never resolves on
+    // its own no matter how long you wait — this isn't "still loading,"
+    // it's a missed resize handshake between the iframe and the parent
+    // page. A real window `resize` event reliably kicks that handshake
+    // back into gear (this is what made the difference when the same
+    // stuck state was fixed by manually scrolling during investigation —
+    // scrolling isn't special, it just also fires layout/resize work).
+    // Nudge a couple of times before falling back to revealing regardless.
+    const nudge = () => window.dispatchEvent(new Event("resize"));
+    const nudgeTimers = [setTimeout(nudge, 4000), setTimeout(nudge, 10000), setTimeout(nudge, 20000)];
+
+    const fallback = setTimeout(markSettled, 30000);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(fallback);
+      nudgeTimers.forEach(clearTimeout);
+      if (quietTimer) clearTimeout(quietTimer);
+    };
+  }, [elementMounted]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -138,8 +205,22 @@ function CheckoutInner({
         </div>
       </div>
 
-      <div className="mt-5">
-        <PaymentElement options={{ layout: "tabs" }} />
+      {/* Stripe's iframe can take a moment to finish its own internal
+          layout/resize handshake with the parent page — showing it before
+          `onReady` fires means real users sometimes see it mid-render
+          (unstyled, clipped labels), not a permanent bug but a real bad
+          first impression. A skeleton covers that gap instead of guessing
+          a fixed delay. */}
+      <div ref={wrapperRef} className="relative mt-5 min-h-[280px]">
+        {!elementReady && (
+          <div className="absolute inset-0 z-10 space-y-3 bg-white">
+            <div className="h-11 animate-pulse rounded-lg bg-gray-100" />
+            <div className="h-11 animate-pulse rounded-lg bg-gray-100" />
+            <div className="h-11 animate-pulse rounded-lg bg-gray-100" />
+            <p className="pt-2 text-center text-sm text-gray-400">Loading payment options…</p>
+          </div>
+        )}
+        <PaymentElement options={{ layout: "tabs" }} onReady={() => setElementMounted(true)} />
       </div>
 
       <div className="mt-5 rounded-xl bg-gray-50 px-5 py-4">
