@@ -117,7 +117,11 @@ export default function AdminSidebar() {
           <nav className="mt-10 flex flex-col gap-1 text-sm">
             {nav.map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href || pathname.startsWith(item.href + "/");
+              // "/admin" (Dashboard) is a prefix of every other admin route,
+              // so it can only ever match exactly — a startsWith check here
+              // would keep it lit up on every other page.
+              const active =
+                pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/"));
               const isOpen = openGroup === item.label;
 
               return (
