@@ -6,7 +6,7 @@ const linkColumns = [
   { label: "Privacy Policy", href: "/privacy" },
   { label: "Govt. Compliance", href: "/compliance" },
   { label: "Service Policies", href: "/policies" },
-  { label: "Contact Support", href: "#contact" },
+  { label: "Contact Support", href: "mailto:support@billfixr.com" },
 ];
 
 function FacebookIcon() {

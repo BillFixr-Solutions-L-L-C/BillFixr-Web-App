@@ -234,7 +234,13 @@ export default function SupportPage() {
               placeholder="How can i help you?"
               className="flex-1 bg-transparent text-sm focus:outline-none"
             />
-            <button type="button" aria-label="Voice input" className="text-gray-400">
+            <button
+              type="button"
+              disabled
+              aria-label="Voice input"
+              title="Voice input isn't available yet"
+              className="text-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
+            >
               🎤
             </button>
             <button

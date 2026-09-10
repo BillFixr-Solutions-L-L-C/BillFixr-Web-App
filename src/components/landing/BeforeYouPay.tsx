@@ -27,12 +27,12 @@ export default function BeforeYouPay() {
           >
             Review Your Bill
           </Link>
-          <Link
-            href="/#contact"
+          <a
+            href="mailto:support@billfixr.com"
             className="rounded-full border border-[#0f7545] px-8 py-3.5 text-sm font-semibold text-[#0f7545] transition hover:bg-white"
           >
             Contact us
-          </Link>
+          </a>
         </div>
       </div>
     </section>
