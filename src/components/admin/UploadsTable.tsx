@@ -17,9 +17,11 @@ export type UploadRow = {
 export default function UploadsTable({
   uploads,
   canDeleteBills = false,
+  emptyMessage = "No uploads yet.",
 }: {
   uploads: UploadRow[];
   canDeleteBills?: boolean;
+  emptyMessage?: string;
 }) {
   const [selected, setSelected] = useState<UploadRow | null>(null);
 
@@ -31,7 +33,7 @@ export default function UploadsTable({
         </div>
 
         {uploads.length === 0 ? (
-          <p className="py-6 text-center text-sm text-gray-400">No uploads yet.</p>
+          <p className="py-6 text-center text-sm text-gray-400">{emptyMessage}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">

@@ -48,8 +48,17 @@ export default function AdminCareersClient({
   const [applicants, setApplicants] = useState(initialApplicants);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | Applicant["status"]>("all");
 
   const active = applicants.find((a) => a.id === activeId) ?? null;
+
+  const filteredApplicants = applicants.filter((a) => {
+    if (statusFilter !== "all" && a.status !== statusFilter) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return a.fullName.toLowerCase().includes(q) || a.email.toLowerCase().includes(q) || a.role.toLowerCase().includes(q);
+  });
 
   async function markReviewed() {
     if (!active) return;
@@ -184,8 +193,29 @@ export default function AdminCareersClient({
         <div className="rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-sm font-semibold text-gray-800">Applicants</h2>
 
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, email, or role"
+              className="min-w-0 flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-primary-400 focus:outline-none"
+            />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as "all" | Applicant["status"])}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-primary-400 focus:outline-none"
+            >
+              <option value="all">All statuses</option>
+              <option value="received">New</option>
+              <option value="reviewed">Reviewed</option>
+            </select>
+          </div>
+
           {applicants.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">No applications submitted yet.</p>
+          ) : filteredApplicants.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-400">No applicants match your search.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] text-left text-sm">
@@ -199,7 +229,7 @@ export default function AdminCareersClient({
                   </tr>
                 </thead>
                 <tbody>
-                  {applicants.map((a, i) => (
+                  {filteredApplicants.map((a, i) => (
                     <tr
                       key={a.id}
                       onClick={() => setActiveId(a.id)}

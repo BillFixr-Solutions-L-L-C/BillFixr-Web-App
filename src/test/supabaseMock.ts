@@ -23,6 +23,7 @@ const CHAIN_METHODS = [
   "ilike",
   "like",
   "is",
+  "range",
 ];
 
 function createQueryBuilder(result: QueryResult) {

@@ -28,6 +28,19 @@ export default function AdminSupportPage() {
   const [loading, setLoading] = useState(true);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [active, setActive] = useState<Ticket | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filteredTickets = tickets.filter((t) => {
+    if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      t.subject.toLowerCase().includes(q) ||
+      (t.profiles?.name ?? "").toLowerCase().includes(q) ||
+      (t.profiles?.email ?? "").toLowerCase().includes(q)
+    );
+  });
 
   useEffect(() => {
     async function load() {
@@ -135,10 +148,32 @@ export default function AdminSupportPage() {
       <div className="rounded-2xl bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold text-gray-800">Customer Tickets</h2>
 
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by subject or customer"
+            className="min-w-0 flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-primary-400 focus:outline-none"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-primary-400 focus:outline-none"
+          >
+            <option value="all">All statuses</option>
+            <option value="open">Pending</option>
+            <option value="in_progress">Ongoing</option>
+            <option value="resolved">Done</option>
+          </select>
+        </div>
+
         {loading ? (
           <p className="py-6 text-center text-sm text-gray-400">Loading…</p>
         ) : tickets.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">No support tickets yet.</p>
+        ) : filteredTickets.length === 0 ? (
+          <p className="py-6 text-center text-sm text-gray-400">No tickets match your search.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-left text-sm">
@@ -153,7 +188,7 @@ export default function AdminSupportPage() {
                 </tr>
               </thead>
               <tbody>
-                {tickets.map((t, i) => (
+                {filteredTickets.map((t, i) => (
                   <tr
                     key={t.id}
                     onClick={() => setActive(t)}
