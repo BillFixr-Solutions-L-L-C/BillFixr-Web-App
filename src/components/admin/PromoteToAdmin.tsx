@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export type RoleOption = { id: string; name: string };
 
@@ -9,11 +10,11 @@ export default function PromoteToAdmin({ userId, roles }: { userId: string; role
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
+  const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   async function promote() {
-    if (!confirm("This grants admin access immediately. Continue?")) return;
     setBusy(true);
     setError("");
     const res = await fetch("/api/admin/promote-to-admin", {
@@ -22,6 +23,7 @@ export default function PromoteToAdmin({ userId, roles }: { userId: string; role
       body: JSON.stringify({ userId, roleId }),
     });
     setBusy(false);
+    setConfirming(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       setError(body.error ?? "Failed to promote account");
@@ -61,7 +63,7 @@ export default function PromoteToAdmin({ userId, roles }: { userId: string; role
         </select>
         <button
           type="button"
-          onClick={promote}
+          onClick={() => setConfirming(true)}
           disabled={busy}
           className="rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
         >
@@ -76,6 +78,17 @@ export default function PromoteToAdmin({ userId, roles }: { userId: string; role
           Cancel
         </button>
       </div>
+
+      <ConfirmModal
+        open={confirming}
+        title="Grant admin access?"
+        message="This grants admin access immediately."
+        confirmLabel="Yes, Promote"
+        danger
+        busy={busy}
+        onConfirm={promote}
+        onCancel={() => setConfirming(false)}
+      />
     </div>
   );
 }

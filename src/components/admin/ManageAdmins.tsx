@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export type AdminRow = {
   id: string;
@@ -31,6 +32,7 @@ export default function ManageAdmins({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [confirmingRemoveId, setConfirmingRemoveId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -75,7 +77,6 @@ export default function ManageAdmins({
   }
 
   async function removeAdmin(adminId: string) {
-    if (!confirm("This permanently deletes this admin account. Continue?")) return;
     setBusy(true);
     setError("");
     const res = await fetch("/api/admin/delete-account", {
@@ -84,6 +85,7 @@ export default function ManageAdmins({
       body: JSON.stringify({ userId: adminId }),
     });
     setBusy(false);
+    setConfirmingRemoveId(null);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       setError(body.error ?? "Failed to delete account");
@@ -164,7 +166,7 @@ export default function ManageAdmins({
                     {canDelete && a.id !== currentUserId && (
                       <button
                         type="button"
-                        onClick={() => removeAdmin(a.id)}
+                        onClick={() => setConfirmingRemoveId(a.id)}
                         aria-label="Delete admin"
                         className="hover:text-red-600"
                       >
@@ -245,6 +247,17 @@ export default function ManageAdmins({
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmingRemoveId !== null}
+        title="Delete this admin account?"
+        message="This permanently deletes this admin account. This cannot be undone."
+        confirmLabel="Yes, Delete Account"
+        danger
+        busy={busy}
+        onConfirm={() => confirmingRemoveId && removeAdmin(confirmingRemoveId)}
+        onCancel={() => setConfirmingRemoveId(null)}
+      />
     </div>
   );
 }

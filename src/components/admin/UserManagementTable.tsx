@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export type AccountRow = {
   id: string;
@@ -32,6 +33,7 @@ export default function UserManagementTable({
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [confirmingRevokeId, setConfirmingRevokeId] = useState<string | null>(null);
 
   async function reactivate(id: string) {
     setBusyId(id);
@@ -64,7 +66,6 @@ export default function UserManagementTable({
   }
 
   async function revokeAccess(id: string) {
-    if (!confirm("This permanently deletes this pending admin account. Continue?")) return;
     setBusyId(id);
     setError("");
     const res = await fetch("/api/admin/delete-account", {
@@ -73,6 +74,7 @@ export default function UserManagementTable({
       body: JSON.stringify({ userId: id }),
     });
     setBusyId(null);
+    setConfirmingRevokeId(null);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       setError(body.error ?? "Failed to revoke access");
@@ -148,7 +150,7 @@ export default function UserManagementTable({
                           <button
                             type="button"
                             disabled={busyId === a.id}
-                            onClick={() => revokeAccess(a.id)}
+                            onClick={() => setConfirmingRevokeId(a.id)}
                             className="rounded-lg border border-red-200 px-3 py-1 text-xs text-red-500 disabled:opacity-50"
                           >
                             Revoke Access
@@ -163,6 +165,17 @@ export default function UserManagementTable({
           </table>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmingRevokeId !== null}
+        title="Revoke this invite?"
+        message="This permanently deletes this pending admin account."
+        confirmLabel="Yes, Revoke Access"
+        danger
+        busy={busyId === confirmingRevokeId}
+        onConfirm={() => confirmingRevokeId && revokeAccess(confirmingRevokeId)}
+        onCancel={() => setConfirmingRevokeId(null)}
+      />
     </div>
   );
 }

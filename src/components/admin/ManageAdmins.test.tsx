@@ -83,4 +83,34 @@ describe("ManageAdmins", () => {
     await waitFor(() => expect(screen.getByText("email already invited")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "Send invite" })).toBeInTheDocument();
   });
+
+  it("asks for confirmation via a modal, not a native dialog, before deleting an admin", async () => {
+    global.fetch = vi.fn();
+    const user = userEvent.setup();
+    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete currentUserId="someone-else" />);
+
+    await user.click(screen.getByRole("button", { name: "Delete admin" }));
+
+    expect(screen.getByText(/permanently deletes this admin account/)).toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("button", { name: "Yes, Delete Account" })).not.toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("deletes the admin and refreshes once the modal is confirmed", async () => {
+    global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const user = userEvent.setup();
+    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete currentUserId="someone-else" />);
+
+    await user.click(screen.getByRole("button", { name: "Delete admin" }));
+    await user.click(screen.getByRole("button", { name: "Yes, Delete Account" }));
+
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/admin/delete-account",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ userId: "admin-1" }) }),
+    );
+  });
 });
