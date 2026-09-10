@@ -23,6 +23,12 @@ const INVITED: AccountRow[] = [
   { id: "acct-1", name: "Pending Admin", email: "pending@example.com", roleName: "Support Admin", lastLogin: "—", status: "Invited" },
 ];
 
+const MIXED: AccountRow[] = [
+  { id: "acct-1", name: "Alice Active", email: "alice@example.com", roleName: "Support Admin", lastLogin: "Jan 1, 2026", status: "Active" },
+  { id: "acct-2", name: "Bob Suspended", email: "bob@example.com", roleName: "Finance Admin", lastLogin: "Jan 2, 2026", status: "Suspended" },
+  { id: "acct-3", name: "Carol Invited", email: "carol@example.com", roleName: "Support Admin", lastLogin: "—", status: "Invited" },
+];
+
 describe("UserManagementTable", () => {
   it("asks for confirmation via a modal, not a native dialog, before revoking access", async () => {
     global.fetch = vi.fn();
@@ -57,5 +63,36 @@ describe("UserManagementTable", () => {
   it("hides Revoke Access when canDelete is false", () => {
     render(<UserManagementTable accounts={INVITED} canDelete={false} currentUserId="someone-else" />);
     expect(screen.queryByRole("button", { name: "Revoke Access" })).not.toBeInTheDocument();
+  });
+
+  it("filters by search text across name and email", async () => {
+    const user = userEvent.setup();
+    render(<UserManagementTable accounts={MIXED} canDelete={false} currentUserId="someone-else" />);
+
+    await user.type(screen.getByPlaceholderText("Search by name or email"), "bob@example.com");
+
+    expect(screen.getByText("Bob Suspended")).toBeInTheDocument();
+    expect(screen.queryByText("Alice Active")).not.toBeInTheDocument();
+    expect(screen.queryByText("Carol Invited")).not.toBeInTheDocument();
+  });
+
+  it("filters by status", async () => {
+    const user = userEvent.setup();
+    render(<UserManagementTable accounts={MIXED} canDelete={false} currentUserId="someone-else" />);
+
+    await user.selectOptions(screen.getByDisplayValue("All statuses"), "Suspended");
+
+    expect(screen.getByText("Bob Suspended")).toBeInTheDocument();
+    expect(screen.queryByText("Alice Active")).not.toBeInTheDocument();
+    expect(screen.queryByText("Carol Invited")).not.toBeInTheDocument();
+  });
+
+  it("shows an empty state when the search/filter matches nothing", async () => {
+    const user = userEvent.setup();
+    render(<UserManagementTable accounts={MIXED} canDelete={false} currentUserId="someone-else" />);
+
+    await user.type(screen.getByPlaceholderText("Search by name or email"), "nobody-matches-this");
+
+    expect(screen.getByText("No accounts match your search.")).toBeInTheDocument();
   });
 });

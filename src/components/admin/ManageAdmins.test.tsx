@@ -28,6 +28,11 @@ const ADMINS: AdminRow[] = [
   { id: "admin-1", name: "Existing Admin", email: "existing@example.com", roleId: "role-1", roleName: "Support Admin", domainsGranted: 3 },
 ];
 
+const MULTIPLE_ADMINS: AdminRow[] = [
+  { id: "admin-1", name: "Alice Support", email: "alice@example.com", roleId: "role-1", roleName: "Support Admin", domainsGranted: 3 },
+  { id: "admin-2", name: "Bob Super", email: "bob@example.com", roleId: "role-2", roleName: "Super Admin", domainsGranted: 7 },
+];
+
 describe("ManageAdmins", () => {
   it("lists existing admins", () => {
     render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete={false} currentUserId="admin-1" />);
@@ -112,5 +117,34 @@ describe("ManageAdmins", () => {
       "/api/admin/delete-account",
       expect.objectContaining({ method: "POST", body: JSON.stringify({ userId: "admin-1" }) }),
     );
+  });
+
+  it("filters by search text across name and email", async () => {
+    const user = userEvent.setup();
+    render(<ManageAdmins admins={MULTIPLE_ADMINS} roles={ROLES} canDelete={false} currentUserId="someone-else" />);
+
+    await user.type(screen.getByPlaceholderText("Search by name or email"), "bob@example.com");
+
+    expect(screen.getByText("Bob Super")).toBeInTheDocument();
+    expect(screen.queryByText("Alice Support")).not.toBeInTheDocument();
+  });
+
+  it("filters by role", async () => {
+    const user = userEvent.setup();
+    render(<ManageAdmins admins={MULTIPLE_ADMINS} roles={ROLES} canDelete={false} currentUserId="someone-else" />);
+
+    await user.selectOptions(screen.getByDisplayValue("All roles"), "Super Admin");
+
+    expect(screen.getByText("Bob Super")).toBeInTheDocument();
+    expect(screen.queryByText("Alice Support")).not.toBeInTheDocument();
+  });
+
+  it("shows an empty state when the search/filter matches nothing", async () => {
+    const user = userEvent.setup();
+    render(<ManageAdmins admins={MULTIPLE_ADMINS} roles={ROLES} canDelete={false} currentUserId="someone-else" />);
+
+    await user.type(screen.getByPlaceholderText("Search by name or email"), "nobody-matches-this");
+
+    expect(screen.getByText("No admins match your search.")).toBeInTheDocument();
   });
 });

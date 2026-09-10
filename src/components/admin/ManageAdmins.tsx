@@ -33,6 +33,15 @@ export default function ManageAdmins({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmingRemoveId, setConfirmingRemoveId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("All");
+
+  const filteredAdmins = admins.filter((a) => {
+    if (roleFilter !== "All" && a.roleName !== roleFilter) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
+  });
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -107,10 +116,34 @@ export default function ManageAdmins({
         </button>
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name or email"
+          className="min-w-0 flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-primary-400 focus:outline-none"
+        />
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-primary-400 focus:outline-none"
+        >
+          <option value="All">All roles</option>
+          {roles.map((r) => (
+            <option key={r.id} value={r.name}>
+              {r.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       {admins.length === 0 ? (
         <p className="py-6 text-center text-sm text-gray-400">No admin accounts yet.</p>
+      ) : filteredAdmins.length === 0 ? (
+        <p className="py-6 text-center text-sm text-gray-400">No admins match your search.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">
@@ -125,7 +158,7 @@ export default function ManageAdmins({
               </tr>
             </thead>
             <tbody>
-              {admins.map((a, i) => (
+              {filteredAdmins.map((a, i) => (
                 <tr key={a.id} className="border-t border-gray-50">
                   <td className="py-3 pr-4 text-gray-500">{String(i + 1).padStart(3, "0")}</td>
                   <td className="flex items-center gap-2 py-3 pr-4 text-gray-800">

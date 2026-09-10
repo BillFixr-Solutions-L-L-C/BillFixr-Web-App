@@ -34,6 +34,15 @@ export default function UserManagementTable({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [confirmingRevokeId, setConfirmingRevokeId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"All" | AccountRow["status"]>("All");
+
+  const filteredAccounts = accounts.filter((a) => {
+    if (statusFilter !== "All" && a.status !== statusFilter) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
+  });
 
   async function reactivate(id: string) {
     setBusyId(id);
@@ -85,14 +94,36 @@ export default function UserManagementTable({
 
   return (
     <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-gray-900">User Account &amp; Access Control</h2>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name or email"
+          className="min-w-0 flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-primary-400 focus:outline-none"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as "All" | AccountRow["status"])}
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-primary-400 focus:outline-none"
+        >
+          <option value="All">All statuses</option>
+          <option value="Active">Active</option>
+          <option value="Suspended">Suspended</option>
+          <option value="Invited">Invited</option>
+        </select>
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       {accounts.length === 0 ? (
         <p className="py-6 text-center text-sm text-gray-400">No admin accounts yet.</p>
+      ) : filteredAccounts.length === 0 ? (
+        <p className="py-6 text-center text-sm text-gray-400">No accounts match your search.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
@@ -107,7 +138,7 @@ export default function UserManagementTable({
               </tr>
             </thead>
             <tbody>
-              {accounts.map((a) => (
+              {filteredAccounts.map((a) => (
                 <tr key={a.id} className="border-t border-gray-50">
                   <td className="flex items-center gap-2 py-2.5 pr-4 text-gray-800">
                     <span className="h-6 w-6 rounded-full bg-primary-100" />
