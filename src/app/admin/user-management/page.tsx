@@ -97,7 +97,12 @@ export default async function UserManagementPage() {
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_320px]">
         <div className="flex min-w-0 flex-col gap-6">
-          <UserManagementTable accounts={accounts} canDelete={Boolean(canDelete)} currentUserId={user?.id ?? ""} />
+          <UserManagementTable
+            accounts={accounts}
+            roles={roles ?? []}
+            canDelete={Boolean(canDelete)}
+            currentUserId={user?.id ?? ""}
+          />
         </div>
 
         <div className="flex min-w-0 flex-col gap-6">

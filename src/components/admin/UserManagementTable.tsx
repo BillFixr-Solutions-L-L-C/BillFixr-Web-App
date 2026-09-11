@@ -15,6 +15,8 @@ export type AccountRow = {
   status: "Active" | "Suspended" | "Invited";
 };
 
+export type RoleOption = { id: string; name: string };
+
 const statusTone: Record<AccountRow["status"], string> = {
   Active: "text-primary-600",
   Suspended: "text-purple-500",
@@ -23,10 +25,12 @@ const statusTone: Record<AccountRow["status"], string> = {
 
 export default function UserManagementTable({
   accounts,
+  roles,
   canDelete,
   currentUserId,
 }: {
   accounts: AccountRow[];
+  roles: RoleOption[];
   canDelete: boolean;
   currentUserId: string;
 }) {
@@ -37,12 +41,39 @@ export default function UserManagementTable({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | AccountRow["status"]>("All");
 
+  const [showAdd, setShowAdd] = useState(false);
+  const [addBusy, setAddBusy] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [addEmail, setAddEmail] = useState("");
+  const [addRoleId, setAddRoleId] = useState(roles[0]?.id ?? "");
+
   const filteredAccounts = accounts.filter((a) => {
     if (statusFilter !== "All" && a.status !== statusFilter) return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
   });
+
+  async function addAdmin(e: React.FormEvent) {
+    e.preventDefault();
+    setAddBusy(true);
+    setError("");
+    const res = await fetch("/api/admin/invite-admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: addName, email: addEmail, roleId: addRoleId }),
+    });
+    setAddBusy(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Failed to invite admin");
+      return;
+    }
+    setShowAdd(false);
+    setAddName("");
+    setAddEmail("");
+    router.refresh();
+  }
 
   async function reactivate(id: string) {
     setBusyId(id);
@@ -96,6 +127,13 @@ export default function UserManagementTable({
     <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-gray-900">User Account &amp; Access Control</h2>
+        <button
+          type="button"
+          onClick={() => setShowAdd(true)}
+          className="rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+        >
+          Add new admin +
+        </button>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -194,6 +232,73 @@ export default function UserManagementTable({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {showAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+            <button
+              type="button"
+              onClick={() => setShowAdd(false)}
+              aria-label="Close"
+              className="absolute right-6 top-6 text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+            <h2 className="font-serif text-xl font-bold text-gray-900">Add new admin</h2>
+            <form onSubmit={addAdmin} className="mt-6 space-y-4">
+              <div>
+                <label htmlFor="um-add-admin-name" className="text-sm text-gray-600">
+                  Full name
+                </label>
+                <input
+                  id="um-add-admin-name"
+                  required
+                  value={addName}
+                  onChange={(e) => setAddName(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="um-add-admin-email" className="text-sm text-gray-600">
+                  Email
+                </label>
+                <input
+                  id="um-add-admin-email"
+                  required
+                  type="email"
+                  value={addEmail}
+                  onChange={(e) => setAddEmail(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="um-add-admin-role" className="text-sm text-gray-600">
+                  Role
+                </label>
+                <select
+                  id="um-add-admin-role"
+                  value={addRoleId}
+                  onChange={(e) => setAddRoleId(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm"
+                >
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="submit"
+                disabled={addBusy}
+                className="w-full rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
+              >
+                {addBusy ? "Sending invite..." : "Send invite"}
+              </button>
+            </form>
+          </div>
         </div>
       )}
 
