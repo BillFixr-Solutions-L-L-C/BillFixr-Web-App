@@ -1,8 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import AdminTestimonialsClient from "@/components/admin/AdminTestimonialsClient";
+import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import AccessRestricted from "@/components/admin/AccessRestricted";
 
 export default async function AdminTestimonialsPage() {
   const supabase = await createClient();
+
+  if (!hasDomainAccess(await getDomainAccess(supabase, "client_data"))) {
+    return <AccessRestricted />;
+  }
+
   const { data } = await supabase
     .from("testimonials")
     .select("id, name, message, rating, status, created_at, profiles(email)")

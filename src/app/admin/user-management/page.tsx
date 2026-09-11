@@ -2,6 +2,8 @@ import UserManagementTable, { type AccountRow } from "@/components/admin/UserMan
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { timeAgo } from "@/lib/timeAgo";
+import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import AccessRestricted from "@/components/admin/AccessRestricted";
 
 type ActivityLogRow = {
   id: string;
@@ -37,6 +39,11 @@ type AdminProfile = {
 
 export default async function UserManagementPage() {
   const supabase = await createClient();
+
+  if (!hasDomainAccess(await getDomainAccess(supabase, "system"))) {
+    return <AccessRestricted />;
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -5,6 +5,8 @@ import BillDocumentCard from "@/components/admin/BillDocumentCard";
 import PendingDocumentCard from "@/components/admin/PendingDocumentCard";
 import { createClient } from "@/lib/supabase/server";
 import { getBillDocuments } from "@/lib/billDocuments";
+import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import AccessRestricted from "@/components/admin/AccessRestricted";
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
@@ -23,6 +25,10 @@ function Field({ label, value }: { label: string; value: string }) {
 export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
+
+  if (!hasDomainAccess(await getDomainAccess(supabase, "client_data"))) {
+    return <AccessRestricted />;
+  }
 
   const { data: profile } = await supabase
     .from("profiles")

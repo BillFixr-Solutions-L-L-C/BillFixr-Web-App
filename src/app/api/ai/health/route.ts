@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAiHealth, getAiServiceConfig } from "@/lib/ai-service";
+import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
 
 // Security audit finding (BACKEND-PLAN.md "Security plan", Medium): this
 // was fully unauthenticated and echoed the raw internal error message
@@ -19,6 +20,9 @@ export async function GET() {
   }
   const { data: caller } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (caller?.role !== "admin") {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  if (!hasDomainAccess(await getDomainAccess(supabase, "ai_pipeline"))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

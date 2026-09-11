@@ -20,6 +20,7 @@ const params = Promise.resolve({ id: "testimonial-1" });
 
 beforeEach(() => {
   vi.clearAllMocks();
+  serverMock.rpc.mockResolvedValue({ data: "full", error: null });
 });
 
 describe("PATCH /api/admin/testimonials/[id]", () => {
@@ -38,6 +39,16 @@ describe("PATCH /api/admin/testimonials/[id]", () => {
     serverMock.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
     serverMock.queueResult("profiles", { data: { role: "customer" }, error: null });
     const res = await PATCH(makeRequest({ status: "approved" }), { params });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 403 when the caller lacks full client_data domain access", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: { id: "admin-1" } } });
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    serverMock.rpc.mockResolvedValue({ data: "none", error: null });
+
+    const res = await PATCH(makeRequest({ status: "approved" }), { params });
+
     expect(res.status).toBe(403);
   });
 

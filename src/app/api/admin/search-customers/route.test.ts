@@ -15,6 +15,7 @@ function makeRequest(q: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  serverMock.rpc.mockResolvedValue({ data: "full", error: null });
 });
 
 describe("GET /api/admin/search-customers", () => {
@@ -36,6 +37,17 @@ describe("GET /api/admin/search-customers", () => {
     serverMock.queueResult("profiles", { data: { role: "customer" }, error: null });
     const res = await GET(makeRequest("jane"));
     expect(res.status).toBe(403);
+  });
+
+  it("returns an empty result (not an error) when the caller has no client_data access", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: { id: "admin-1" } } });
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    serverMock.rpc.mockResolvedValue({ data: "none", error: null });
+
+    const res = await GET(makeRequest("jane"));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ results: [] });
   });
 
   it("returns matching customers for an admin caller", async () => {

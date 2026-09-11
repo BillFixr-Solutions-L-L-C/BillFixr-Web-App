@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import AccessRestricted from "@/components/admin/AccessRestricted";
 
 type Ticket = {
   id: string;
@@ -26,6 +28,7 @@ const statusLabel: Record<string, string> = {
 
 export default function AdminSupportPage() {
   const [loading, setLoading] = useState(true);
+  const [restricted, setRestricted] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [active, setActive] = useState<Ticket | null>(null);
   const [search, setSearch] = useState("");
@@ -45,6 +48,12 @@ export default function AdminSupportPage() {
   useEffect(() => {
     async function load() {
       const supabase = createClient();
+      const level = await getDomainAccess(supabase, "client_data");
+      if (!hasDomainAccess(level)) {
+        setRestricted(true);
+        setLoading(false);
+        return;
+      }
       const { data } = await supabase
         .from("support_tickets")
         .select("id, subject, message, status, created_at, profiles(name, email)")
@@ -64,6 +73,15 @@ export default function AdminSupportPage() {
     });
     setTickets((prev) => prev.map((t) => (t.id === active.id ? { ...t, status } : t)));
     setActive(null);
+  }
+
+  if (restricted) {
+    return (
+      <div>
+        <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Support</h1>
+        <AccessRestricted />
+      </div>
+    );
   }
 
   if (active) {

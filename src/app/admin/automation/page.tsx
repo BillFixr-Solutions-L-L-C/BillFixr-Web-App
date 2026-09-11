@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import RevenueChart from "@/components/admin/RevenueChart";
 import DonutChart from "@/components/admin/DonutChart";
+import { createClient } from "@/lib/supabase/client";
+import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import AccessRestricted from "@/components/admin/AccessRestricted";
 
 const processes = [
   { title: "Claim OCR Pipeline", detail: "OCR: 98% complete, Agent: ACtive, Generator: Pending" },
@@ -46,6 +49,25 @@ const mockStatusSegments = [
 
 export default function AutomationMonitoringPage() {
   const [failedTasks, setFailedTasks] = useState(initialFailedTasks);
+  const [restricted, setRestricted] = useState(false);
+
+  useEffect(() => {
+    async function check() {
+      const supabase = createClient();
+      const level = await getDomainAccess(supabase, "ai_pipeline");
+      if (!hasDomainAccess(level)) setRestricted(true);
+    }
+    check();
+  }, []);
+
+  if (restricted) {
+    return (
+      <div>
+        <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Automation Monitoring Dashboard</h1>
+        <AccessRestricted />
+      </div>
+    );
+  }
 
   const retry = (index: number) => {
     setFailedTasks((tasks) => tasks.filter((_, i) => i !== index));

@@ -4,6 +4,8 @@ import { getPaymentRows } from "@/lib/paymentTransactions";
 import { ADMIN_PAGE_SIZE } from "@/lib/searchFilter";
 import AdminTableToolbar from "@/components/admin/AdminTableToolbar";
 import Pagination from "@/components/admin/Pagination";
+import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import AccessRestricted from "@/components/admin/AccessRestricted";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "All statuses" },
@@ -20,6 +22,11 @@ export default async function PercentageFeePage({
   const { q, status, page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const supabase = await createClient();
+
+  if (!hasDomainAccess(await getDomainAccess(supabase, "finance"))) {
+    return <AccessRestricted />;
+  }
+
   const [{ rows, totalCount }, { data: canIssueRefunds }] = await Promise.all([
     getPaymentRows(supabase, "success_fee", {
       limit: ADMIN_PAGE_SIZE,

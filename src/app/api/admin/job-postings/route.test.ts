@@ -27,6 +27,7 @@ const VALID_BODY = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  serverMock.rpc.mockResolvedValue({ data: "full", error: null });
 });
 
 describe("POST /api/admin/job-postings", () => {
@@ -45,6 +46,16 @@ describe("POST /api/admin/job-postings", () => {
     serverMock.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
     serverMock.queueResult("profiles", { data: { role: "customer" }, error: null });
     const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 403 when the caller lacks full hr domain access", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: { id: "admin-1" } } });
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    serverMock.rpc.mockResolvedValue({ data: "limited", error: null });
+
+    const res = await POST(makeRequest(VALID_BODY));
+
     expect(res.status).toBe(403);
   });
 

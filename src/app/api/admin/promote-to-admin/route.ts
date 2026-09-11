@@ -3,15 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { escapeHtml } from "@/lib/html";
+import { getDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 
 // Promotes an existing customer account to an admin role in place — the
 // account, credentials, and any existing case/bill history stay exactly
 // as they are, only profiles.role/role_id change. Distinct from
 // invite-admin, which always creates a brand-new auth user; this route
 // works on someone who already has a real, confirmed account. Same
-// authorization gate as invite-admin (any existing admin can grant a
-// role) — see roles RLS policy comments for why this isn't scoped
-// tighter yet.
+// authorization gate as invite-admin (system domain, full access) —
+// see BACKEND-PLAN.md Step 20.
 export async function POST(request: Request) {
   const { userId, roleId } = await request.json();
   if (typeof userId !== "string" || typeof roleId !== "string") {
@@ -27,6 +27,9 @@ export async function POST(request: Request) {
   }
   const { data: caller } = await supabase.from("profiles").select("role, name").eq("id", user.id).single();
   if (caller?.role !== "admin") {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  if (!hasFullDomainAccess(await getDomainAccess(supabase, "system"))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

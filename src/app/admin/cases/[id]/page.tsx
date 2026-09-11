@@ -5,6 +5,8 @@ import { MOCK_ADMIN_CASE_ANALYSIS, type AdminCaseAnalysis } from "@/lib/adminCas
 import { isCaseCompleted } from "@/lib/caseStatus";
 import BillDocumentCard from "@/components/admin/BillDocumentCard";
 import ManualOverridePanel from "@/components/admin/ManualOverridePanel";
+import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import AccessRestricted from "@/components/admin/AccessRestricted";
 
 const RISK_COLOR: Record<string, string> = {
   High: "text-red-500",
@@ -15,6 +17,10 @@ const RISK_COLOR: Record<string, string> = {
 export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
+
+  if (!hasDomainAccess(await getDomainAccess(supabase, "client_data"))) {
+    return <AccessRestricted />;
+  }
 
   const { data: caseRow } = await supabase
     .from("cases")

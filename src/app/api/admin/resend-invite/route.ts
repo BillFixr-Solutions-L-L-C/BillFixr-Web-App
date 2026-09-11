@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 
 // Resends the invite email for an admin account that was created but
 // hasn't confirmed yet (auth.users.email_confirmed_at is still null).
@@ -19,6 +20,9 @@ export async function POST(request: Request) {
   }
   const { data: caller } = await supabase.from("profiles").select("role, name").eq("id", user.id).single();
   if (caller?.role !== "admin") {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  if (!hasFullDomainAccess(await getDomainAccess(supabase, "system"))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

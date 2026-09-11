@@ -19,6 +19,7 @@ const CALLER = { id: "admin-1" };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  serverMock.rpc.mockResolvedValue({ data: "full", error: null });
 });
 
 describe("GET /api/ai/health", () => {
@@ -32,6 +33,15 @@ describe("GET /api/ai/health", () => {
   it("returns 403 for a non-admin caller", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: CALLER } });
     serverMock.queueResult("profiles", { data: { role: "customer" }, error: null });
+    const res = await GET();
+    expect(res.status).toBe(403);
+    expect(getAiServiceConfig).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when the caller has no ai_pipeline domain access", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: CALLER } });
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    serverMock.rpc.mockResolvedValue({ data: "none", error: null });
     const res = await GET();
     expect(res.status).toBe(403);
     expect(getAiServiceConfig).not.toHaveBeenCalled();

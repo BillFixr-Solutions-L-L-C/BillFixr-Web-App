@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import { sendEmail } from "@/lib/email";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { escapeHtml } from "@/lib/html";
@@ -38,6 +39,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
   const { data: caller } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (caller?.role !== "admin") {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  if (!hasFullDomainAccess(await getDomainAccess(supabase, "client_data"))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

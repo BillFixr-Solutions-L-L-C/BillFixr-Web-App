@@ -27,6 +27,7 @@ const VALID_BODY = { userId: "customer-1", roleId: "role-1" };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  serverMock.rpc.mockResolvedValue({ data: "full", error: null });
 });
 
 describe("POST /api/admin/promote-to-admin", () => {
@@ -44,6 +45,15 @@ describe("POST /api/admin/promote-to-admin", () => {
   it("returns 403 when the caller is not an admin", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: CALLER } });
     serverMock.queueResult("profiles", { data: { role: "customer" }, error: null });
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(403);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when the caller lacks full system domain access", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: CALLER } });
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    serverMock.rpc.mockResolvedValue({ data: "none", error: null });
     const res = await POST(makeRequest(VALID_BODY));
     expect(res.status).toBe(403);
     expect(sendEmail).not.toHaveBeenCalled();

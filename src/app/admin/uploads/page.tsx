@@ -4,6 +4,8 @@ import { getBillDocuments } from "@/lib/billDocuments";
 import { sanitizeSearchTerm, ADMIN_PAGE_SIZE } from "@/lib/searchFilter";
 import AdminTableToolbar from "@/components/admin/AdminTableToolbar";
 import Pagination from "@/components/admin/Pagination";
+import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import AccessRestricted from "@/components/admin/AccessRestricted";
 
 type BillWithProfile = {
   id: string;
@@ -31,6 +33,10 @@ export default async function AdminUploadsPage({
   const { q, status, page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const supabase = await createClient();
+
+  if (!hasDomainAccess(await getDomainAccess(supabase, "client_data"))) {
+    return <AccessRestricted />;
+  }
 
   const search = q ? sanitizeSearchTerm(q) : "";
 

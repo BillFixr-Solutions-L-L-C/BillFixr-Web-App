@@ -1,5 +1,7 @@
 import ManageAdmins, { type AdminRow, type RoleOption } from "@/components/admin/ManageAdmins";
 import { createClient } from "@/lib/supabase/server";
+import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import AccessRestricted from "@/components/admin/AccessRestricted";
 
 type AdminProfile = {
   id: string;
@@ -11,6 +13,10 @@ type AdminProfile = {
 
 export default async function AdminSettingsPage() {
   const supabase = await createClient();
+
+  if (!hasDomainAccess(await getDomainAccess(supabase, "system"))) {
+    return <AccessRestricted />;
+  }
 
   const {
     data: { user },

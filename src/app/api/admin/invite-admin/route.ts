@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 
 // Admin accounts are never created via public signup (see
 // auto_create_profile.sql) — this is the one path that creates them.
@@ -23,6 +24,9 @@ export async function POST(request: Request) {
   }
   const { data: caller } = await supabase.from("profiles").select("role, name").eq("id", user.id).single();
   if (caller?.role !== "admin") {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  if (!hasFullDomainAccess(await getDomainAccess(supabase, "system"))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

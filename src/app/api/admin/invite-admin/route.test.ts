@@ -25,6 +25,7 @@ const VALID_BODY = { name: "New Admin", email: "new.admin@example.com", roleId: 
 
 beforeEach(() => {
   vi.clearAllMocks();
+  serverMock.rpc.mockResolvedValue({ data: "full", error: null });
 });
 
 describe("POST /api/admin/invite-admin", () => {
@@ -43,6 +44,17 @@ describe("POST /api/admin/invite-admin", () => {
     serverMock.getUser.mockResolvedValue({ data: { user: CALLER } });
     serverMock.queueResult("profiles", { data: { role: "customer" }, error: null });
     const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(403);
+    expect(adminMock.inviteUserByEmail).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when the caller lacks full system domain access", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: CALLER } });
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    serverMock.rpc.mockResolvedValue({ data: "none", error: null });
+
+    const res = await POST(makeRequest(VALID_BODY));
+
     expect(res.status).toBe(403);
     expect(adminMock.inviteUserByEmail).not.toHaveBeenCalled();
   });

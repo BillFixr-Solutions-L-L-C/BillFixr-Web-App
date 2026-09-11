@@ -27,6 +27,7 @@ const VALID_BODY = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  serverMock.rpc.mockResolvedValue({ data: "full", error: null });
 });
 
 describe("PATCH /api/admin/cases/[id]/override", () => {
@@ -45,6 +46,16 @@ describe("PATCH /api/admin/cases/[id]/override", () => {
     serverMock.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
     serverMock.queueResult("profiles", { data: { role: "customer" }, error: null });
     const res = await PATCH(makeRequest(VALID_BODY), { params });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 403 when the caller lacks full negotiation domain access", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: { id: "admin-1" } } });
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    serverMock.rpc.mockResolvedValue({ data: "read_only", error: null });
+
+    const res = await PATCH(makeRequest(VALID_BODY), { params });
+
     expect(res.status).toBe(403);
   });
 

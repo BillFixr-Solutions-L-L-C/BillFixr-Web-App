@@ -3,9 +3,16 @@ import PaymentsTable from "@/components/admin/PaymentsTable";
 import BillingSettingsCard from "@/components/admin/BillingSettingsCard";
 import { createClient } from "@/lib/supabase/server";
 import { getPaymentRows } from "@/lib/paymentTransactions";
+import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import AccessRestricted from "@/components/admin/AccessRestricted";
 
 export default async function AdminPaymentsPage() {
   const supabase = await createClient();
+
+  if (!hasDomainAccess(await getDomainAccess(supabase, "finance"))) {
+    return <AccessRestricted />;
+  }
+
   const [{ rows: commitmentFees }, { rows: percentageFees }, { data: settings }, { data: canIssueRefunds }] =
     await Promise.all([
       getPaymentRows(supabase, "commitment_fee", { limit: 5 }),

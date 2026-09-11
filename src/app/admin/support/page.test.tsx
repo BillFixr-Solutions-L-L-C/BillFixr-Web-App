@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import AdminSupportPage from "./page";
 
 const TICKETS = [
@@ -9,8 +9,10 @@ const TICKETS = [
   { id: "t-3", subject: "Refund request", message: "Help", status: "resolved", created_at: "2026-01-03", profiles: { name: "Carol", email: "carol@example.com" } },
 ];
 
+let domainAccess = "full";
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
+    rpc: async () => ({ data: domainAccess, error: null }),
     from: () => ({
       select: () => ({
         order: async () => ({ data: TICKETS, error: null }),
@@ -19,7 +21,19 @@ vi.mock("@/lib/supabase/client", () => ({
   }),
 }));
 
+beforeEach(() => {
+  domainAccess = "full";
+});
+
 describe("AdminSupportPage", () => {
+  it("shows an access-restricted message when the caller has no client_data access", async () => {
+    domainAccess = "none";
+    render(<AdminSupportPage />);
+
+    await waitFor(() => expect(screen.getByText("Access restricted")).toBeInTheDocument());
+    expect(screen.queryByText("Billing question")).not.toBeInTheDocument();
+  });
+
   it("filters by search text across subject, customer name, and email", async () => {
     const user = userEvent.setup();
     render(<AdminSupportPage />);

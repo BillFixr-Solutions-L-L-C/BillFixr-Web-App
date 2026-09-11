@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,6 +30,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
   const { data: caller } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (caller?.role !== "admin") {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  if (!hasFullDomainAccess(await getDomainAccess(supabase, "hr"))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
