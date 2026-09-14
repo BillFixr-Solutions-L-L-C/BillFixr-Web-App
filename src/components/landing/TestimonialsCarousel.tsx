@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+
+const AUTOPLAY_INTERVAL_MS = 5000;
 
 type Testimonial = { quote: string; name: string; rating: number };
 
@@ -27,8 +29,17 @@ function Stars({ rating }: { rating: number }) {
 
 export default function TestimonialsCarousel({ testimonials }: { testimonials: Testimonial[] }) {
   const [start, setStart] = useState(0);
+  const [paused, setPaused] = useState(false);
   const count = Math.min(3, testimonials.length);
   const visible = Array.from({ length: count }, (_, i) => testimonials[(start + i) % testimonials.length]);
+
+  useEffect(() => {
+    if (testimonials.length <= 3 || paused) return;
+    const id = setInterval(() => {
+      setStart((s) => (s + 1) % testimonials.length);
+    }, AUTOPLAY_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [testimonials.length, paused]);
 
   return (
     <section id="testimonials" className="relative overflow-hidden px-6 py-24">
@@ -61,7 +72,11 @@ export default function TestimonialsCarousel({ testimonials }: { testimonials: T
             </p>
           </div>
         ) : (
-          <>
+          <div
+            data-testid="testimonials-carousel"
+            onMouseEnter={() => setPaused(true)}
+            onMouseLeave={() => setPaused(false)}
+          >
             <div className="mt-10 grid gap-6 sm:grid-cols-3">
               {visible.map((t, i) => (
                 <div key={i} className="rounded-2xl bg-primary-50 p-6">
@@ -95,7 +110,7 @@ export default function TestimonialsCarousel({ testimonials }: { testimonials: T
                 </button>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </section>
