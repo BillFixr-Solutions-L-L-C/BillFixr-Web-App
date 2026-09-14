@@ -57,6 +57,7 @@
   --color-success-bg: var(--color-success-bg);
 
   --animate-float: float 7s ease-in-out infinite alternate;
+  --animate-marquee: marquee var(--marquee-duration, 30s) linear infinite;
 }
 
 body {
@@ -83,8 +84,20 @@ button:not(:disabled) {
   }
 }
 
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    /* The track renders the item set twice back-to-back, so sliding
+       exactly half its width loops seamlessly into the duplicate copy. */
+    transform: translateX(-50%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-float {
+  .animate-float,
+  .animate-marquee {
     animation: none;
   }
 }

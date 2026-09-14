@@ -1,9 +1,4 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-
-const AUTOPLAY_INTERVAL_MS = 5000;
 
 type Testimonial = { quote: string; name: string; rating: number };
 
@@ -27,19 +22,38 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-export default function TestimonialsCarousel({ testimonials }: { testimonials: Testimonial[] }) {
-  const [start, setStart] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const count = Math.min(3, testimonials.length);
-  const visible = Array.from({ length: count }, (_, i) => testimonials[(start + i) % testimonials.length]);
+function Card({
+  t,
+  fixedWidth = false,
+  hidden = false,
+}: {
+  t: Testimonial;
+  fixedWidth?: boolean;
+  hidden?: boolean;
+}) {
+  return (
+    <div
+      aria-hidden={hidden || undefined}
+      className={`shrink-0 rounded-2xl bg-primary-50 p-6 ${fixedWidth ? "w-80" : "w-full"}`}
+    >
+      <Stars rating={t.rating} />
+      <p className="mt-4 text-sm text-primary-900/80">{t.quote}</p>
+      <div className="mt-6 flex items-center gap-3">
+        <span className="h-8 w-8 rounded-full bg-accent-300" aria-hidden="true" />
+        <span className="text-sm font-medium text-primary-900">{t.name}</span>
+      </div>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    if (testimonials.length <= 3 || paused) return;
-    const id = setInterval(() => {
-      setStart((s) => (s + 1) % testimonials.length);
-    }, AUTOPLAY_INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [testimonials.length, paused]);
+export default function TestimonialsCarousel({ testimonials }: { testimonials: Testimonial[] }) {
+  // Few enough that a continuous scroll would just loop the same handful
+  // of cards awkwardly — lay them out statically instead.
+  const scrolls = testimonials.length > 3;
+  // Duration scales with how much content there is, so the scroll speed
+  // (px/sec) stays roughly constant instead of 20 testimonials whipping by
+  // as fast as 4 would.
+  const durationSeconds = Math.max(20, testimonials.length * 6);
 
   return (
     <section id="testimonials" className="relative overflow-hidden px-6 py-24">
@@ -65,51 +79,34 @@ export default function TestimonialsCarousel({ testimonials }: { testimonials: T
           <p className="text-5xl font-bold text-primary-900 sm:text-7xl">150k+</p>
         </div>
 
-        {visible.length === 0 ? (
+        {testimonials.length === 0 ? (
           <div className="mt-10 rounded-2xl bg-primary-50 p-8 text-center">
             <p className="text-sm text-primary-900/70">
               No reviews yet — be the first to share your experience.
             </p>
           </div>
-        ) : (
+        ) : scrolls ? (
           <div
             data-testid="testimonials-carousel"
-            onMouseEnter={() => setPaused(true)}
-            onMouseLeave={() => setPaused(false)}
+            className="mt-10 [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)]"
           >
-            <div className="mt-10 grid gap-6 sm:grid-cols-3">
-              {visible.map((t, i) => (
-                <div key={i} className="rounded-2xl bg-primary-50 p-6">
-                  <Stars rating={t.rating} />
-                  <p className="mt-4 text-sm text-primary-900/80">{t.quote}</p>
-                  <div className="mt-6 flex items-center gap-3">
-                    <span className="h-8 w-8 rounded-full bg-accent-300" aria-hidden="true" />
-                    <span className="text-sm font-medium text-primary-900">{t.name}</span>
-                  </div>
-                </div>
+            <div
+              className="animate-marquee flex w-max gap-6 hover:[animation-play-state:paused]"
+              style={{ "--marquee-duration": `${durationSeconds}s` } as React.CSSProperties}
+            >
+              {testimonials.map((t, i) => (
+                <Card key={`a-${i}`} t={t} fixedWidth />
+              ))}
+              {testimonials.map((t, i) => (
+                <Card key={`b-${i}`} t={t} fixedWidth hidden />
               ))}
             </div>
-
-            {testimonials.length > 3 && (
-              <div className="mt-8 flex justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setStart((s) => (s - 1 + testimonials.length) % testimonials.length)}
-                  aria-label="Previous testimonials"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-primary-300 text-primary-700 transition hover:bg-primary-50"
-                >
-                  ←
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStart((s) => (s + 1) % testimonials.length)}
-                  aria-label="Next testimonials"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-primary-300 text-primary-700 transition hover:bg-primary-50"
-                >
-                  →
-                </button>
-              </div>
-            )}
+          </div>
+        ) : (
+          <div className="mt-10 grid gap-6 sm:grid-cols-3">
+            {testimonials.map((t, i) => (
+              <Card key={i} t={t} />
+            ))}
           </div>
         )}
       </div>

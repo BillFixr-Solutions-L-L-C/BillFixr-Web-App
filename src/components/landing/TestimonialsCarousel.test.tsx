@@ -1,68 +1,45 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import TestimonialsCarousel from "./TestimonialsCarousel";
 
-const TESTIMONIALS = Array.from({ length: 5 }, (_, i) => ({
-  quote: `Quote ${i + 1}`,
-  name: `Reviewer ${i + 1}`,
-  rating: 5,
-}));
+const makeTestimonials = (count: number) =>
+  Array.from({ length: count }, (_, i) => ({ quote: `Quote ${i + 1}`, name: `Reviewer ${i + 1}`, rating: 5 }));
 
-beforeEach(() => {
-  vi.useFakeTimers();
-});
-
-afterEach(() => {
-  vi.useRealTimers();
-});
-
-describe("TestimonialsCarousel autoplay", () => {
-  it("does not show nav buttons (or need to autoplay) with 3 or fewer testimonials", () => {
-    render(<TestimonialsCarousel testimonials={TESTIMONIALS.slice(0, 3)} />);
-    expect(screen.queryByRole("button", { name: "Next testimonials" })).not.toBeInTheDocument();
+describe("TestimonialsCarousel", () => {
+  it("shows the empty state with no testimonials", () => {
+    render(<TestimonialsCarousel testimonials={[]} />);
+    expect(screen.getByText(/No reviews yet/)).toBeInTheDocument();
+    expect(screen.queryByTestId("testimonials-carousel")).not.toBeInTheDocument();
   });
 
-  it("advances to the next set automatically after the interval", () => {
-    render(<TestimonialsCarousel testimonials={TESTIMONIALS} />);
-    expect(screen.getByText("Quote 1")).toBeInTheDocument();
-
-    act(() => {
-      vi.advanceTimersByTime(5000);
-    });
-
-    expect(screen.getByText("Quote 2")).toBeInTheDocument();
-    expect(screen.queryByText("Quote 1")).not.toBeInTheDocument();
+  it("lays out 3 or fewer testimonials statically, without the scrolling track", () => {
+    render(<TestimonialsCarousel testimonials={makeTestimonials(3)} />);
+    expect(screen.queryByTestId("testimonials-carousel")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Quote \d/)).toHaveLength(3);
   });
 
-  it("pauses autoplay while the pointer is over the cards", () => {
-    render(<TestimonialsCarousel testimonials={TESTIMONIALS} />);
-
-    fireEvent.mouseEnter(screen.getByTestId("testimonials-carousel"));
-    act(() => {
-      vi.advanceTimersByTime(10000);
-    });
-
-    expect(screen.getByText("Quote 1")).toBeInTheDocument();
+  it("switches to the scrolling track once there are more than 3 testimonials", () => {
+    render(<TestimonialsCarousel testimonials={makeTestimonials(5)} />);
+    expect(screen.getByTestId("testimonials-carousel")).toBeInTheDocument();
   });
 
-  it("resumes autoplay after the pointer leaves", () => {
-    render(<TestimonialsCarousel testimonials={TESTIMONIALS} />);
-
-    const carousel = screen.getByTestId("testimonials-carousel");
-    fireEvent.mouseEnter(carousel);
-    fireEvent.mouseLeave(carousel);
-    act(() => {
-      vi.advanceTimersByTime(5000);
-    });
-
-    expect(screen.getByText("Quote 2")).toBeInTheDocument();
+  it("duplicates the set once for a seamless loop, hiding the duplicate from assistive tech", () => {
+    const { container } = render(<TestimonialsCarousel testimonials={makeTestimonials(5)} />);
+    // 5 real + 5 duplicated = 10 cards in the DOM.
+    expect(screen.getAllByText(/Quote \d/)).toHaveLength(10);
+    expect(container.querySelectorAll('[aria-hidden="true"]').length).toBeGreaterThanOrEqual(5);
   });
 
-  it("still supports manual navigation via the arrows", () => {
-    render(<TestimonialsCarousel testimonials={TESTIMONIALS} />);
+  it("scales the animation duration with how much content there is", () => {
+    const { container: fewer } = render(<TestimonialsCarousel testimonials={makeTestimonials(4)} />);
+    const { container: more } = render(<TestimonialsCarousel testimonials={makeTestimonials(20)} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Next testimonials" }));
+    const fewerTrack = fewer.querySelector(".animate-marquee") as HTMLElement;
+    const moreTrack = more.querySelector(".animate-marquee") as HTMLElement;
 
-    expect(screen.getByText("Quote 2")).toBeInTheDocument();
+    const fewerDuration = fewerTrack.style.getPropertyValue("--marquee-duration");
+    const moreDuration = moreTrack.style.getPropertyValue("--marquee-duration");
+
+    expect(parseInt(moreDuration)).toBeGreaterThan(parseInt(fewerDuration));
   });
 });
