@@ -57,7 +57,7 @@ export default function Sidebar({
   return (
     <>
       <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-4 md:hidden">
-        <Link href="/">
+        <Link href="/dashboard">
           <Logo />
         </Link>
         <button
@@ -84,7 +84,7 @@ export default function Sidebar({
         }`}
       >
         <div className="flex items-center justify-between">
-          <Link href="/">
+          <Link href="/dashboard">
             <Logo />
           </Link>
           <button

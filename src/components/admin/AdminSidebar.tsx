@@ -73,7 +73,7 @@ export default function AdminSidebar() {
   return (
     <>
       <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-4 md:hidden">
-        <Link href="/">
+        <Link href="/admin">
           <Logo />
         </Link>
         <button
@@ -101,7 +101,7 @@ export default function AdminSidebar() {
       >
         <div>
           <div className="flex items-center justify-between">
-            <Link href="/">
+            <Link href="/admin">
               <Logo />
             </Link>
             <button
