@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import PageHeading from "@/components/dashboard/PageHeading";
 import { createClient } from "@/lib/supabase/client";
 
@@ -10,11 +11,13 @@ const ONLINE_POLL_MS = 30000;
 type ChatMessage = { from: string; text: string };
 type ChatTicket = { id: string; status: string; created_at: string; chat_rating: number | null };
 
+// The real BillFixr mark, not a hand-drawn placeholder — represents
+// "this is from BillFixr support" wherever it appears in the widget.
 function Avatar({ className = "" }: { className?: string }) {
   return (
-    <span
-      className={`inline-block shrink-0 rounded-full bg-gradient-to-br from-accent-300 to-primary-400 ${className}`}
-    />
+    <span className={`inline-flex shrink-0 items-center justify-center rounded-full bg-primary-50 ${className}`}>
+      <Image src="/logo-icon-green.png" alt="" width={18} height={18} className="object-contain" />
+    </span>
   );
 }
 
