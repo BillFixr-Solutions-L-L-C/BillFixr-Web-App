@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
@@ -42,6 +42,10 @@ export default function AdminSupportPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatReply, setChatReply] = useState("");
   const [chatSending, setChatSending] = useState(false);
+  // Same race guard as the customer widget: an in-flight poll that
+  // started before a reply landed can otherwise overwrite the optimistic
+  // append with an older, reply-less snapshot.
+  const unconfirmedRef = useRef<ChatMessage[]>([]);
 
   const filteredTickets = tickets.filter((t) => {
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
@@ -99,7 +103,11 @@ export default function AdminSupportPage() {
         .select("from, text")
         .eq("ticket_id", active!.id)
         .order("created_at", { ascending: true });
-      if (!cancelled) setChatMessages((data as unknown as ChatMessage[]) ?? []);
+      if (cancelled || !data) return;
+      unconfirmedRef.current = unconfirmedRef.current.filter(
+        (p) => !data.some((m) => m.from === p.from && m.text === p.text),
+      );
+      setChatMessages([...(data as unknown as ChatMessage[]), ...unconfirmedRef.current]);
     }
 
     load();
@@ -111,6 +119,7 @@ export default function AdminSupportPage() {
   }, [active]);
 
   function selectTicket(t: Ticket) {
+    unconfirmedRef.current = [];
     setChatMessages([]);
     setActive(t);
   }
@@ -127,7 +136,11 @@ export default function AdminSupportPage() {
       body: JSON.stringify({ text }),
     });
     setChatSending(false);
-    if (res.ok) setChatMessages((m) => [...m, { from: "agent", text }]);
+    if (res.ok) {
+      const optimistic = { from: "agent", text };
+      unconfirmedRef.current = [...unconfirmedRef.current, optimistic];
+      setChatMessages((m) => [...m, optimistic]);
+    }
   }
 
   if (restricted) {

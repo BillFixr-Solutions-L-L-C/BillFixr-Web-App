@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PageHeading from "@/components/dashboard/PageHeading";
 import { createClient } from "@/lib/supabase/client";
 
@@ -32,6 +32,11 @@ export default function SupportPage() {
   const [isOnline, setIsOnline] = useState<boolean | null>(null);
   const [startingNew, setStartingNew] = useState(false);
   const [ratingSaving, setRatingSaving] = useState(false);
+  // Messages appended optimistically that a poll hasn't confirmed yet —
+  // guards against a poll that started fetching before the send landed
+  // resolving after it and silently wiping the just-sent message off the
+  // screen until the next cycle.
+  const unconfirmedRef = useRef<ChatMessage[]>([]);
 
   const liveTicket = tickets.find((t) => t.status !== "resolved") ?? null;
   const pastTickets = tickets.filter((t) => t.status === "resolved");
@@ -87,18 +92,21 @@ export default function SupportPage() {
     setTickets((prev) => [newTicket as ChatTicket, ...prev]);
     setActiveTicketId(newTicket.id);
     setHistoryOpen(false);
+    unconfirmedRef.current = [];
     setMessages([]);
   }
 
   function openPastTicket(ticket: ChatTicket) {
     setActiveTicketId(ticket.id);
     setHistoryOpen(false);
+    unconfirmedRef.current = [];
     setMessages([]);
   }
 
   function backToChat() {
     setHistoryOpen(false);
     setActiveTicketId(liveTicket?.id ?? null);
+    unconfirmedRef.current = [];
     setMessages([]);
   }
 
@@ -106,7 +114,9 @@ export default function SupportPage() {
     const text = draft.trim();
     if (!text || !activeTicketId) return;
     setDraft("");
-    setMessages((m) => [...m, { from: "user", text }]);
+    const optimistic = { from: "user", text };
+    unconfirmedRef.current = [...unconfirmedRef.current, optimistic];
+    setMessages((m) => [...m, optimistic]);
 
     await fetch("/api/dashboard/chat/send", {
       method: "POST",
@@ -153,7 +163,15 @@ export default function SupportPage() {
           .single(),
       ]);
       if (cancelled) return;
-      if (msgs) setMessages(msgs);
+      if (msgs) {
+        // Drop any optimistic message this fetch actually caught up to;
+        // keep showing the rest so a stale/in-flight response can't make
+        // a message the user already sent momentarily vanish.
+        unconfirmedRef.current = unconfirmedRef.current.filter(
+          (p) => !msgs.some((m) => m.from === p.from && m.text === p.text),
+        );
+        setMessages([...msgs, ...unconfirmedRef.current]);
+      }
       if (ticket) setTickets((prev) => prev.map((t) => (t.id === ticket.id ? (ticket as ChatTicket) : t)));
     }
 

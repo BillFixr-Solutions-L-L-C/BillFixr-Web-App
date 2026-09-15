@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock } from "@/test/supabaseMock";
@@ -103,6 +103,74 @@ describe("SupportPage live chat", () => {
         body: JSON.stringify({ ticketId: "ticket-1", text: "Is my case still active?" }),
       }),
     );
+  });
+
+  it("keeps a just-sent message visible even if a poll resolves without it yet", async () => {
+    global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.useFakeTimers();
+    try {
+      // The polling interval is created as soon as a ticket becomes
+      // active, so fake timers have to be in place for the whole flow —
+      // switching to them mid-test would leave an earlier real interval
+      // running uncontrolled in the background. userEvent hangs when
+      // combined with fake timers, so this uses fireEvent throughout.
+      mock.queueResult("support_tickets", { data: [], error: null });
+      mock.queueResult("support_tickets", {
+        data: { id: "ticket-1", status: "open", created_at: "2026-01-01T00:00:00Z" },
+        error: null,
+      });
+      mock.queueResult("support_tickets", {
+        data: { id: "ticket-1", status: "open", created_at: "2026-01-01T00:00:00Z" },
+        error: null,
+      });
+      mock.queueResult("chat_messages", { data: [], error: null });
+
+      render(<SupportPage />);
+      fireEvent.click(screen.getByRole("button", { name: "Open live chat" }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Start a new conversation" }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      fireEvent.change(screen.getByPlaceholderText("How can i help you?"), {
+        target: { value: "Are you there?" },
+      });
+      const sendButtons = screen.getAllByRole("button", { name: "Send" });
+      fireEvent.click(sendButtons[sendButtons.length - 1]);
+
+      expect(screen.getByText("Are you there?")).toBeInTheDocument();
+
+      // Simulate a poll that started before the send landed, resolving
+      // with a snapshot that doesn't include it yet — this is the exact
+      // race that used to wipe the message off the screen.
+      mock.queueResult("chat_messages", { data: [], error: null });
+      mock.queueResult("support_tickets", {
+        data: { id: "ticket-1", status: "open", created_at: "2026-01-01T00:00:00Z" },
+        error: null,
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+
+      expect(screen.getByText("Are you there?")).toBeInTheDocument();
+
+      // A later poll that correctly includes it shouldn't duplicate it.
+      mock.queueResult("chat_messages", { data: [{ from: "user", text: "Are you there?" }], error: null });
+      mock.queueResult("support_tickets", {
+        data: { id: "ticket-1", status: "open", created_at: "2026-01-01T00:00:00Z" },
+        error: null,
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+
+      expect(screen.getAllByText("Are you there?")).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("shows Support is online when the presence check comes back true", async () => {

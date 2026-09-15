@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AdminSupportPage from "./page";
@@ -163,5 +163,50 @@ describe("AdminSupportPage", () => {
       "/api/admin/support-tickets/t-4/chat",
       expect.objectContaining({ method: "POST", body: JSON.stringify({ text: "On it now" }) }),
     );
+  });
+
+  it("keeps a just-sent reply visible even if a poll resolves without it yet", async () => {
+    global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.useFakeTimers();
+    try {
+      // Fake timers have to be active before the chat thread's polling
+      // interval is created, or an earlier real interval keeps running
+      // uncontrolled in the background — same reasoning as the customer
+      // widget's version of this test. userEvent hangs under fake timers,
+      // so this uses fireEvent throughout.
+      render(<AdminSupportPage />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      fireEvent.click(screen.getByText("Dave"));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      fireEvent.change(screen.getByPlaceholderText("Type a reply…"), { target: { value: "On it now" } });
+      fireEvent.click(screen.getByRole("button", { name: "Send" }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(screen.getByText("On it now")).toBeInTheDocument();
+
+      // The mocked "DB" (chatMessages) hasn't been updated yet — this
+      // poll tick simulates one that started before the reply landed.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      expect(screen.getByText("On it now")).toBeInTheDocument();
+
+      // Now the "DB" catches up — the next poll shouldn't duplicate it.
+      chatMessages = [{ from: "agent", text: "On it now" }];
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      expect(screen.getAllByText("On it now")).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
