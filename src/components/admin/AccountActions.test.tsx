@@ -29,24 +29,29 @@ afterEach(() => {
 
 describe("AccountActions", () => {
   it("shows Suspend for an active account and Delete when canDelete is true", () => {
-    render(<AccountActions userId="u1" initialStatus="active" canDelete />);
+    render(<AccountActions userId="u1" initialStatus="active" canDelete canWrite />);
     expect(screen.getByRole("button", { name: "Suspend account" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete Account" })).toBeInTheDocument();
   });
 
+  it("hides Suspend/Reactivate when canWrite is false", () => {
+    render(<AccountActions userId="u1" initialStatus="active" canDelete={false} canWrite={false} />);
+    expect(screen.queryByRole("button", { name: "Suspend account" })).not.toBeInTheDocument();
+  });
+
   it("hides the Delete button when canDelete is false", () => {
-    render(<AccountActions userId="u1" initialStatus="active" canDelete={false} />);
+    render(<AccountActions userId="u1" initialStatus="active" canDelete={false} canWrite />);
     expect(screen.queryByRole("button", { name: "Delete Account" })).not.toBeInTheDocument();
   });
 
   it("shows Reactivate for a suspended account", () => {
-    render(<AccountActions userId="u1" initialStatus="suspended" canDelete={false} />);
+    render(<AccountActions userId="u1" initialStatus="suspended" canDelete={false} canWrite />);
     expect(screen.getByRole("button", { name: "Reactivate account" })).toBeInTheDocument();
   });
 
   it("toggles to Reactivate after a successful suspend, and refreshes the router", async () => {
     const user = userEvent.setup();
-    render(<AccountActions userId="u1" initialStatus="active" canDelete={false} />);
+    render(<AccountActions userId="u1" initialStatus="active" canDelete={false} canWrite />);
 
     await user.click(screen.getByRole("button", { name: "Suspend account" }));
 
@@ -56,14 +61,14 @@ describe("AccountActions", () => {
   });
 
   it("does not show the confirmation modal until Delete Account is clicked", () => {
-    render(<AccountActions userId="u1" initialStatus="active" canDelete />);
+    render(<AccountActions userId="u1" initialStatus="active" canDelete canWrite />);
     expect(screen.queryByRole("button", { name: "Yes, Delete Account" })).not.toBeInTheDocument();
   });
 
   it("opens a confirmation modal, and does nothing if cancelled", async () => {
     global.fetch = vi.fn();
     const user = userEvent.setup();
-    render(<AccountActions userId="u1" initialStatus="active" canDelete />);
+    render(<AccountActions userId="u1" initialStatus="active" canDelete canWrite />);
 
     await user.click(screen.getByRole("button", { name: "Delete Account" }));
     expect(screen.getByText(/This permanently deletes the account/)).toBeInTheDocument();
@@ -77,7 +82,7 @@ describe("AccountActions", () => {
   it("deletes the account and redirects to the customer list on confirm", async () => {
     global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const user = userEvent.setup();
-    render(<AccountActions userId="u1" initialStatus="active" canDelete />);
+    render(<AccountActions userId="u1" initialStatus="active" canDelete canWrite />);
 
     await user.click(screen.getByRole("button", { name: "Delete Account" }));
     await user.click(screen.getByRole("button", { name: "Yes, Delete Account" }));
@@ -92,7 +97,7 @@ describe("AccountActions", () => {
   it("shows the server error message and does not redirect when delete fails", async () => {
     global.fetch = vi.fn(async () => new Response(JSON.stringify({ error: "forbidden" }), { status: 403 }));
     const user = userEvent.setup();
-    render(<AccountActions userId="u1" initialStatus="active" canDelete />);
+    render(<AccountActions userId="u1" initialStatus="active" canDelete canWrite />);
 
     await user.click(screen.getByRole("button", { name: "Delete Account" }));
     await user.click(screen.getByRole("button", { name: "Yes, Delete Account" }));

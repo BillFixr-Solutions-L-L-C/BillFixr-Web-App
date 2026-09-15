@@ -9,10 +9,12 @@ export default function AccountActions({
   userId,
   initialStatus,
   canDelete,
+  canWrite,
 }: {
   userId: string;
   initialStatus: "active" | "suspended";
   canDelete: boolean;
+  canWrite: boolean;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
@@ -61,14 +63,16 @@ export default function AccountActions({
     <div>
       {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
       <div className="flex flex-wrap gap-4">
-        <button
-          type="button"
-          onClick={toggleSuspend}
-          disabled={busy}
-          className="rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-50"
-        >
-          {status === "active" ? "Suspend account" : "Reactivate account"}
-        </button>
+        {canWrite && (
+          <button
+            type="button"
+            onClick={toggleSuspend}
+            disabled={busy}
+            className="rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-50"
+          >
+            {status === "active" ? "Suspend account" : "Reactivate account"}
+          </button>
+        )}
         {canDelete && (
           <button
             type="button"

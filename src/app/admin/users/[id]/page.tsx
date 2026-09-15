@@ -26,9 +26,11 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   const { id } = await params;
   const supabase = await createClient();
 
-  if (!hasDomainAccess(await getDomainAccess(supabase, "client_data"))) {
+  const clientDataAccess = await getDomainAccess(supabase, "client_data");
+  if (!hasDomainAccess(clientDataAccess)) {
     return <AccessRestricted />;
   }
+  const canEditStatus = hasFullDomainAccess(clientDataAccess);
   const canPromote = hasFullDomainAccess(await getDomainAccess(supabase, "system"));
 
   const { data: profile } = await supabase
@@ -117,7 +119,12 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       </div>
 
       <div className="mt-8 flex flex-wrap items-start gap-4">
-        <AccountActions userId={profile.id} initialStatus={profile.status} canDelete={Boolean(canDelete)} />
+        <AccountActions
+          userId={profile.id}
+          initialStatus={profile.status}
+          canDelete={Boolean(canDelete)}
+          canWrite={canEditStatus}
+        />
         {canPromote && <PromoteToAdmin userId={profile.id} roles={roles ?? []} />}
       </div>
     </div>

@@ -65,6 +65,16 @@ describe("UserManagementTable", () => {
     );
   });
 
+  it("hides Reactivate for a suspended account when canWrite is false", () => {
+    const SUSPENDED: AccountRow[] = [
+      { id: "acct-1", name: "Suspended Admin", email: "s@example.com", roleName: "Support Admin", lastLogin: "—", status: "Suspended" },
+    ];
+    render(
+      <UserManagementTable accounts={SUSPENDED} roles={ROLES} canDelete={false} currentUserId="someone-else" canWrite={false} />,
+    );
+    expect(screen.queryByRole("button", { name: "Reactivate" })).not.toBeInTheDocument();
+  });
+
   it("hides Add new admin and Resend Invite when canWrite is false", () => {
     render(
       <UserManagementTable accounts={INVITED} roles={ROLES} canDelete={false} currentUserId="someone-else" canWrite={false} />,

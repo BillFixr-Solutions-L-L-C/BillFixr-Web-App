@@ -199,7 +199,7 @@ export default function UserManagementTable({
                         Edit
                       </Link>
                     )}
-                    {a.status === "Suspended" && (
+                    {a.status === "Suspended" && canWrite && (
                       <button
                         type="button"
                         disabled={busyId === a.id}

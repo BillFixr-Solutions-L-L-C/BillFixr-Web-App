@@ -45,9 +45,10 @@ describe("ManageAdmins", () => {
     expect(screen.getByText("No admin accounts yet.")).toBeInTheDocument();
   });
 
-  it("hides Add new admin when canWrite is false", () => {
+  it("hides Add new admin and the Edit role button when canWrite is false", () => {
     render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete={false} currentUserId="admin-1" canWrite={false} />);
     expect(screen.queryByRole("button", { name: "Add new admin +" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit role" })).not.toBeInTheDocument();
   });
 
   it("never shows a delete button for the current user's own row", () => {

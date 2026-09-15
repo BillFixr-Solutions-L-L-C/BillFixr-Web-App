@@ -192,14 +192,16 @@ export default function ManageAdmins({
                   </td>
                   <td className="py-3 pr-4 text-gray-500">{a.domainsGranted}</td>
                   <td className="py-3 text-gray-400">
-                    <button
-                      type="button"
-                      onClick={() => setEditingId(a.id)}
-                      aria-label="Edit role"
-                      className="mr-3 hover:text-gray-700"
-                    >
-                      ✎
-                    </button>
+                    {canWrite && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(a.id)}
+                        aria-label="Edit role"
+                        className="mr-3 hover:text-gray-700"
+                      >
+                        ✎
+                      </button>
+                    )}
                     {canDelete && a.id !== currentUserId && (
                       <button
                         type="button"
