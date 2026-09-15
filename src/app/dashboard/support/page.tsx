@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PageHeading from "@/components/dashboard/PageHeading";
 import { createClient } from "@/lib/supabase/client";
-import { CANNED_AGENT_REPLY } from "@/lib/support";
+
+const CHAT_POLL_MS = 3000;
 
 // Shown until a real chat_messages history exists for this user's live-chat
 // ticket — Step 7 contract stub, not an AI-generated greeting.
@@ -82,7 +83,7 @@ export default function SupportPage() {
     const text = draft.trim();
     if (!text || !chatTicketId) return;
     setDraft("");
-    setMessages((m) => [...m, { from: "user", text }, { from: "agent", text: CANNED_AGENT_REPLY }]);
+    setMessages((m) => [...m, { from: "user", text }]);
 
     await fetch("/api/dashboard/chat/send", {
       method: "POST",
@@ -90,6 +91,30 @@ export default function SupportPage() {
       body: JSON.stringify({ ticketId: chatTicketId, text }),
     });
   }
+
+  // Polls for the support team's replies while the widget is open — the
+  // only other write path, the admin console, goes through a real
+  // gated route now instead of a fake instant "agent" auto-reply.
+  useEffect(() => {
+    if (!chatOpen || !chatTicketId) return;
+    const supabase = createClient();
+    let cancelled = false;
+
+    async function poll() {
+      const { data } = await supabase
+        .from("chat_messages")
+        .select("from, text")
+        .eq("ticket_id", chatTicketId)
+        .order("created_at", { ascending: true });
+      if (!cancelled && data && data.length > 0) setMessages(data);
+    }
+
+    const interval = setInterval(poll, CHAT_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [chatOpen, chatTicketId]);
 
   async function handleSubmitTicket() {
     setError(null);

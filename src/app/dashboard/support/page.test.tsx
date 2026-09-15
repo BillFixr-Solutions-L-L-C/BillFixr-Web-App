@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock } from "@/test/supabaseMock";
 import SupportPage from "./page";
 
@@ -20,6 +20,11 @@ beforeEach(() => {
 });
 
 describe("SupportPage live chat", () => {
+  const originalFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
   it("shows the voice input control as disabled rather than a dead-looking active button", async () => {
     mock.queueResult("support_tickets", { data: null, error: null }); // no existing "Live Chat" ticket
     mock.queueResult("support_tickets", { data: { id: "ticket-1" }, error: null }); // created one
@@ -30,6 +35,33 @@ describe("SupportPage live chat", () => {
     await user.click(screen.getByRole("button", { name: "Open live chat" }));
 
     expect(await screen.findByRole("button", { name: "Voice input" })).toBeDisabled();
+  });
+
+  it("sends the message to the gated route and does not fabricate an agent reply", async () => {
+    global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    mock.queueResult("support_tickets", { data: null, error: null });
+    mock.queueResult("support_tickets", { data: { id: "ticket-1" }, error: null });
+    mock.queueResult("chat_messages", { data: [], error: null });
+    const user = userEvent.setup();
+    render(<SupportPage />);
+
+    await user.click(screen.getByRole("button", { name: "Open live chat" }));
+    await screen.findByRole("button", { name: "Voice input" });
+
+    await user.type(screen.getByPlaceholderText("How can i help you?"), "Is my case still active?");
+    // "Send" also matches the complaint form's submit button below, so
+    // disambiguate: the chat widget's is the last one in the DOM.
+    const sendButtons = screen.getAllByRole("button", { name: "Send" });
+    await user.click(sendButtons[sendButtons.length - 1]);
+
+    expect(screen.getByText("Is my case still active?")).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/dashboard/chat/send",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ ticketId: "ticket-1", text: "Is my case still active?" }),
+      }),
+    );
   });
 });
 

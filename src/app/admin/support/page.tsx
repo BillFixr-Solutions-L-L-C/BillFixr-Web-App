@@ -14,6 +14,10 @@ type Ticket = {
   profiles: { name: string; email: string } | null;
 };
 
+type ChatMessage = { from: string; text: string };
+
+const CHAT_POLL_MS = 3000;
+
 const statusTone: Record<string, string> = {
   open: "text-accent-600",
   resolved: "text-primary-600",
@@ -34,6 +38,9 @@ export default function AdminSupportPage() {
   const [active, setActive] = useState<Ticket | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatReply, setChatReply] = useState("");
+  const [chatSending, setChatSending] = useState(false);
 
   const filteredTickets = tickets.filter((t) => {
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
@@ -75,6 +82,51 @@ export default function AdminSupportPage() {
     });
     setTickets((prev) => prev.map((t) => (t.id === active.id ? { ...t, status } : t)));
     setActive(null);
+  }
+
+  // Polls the customer's live-chat thread while a "Live Chat" ticket is
+  // open — same fetch-on-an-interval shape as the customer widget, no
+  // realtime infra introduced for this.
+  useEffect(() => {
+    if (!active || active.subject !== "Live Chat") return;
+    const supabase = createClient();
+    let cancelled = false;
+
+    async function load() {
+      const { data } = await supabase
+        .from("chat_messages")
+        .select("from, text")
+        .eq("ticket_id", active!.id)
+        .order("created_at", { ascending: true });
+      if (!cancelled) setChatMessages((data as unknown as ChatMessage[]) ?? []);
+    }
+
+    load();
+    const interval = setInterval(load, CHAT_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [active]);
+
+  function selectTicket(t: Ticket) {
+    setChatMessages([]);
+    setActive(t);
+  }
+
+  async function sendChatReply() {
+    const text = chatReply.trim();
+    if (!text || !active) return;
+    setChatSending(true);
+    setChatReply("");
+
+    const res = await fetch(`/api/admin/support-tickets/${active.id}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    setChatSending(false);
+    if (res.ok) setChatMessages((m) => [...m, { from: "agent", text }]);
   }
 
   if (restricted) {
@@ -130,15 +182,66 @@ export default function AdminSupportPage() {
             </div>
           </div>
 
-          <div className="mt-6">
-            <p className="text-sm text-gray-600">Description</p>
-            <textarea
-              readOnly
-              rows={4}
-              defaultValue={active.message}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            />
-          </div>
+          {active.subject === "Live Chat" ? (
+            <div className="mt-6">
+              <p className="mb-2 text-sm text-gray-600">Live Chat</p>
+              <div className="flex h-72 flex-col gap-3 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-4">
+                {chatMessages.length === 0 ? (
+                  <p className="text-center text-sm text-gray-400">No messages yet.</p>
+                ) : (
+                  chatMessages.map((m, i) =>
+                    m.from === "agent" ? (
+                      <div
+                        key={i}
+                        className="ml-auto max-w-[80%] rounded-2xl bg-primary-100 px-4 py-2.5 text-sm text-primary-900"
+                      >
+                        {m.text}
+                      </div>
+                    ) : (
+                      <div
+                        key={i}
+                        className="max-w-[80%] rounded-2xl bg-white px-4 py-2.5 text-sm text-gray-700 shadow-sm"
+                      >
+                        {m.text}
+                      </div>
+                    ),
+                  )
+                )}
+              </div>
+              {canWrite && (
+                <div className="mt-3 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={chatReply}
+                    onChange={(e) => setChatReply(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") sendChatReply();
+                    }}
+                    placeholder="Type a reply…"
+                    className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm focus:border-primary-400 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={sendChatReply}
+                    disabled={chatSending || !chatReply.trim()}
+                    className="rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                  >
+                    Send
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="mt-6">
+              <p className="text-sm text-gray-600">Description</p>
+              <textarea
+                readOnly
+                rows={4}
+                defaultValue={active.message}
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              />
+            </div>
+          )}
 
           {canWrite && (
             <div className="mt-8 flex justify-center gap-4">
@@ -213,7 +316,7 @@ export default function AdminSupportPage() {
                 {filteredTickets.map((t, i) => (
                   <tr
                     key={t.id}
-                    onClick={() => setActive(t)}
+                    onClick={() => selectTicket(t)}
                     className="cursor-pointer border-t border-gray-50 hover:bg-gray-50"
                   >
                     <td className="py-3 pr-4 text-gray-500">{String(i + 1).padStart(3, "0")}</td>

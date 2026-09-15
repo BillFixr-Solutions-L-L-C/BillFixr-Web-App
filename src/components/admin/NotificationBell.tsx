@@ -12,12 +12,48 @@ type Notification = {
   created_at: string;
 };
 
+const POLL_MS = 15000;
+
 export default function NotificationBell({ initialNotifications }: { initialNotifications: Notification[] }) {
   const [notifications, setNotifications] = useState(initialNotifications);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Polls for new notifications (e.g. a live-chat message from a customer)
+  // so the bell updates without needing a full page navigation — the
+  // layout's server-side fetch only ever ran once, on the initial load.
+  useEffect(() => {
+    const supabase = createClient();
+    let userId: string | null = null;
+    let cancelled = false;
+
+    async function fetchNotifications() {
+      if (!userId) return;
+      const { data } = await supabase
+        .from("notifications")
+        .select("id, type, message, read, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (!cancelled && data) setNotifications(data);
+    }
+
+    async function init() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      userId = user?.id ?? null;
+    }
+    init();
+
+    const interval = setInterval(fetchNotifications, POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
