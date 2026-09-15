@@ -28,7 +28,7 @@ function CloseIcon() {
   );
 }
 
-export default function Navbar() {
+export default function Navbar({ dashboardHref = null }: { dashboardHref?: string | null }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -47,18 +47,29 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link
-            href="/signup"
-            className="rounded-full bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 sm:px-5"
-          >
-            Sign Up
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-full border border-primary-600 px-4 py-2.5 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 sm:px-5"
-          >
-            Log in
-          </Link>
+          {dashboardHref ? (
+            <Link
+              href={dashboardHref}
+              className="rounded-full bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 sm:px-5"
+            >
+              Go to Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/signup"
+                className="rounded-full bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 sm:px-5"
+              >
+                Sign Up
+              </Link>
+              <Link
+                href="/login"
+                className="rounded-full border border-primary-600 px-4 py-2.5 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 sm:px-5"
+              >
+                Log in
+              </Link>
+            </>
+          )}
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
