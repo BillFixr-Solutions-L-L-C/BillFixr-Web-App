@@ -1,15 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { getApplicationDocuments } from "@/lib/billDocuments";
-import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AdminCareersClient from "@/components/admin/AdminCareersClient";
 import AccessRestricted from "@/components/admin/AccessRestricted";
 
 export default async function AdminCareersPage() {
   const supabase = await createClient();
 
-  if (!hasDomainAccess(await getDomainAccess(supabase, "hr"))) {
+  const hrAccess = await getDomainAccess(supabase, "hr");
+  if (!hasDomainAccess(hrAccess)) {
     return <AccessRestricted />;
   }
+  const canWrite = hasFullDomainAccess(hrAccess);
 
   const [{ data: postingRows }, { data: applicationRows }] = await Promise.all([
     supabase
@@ -53,5 +55,7 @@ export default async function AdminCareersPage() {
     };
   });
 
-  return <AdminCareersClient initialPostings={initialPostings} initialApplicants={initialApplicants} />;
+  return (
+    <AdminCareersClient initialPostings={initialPostings} initialApplicants={initialApplicants} canWrite={canWrite} />
+  );
 }

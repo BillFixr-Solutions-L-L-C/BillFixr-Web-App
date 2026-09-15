@@ -3,15 +3,17 @@ import PaymentsTable from "@/components/admin/PaymentsTable";
 import BillingSettingsCard from "@/components/admin/BillingSettingsCard";
 import { createClient } from "@/lib/supabase/server";
 import { getPaymentRows } from "@/lib/paymentTransactions";
-import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
 
 export default async function AdminPaymentsPage() {
   const supabase = await createClient();
 
-  if (!hasDomainAccess(await getDomainAccess(supabase, "finance"))) {
+  const financeAccess = await getDomainAccess(supabase, "finance");
+  if (!hasDomainAccess(financeAccess)) {
     return <AccessRestricted />;
   }
+  const canWrite = hasFullDomainAccess(financeAccess);
 
   const [{ rows: commitmentFees }, { rows: percentageFees }, { data: settings }, { data: canIssueRefunds }] =
     await Promise.all([
@@ -25,7 +27,7 @@ export default async function AdminPaymentsPage() {
     <div>
       <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Transactions</h1>
 
-      <BillingSettingsCard initialPercentage={Number(settings?.success_fee_percentage ?? 30)} />
+      <BillingSettingsCard initialPercentage={Number(settings?.success_fee_percentage ?? 30)} canWrite={canWrite} />
 
       <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Commitment Fee</h2>

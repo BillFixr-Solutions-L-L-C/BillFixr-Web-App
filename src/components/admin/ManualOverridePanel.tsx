@@ -16,12 +16,14 @@ export default function ManualOverridePanel({
   initialOverrideReason,
   initialApprovalChain,
   initialDecision,
+  canWrite,
 }: {
   caseId: string;
   initialNotes: string;
   initialOverrideReason: string;
   initialApprovalChain: string;
   initialDecision: Decision | null;
+  canWrite: boolean;
 }) {
   const [notes, setNotes] = useState(initialNotes);
   const [overrideReason, setOverrideReason] = useState(initialOverrideReason);
@@ -65,57 +67,62 @@ export default function ManualOverridePanel({
         rows={3}
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
+        readOnly={!canWrite}
         className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
       />
       <label className="mt-3 block text-sm text-gray-600">Override Reason</label>
       <input
         value={overrideReason}
         onChange={(e) => setOverrideReason(e.target.value)}
+        readOnly={!canWrite}
         className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
       />
       <label className="mt-3 block text-sm text-gray-600">Approval Chain</label>
       <input
         value={approvalChain}
         onChange={(e) => setApprovalChain(e.target.value)}
+        readOnly={!canWrite}
         className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
       />
 
       {error && <p className="mt-2 text-sm text-danger">{error}</p>}
 
-      <div className="mt-4 flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => submit("approved")}
-          disabled={saving !== null}
-          className="rounded-full bg-primary-600 py-2 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {saving === "approved" ? "Saving…" : "Manual Approve"}
-        </button>
-        <button
-          type="button"
-          onClick={() => submit("rejected")}
-          disabled={saving !== null}
-          className="rounded-full bg-red-500 py-2 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {saving === "rejected" ? "Saving…" : "Reject"}
-        </button>
-        <button
-          type="button"
-          onClick={() => submit("escalated")}
-          disabled={saving !== null}
-          className="rounded-full bg-red-100 py-2 text-sm font-semibold text-red-500 disabled:opacity-60"
-        >
-          {saving === "escalated" ? "Saving…" : "Deny & Escalate"}
-        </button>
-        <button
-          type="button"
-          disabled
-          title="Not available yet — depends on the AI/OCR pipeline"
-          className="rounded-full bg-gray-100 py-2 text-sm font-semibold text-gray-400"
-        >
-          Re-Run AI Analysis
-        </button>
-      </div>
+      {canWrite && (
+        <div className="mt-4 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => submit("approved")}
+            disabled={saving !== null}
+            className="rounded-full bg-primary-600 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {saving === "approved" ? "Saving…" : "Manual Approve"}
+          </button>
+          <button
+            type="button"
+            onClick={() => submit("rejected")}
+            disabled={saving !== null}
+            className="rounded-full bg-red-500 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {saving === "rejected" ? "Saving…" : "Reject"}
+          </button>
+          <button
+            type="button"
+            onClick={() => submit("escalated")}
+            disabled={saving !== null}
+            className="rounded-full bg-red-100 py-2 text-sm font-semibold text-red-500 disabled:opacity-60"
+          >
+            {saving === "escalated" ? "Saving…" : "Deny & Escalate"}
+          </button>
+        </div>
+      )}
+      <button
+        type="button"
+        disabled
+        title="Not available yet — depends on the AI/OCR pipeline"
+        className="mt-2 w-full rounded-full bg-gray-100 py-2 text-sm font-semibold text-gray-400"
+      >
+        Re-Run AI Analysis
+      </button>
     </div>
   );
 }

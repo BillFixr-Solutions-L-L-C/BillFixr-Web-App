@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import AdminShell from "@/components/admin/AdminShell";
 import { createClient } from "@/lib/supabase/server";
+import { getDomainAccess, type AccessLevel, type Domain } from "@/lib/domainAccess";
+
+const SIDEBAR_DOMAINS = ["client_data", "finance", "hr", "system", "ai_pipeline"] as const satisfies readonly Domain[];
 
 export const metadata: Metadata = {
   title: "BillFixr - Admin",
@@ -15,7 +18,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   let name = "";
   let roleName = "";
   let initialNotifications: { id: string; type: string; message: string; read: boolean; created_at: string }[] = [];
+  const domainAccess: Partial<Record<Domain, AccessLevel>> = {};
   if (user) {
+    const levels = await Promise.all(SIDEBAR_DOMAINS.map((domain) => getDomainAccess(supabase, domain)));
+    SIDEBAR_DOMAINS.forEach((domain, i) => {
+      domainAccess[domain] = levels[i];
+    });
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("name, roles(name)")
@@ -34,7 +43,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <AdminShell user={{ name, roleName }} initialNotifications={initialNotifications}>
+    <AdminShell user={{ name, roleName }} initialNotifications={initialNotifications} domainAccess={domainAccess}>
       {children}
     </AdminShell>
   );

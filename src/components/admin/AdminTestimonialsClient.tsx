@@ -24,7 +24,13 @@ const statusLabel: Record<Testimonial["status"], string> = {
   rejected: "Rejected",
 };
 
-export default function AdminTestimonialsClient({ initialTestimonials }: { initialTestimonials: Testimonial[] }) {
+export default function AdminTestimonialsClient({
+  initialTestimonials,
+  canWrite,
+}: {
+  initialTestimonials: Testimonial[];
+  canWrite: boolean;
+}) {
   const [testimonials, setTestimonials] = useState(initialTestimonials);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -101,22 +107,26 @@ export default function AdminTestimonialsClient({ initialTestimonials }: { initi
             >
               Back
             </button>
-            <button
-              type="button"
-              disabled={saving || active.status === "rejected"}
-              onClick={() => setStatus(active.id, "rejected")}
-              className="flex items-center gap-2 rounded-full bg-danger px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-            >
-              Reject ✕
-            </button>
-            <button
-              type="button"
-              disabled={saving || active.status === "approved"}
-              onClick={() => setStatus(active.id, "approved")}
-              className="flex items-center gap-2 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
-            >
-              Approve ✓
-            </button>
+            {canWrite && (
+              <>
+                <button
+                  type="button"
+                  disabled={saving || active.status === "rejected"}
+                  onClick={() => setStatus(active.id, "rejected")}
+                  className="flex items-center gap-2 rounded-full bg-danger px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  Reject ✕
+                </button>
+                <button
+                  type="button"
+                  disabled={saving || active.status === "approved"}
+                  onClick={() => setStatus(active.id, "approved")}
+                  className="flex items-center gap-2 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
+                >
+                  Approve ✓
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 
-export default function BillingSettingsCard({ initialPercentage }: { initialPercentage: number }) {
+export default function BillingSettingsCard({
+  initialPercentage,
+  canWrite,
+}: {
+  initialPercentage: number;
+  canWrite: boolean;
+}) {
   const [value, setValue] = useState(String(initialPercentage));
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -43,6 +49,7 @@ export default function BillingSettingsCard({ initialPercentage }: { initialPerc
             max={100}
             step="0.01"
             value={value}
+            readOnly={!canWrite}
             onChange={(e) => {
               setValue(e.target.value);
               setSaved(false);
@@ -51,14 +58,16 @@ export default function BillingSettingsCard({ initialPercentage }: { initialPerc
           />
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">%</span>
         </div>
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className="rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {saving ? "Saving…" : "Save"}
-        </button>
+        {canWrite && (
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        )}
         {saved && <span className="text-sm text-primary-600">Saved</span>}
         {error && <span className="text-sm text-danger">{error}</span>}
       </div>

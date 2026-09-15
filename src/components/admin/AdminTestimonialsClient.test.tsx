@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import AdminTestimonialsClient from "./AdminTestimonialsClient";
@@ -12,7 +12,7 @@ const TESTIMONIALS = [
 describe("AdminTestimonialsClient", () => {
   it("filters by search text across name and email", async () => {
     const user = userEvent.setup();
-    render(<AdminTestimonialsClient initialTestimonials={TESTIMONIALS} />);
+    render(<AdminTestimonialsClient initialTestimonials={TESTIMONIALS} canWrite />);
 
     await user.type(screen.getByPlaceholderText("Search by name or email"), "bob@example.com");
 
@@ -23,7 +23,7 @@ describe("AdminTestimonialsClient", () => {
 
   it("filters by status", async () => {
     const user = userEvent.setup();
-    render(<AdminTestimonialsClient initialTestimonials={TESTIMONIALS} />);
+    render(<AdminTestimonialsClient initialTestimonials={TESTIMONIALS} canWrite />);
 
     await user.selectOptions(screen.getByDisplayValue("All statuses"), "Pending");
 
@@ -34,10 +34,17 @@ describe("AdminTestimonialsClient", () => {
 
   it("shows an empty state when nothing matches", async () => {
     const user = userEvent.setup();
-    render(<AdminTestimonialsClient initialTestimonials={TESTIMONIALS} />);
+    render(<AdminTestimonialsClient initialTestimonials={TESTIMONIALS} canWrite />);
 
     await user.type(screen.getByPlaceholderText("Search by name or email"), "nobody-matches");
 
     expect(screen.getByText("No testimonials match your search.")).toBeInTheDocument();
+  });
+
+  it("hides Approve/Reject when canWrite is false", () => {
+    render(<AdminTestimonialsClient initialTestimonials={TESTIMONIALS} canWrite={false} />);
+    fireEvent.click(screen.getByText("Alice Pending"));
+    expect(screen.queryByRole("button", { name: "Approve ✓" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject ✕" })).not.toBeInTheDocument();
   });
 });

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
+import { hasDomainAccess, type AccessLevel, type Domain } from "@/lib/domainAccess";
 import {
   DashboardIcon,
   UsersIcon,
@@ -19,15 +20,25 @@ import {
   ChevronIcon,
 } from "@/components/admin/icons";
 
-const nav = [
+type NavChild = { label: string; href: string; domain?: Domain };
+type NavItem = {
+  label: string;
+  href: string;
+  icon: (props: Record<string, never>) => React.JSX.Element;
+  domain?: Domain;
+  children?: NavChild[];
+};
+
+const nav: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: DashboardIcon },
-  { label: "Users", href: "/admin/users", icon: UsersIcon },
-  { label: "Careers", href: "/admin/careers", icon: CareersIcon },
-  { label: "Testimonials", href: "/admin/testimonials", icon: TestimonialsIcon },
+  { label: "Users", href: "/admin/users", icon: UsersIcon, domain: "client_data" as Domain },
+  { label: "Careers", href: "/admin/careers", icon: CareersIcon, domain: "hr" as Domain },
+  { label: "Testimonials", href: "/admin/testimonials", icon: TestimonialsIcon, domain: "client_data" as Domain },
   {
     label: "Payments",
     href: "/admin/payments",
     icon: PaymentsIcon,
+    domain: "finance" as Domain,
     children: [
       { label: "Commitment", href: "/admin/payments/commitment" },
       { label: "Percentage", href: "/admin/payments/percentage" },
@@ -37,17 +48,18 @@ const nav = [
     label: "Uploads",
     href: "/admin/uploads",
     icon: UploadsIcon,
+    domain: "client_data" as Domain,
     children: [{ label: "Customer", href: "/admin/uploads" }],
   },
-  { label: "Support", href: "/admin/support", icon: SupportIcon },
-  { label: "Automation Monitoring", href: "/admin/automation", icon: AutomationIcon },
-  { label: "User Management", href: "/admin/user-management", icon: TeamIcon },
+  { label: "Support", href: "/admin/support", icon: SupportIcon, domain: "client_data" as Domain },
+  { label: "Automation Monitoring", href: "/admin/automation", icon: AutomationIcon, domain: "ai_pipeline" as Domain },
+  { label: "User Management", href: "/admin/user-management", icon: TeamIcon, domain: "system" as Domain },
   {
     label: "Settings",
     href: "/admin/settings",
     icon: SettingsIcon,
     children: [
-      { label: "Manage Admin", href: "/admin/settings" },
+      { label: "Manage Admin", href: "/admin/settings", domain: "system" as Domain },
       { label: "Profile Settings", href: "/admin/settings/profile" },
     ],
   },
@@ -61,7 +73,11 @@ function MenuIcon() {
   );
 }
 
-export default function AdminSidebar() {
+export default function AdminSidebar({
+  domainAccess,
+}: {
+  domainAccess?: Partial<Record<Domain, AccessLevel>>;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [openGroup, setOpenGroup] = useState<string | null>(
@@ -69,6 +85,14 @@ export default function AdminSidebar() {
   );
   const [mobileOpen, setMobileOpen] = useState(false);
   const closeMobile = () => setMobileOpen(false);
+
+  // No domainAccess prop (e.g. tests rendering the sidebar in isolation)
+  // means "show everything" rather than "show nothing".
+  const canSee = (domain?: Domain) => !domain || !domainAccess || hasDomainAccess(domainAccess[domain] ?? "none");
+
+  const visibleNav = nav
+    .filter((item) => canSee(item.domain))
+    .map((item) => (item.children ? { ...item, children: item.children.filter((c) => canSee(c.domain)) } : item));
 
   return (
     <>
@@ -115,7 +139,7 @@ export default function AdminSidebar() {
           </div>
 
           <nav className="mt-10 flex flex-col gap-1 text-sm">
-            {nav.map((item) => {
+            {visibleNav.map((item) => {
               const Icon = item.icon;
               // "/admin" (Dashboard) is a prefix of every other admin route,
               // so it can only ever match exactly — a startsWith check here

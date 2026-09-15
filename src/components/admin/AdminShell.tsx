@@ -1,5 +1,6 @@
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminTopbar from "@/components/admin/AdminTopbar";
+import type { AccessLevel, Domain } from "@/lib/domainAccess";
 
 type Notification = { id: string; type: string; message: string; read: boolean; created_at: string };
 
@@ -7,14 +8,16 @@ export default function AdminShell({
   children,
   user,
   initialNotifications,
+  domainAccess,
 }: {
   children: React.ReactNode;
   user: { name: string; roleName: string };
   initialNotifications: Notification[];
+  domainAccess?: Partial<Record<Domain, AccessLevel>>;
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-white md:flex-row">
-      <AdminSidebar />
+      <AdminSidebar domainAccess={domainAccess} />
       <div className="min-w-0 flex-1">
         <AdminTopbar user={user} initialNotifications={initialNotifications} />
         <main className="overflow-x-auto p-4 sm:p-6">

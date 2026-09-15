@@ -40,9 +40,11 @@ const statusLabel: Record<Applicant["status"], string> = {
 export default function AdminCareersClient({
   initialPostings,
   initialApplicants,
+  canWrite,
 }: {
   initialPostings: Posting[];
   initialApplicants: Applicant[];
+  canWrite: boolean;
 }) {
   const [tab, setTab] = useState<"applicants" | "postings">("applicants");
   const [applicants, setApplicants] = useState(initialApplicants);
@@ -152,7 +154,7 @@ export default function AdminCareersClient({
             >
               Back to Applicants
             </button>
-            {active.status === "received" && (
+            {canWrite && active.status === "received" && (
               <button
                 type="button"
                 disabled={saving}
@@ -188,7 +190,7 @@ export default function AdminCareersClient({
       </div>
 
       {tab === "postings" ? (
-        <JobPostingsPanel initialPostings={initialPostings} />
+        <JobPostingsPanel initialPostings={initialPostings} canWrite={canWrite} />
       ) : (
         <div className="rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-sm font-semibold text-gray-800">Applicants</h2>

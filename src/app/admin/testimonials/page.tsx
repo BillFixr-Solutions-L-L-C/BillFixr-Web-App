@@ -1,14 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import AdminTestimonialsClient from "@/components/admin/AdminTestimonialsClient";
-import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
 
 export default async function AdminTestimonialsPage() {
   const supabase = await createClient();
 
-  if (!hasDomainAccess(await getDomainAccess(supabase, "client_data"))) {
+  const clientDataAccess = await getDomainAccess(supabase, "client_data");
+  if (!hasDomainAccess(clientDataAccess)) {
     return <AccessRestricted />;
   }
+  const canWrite = hasFullDomainAccess(clientDataAccess);
 
   const { data } = await supabase
     .from("testimonials")
@@ -28,5 +30,5 @@ export default async function AdminTestimonialsPage() {
     };
   });
 
-  return <AdminTestimonialsClient initialTestimonials={testimonials} />;
+  return <AdminTestimonialsClient initialTestimonials={testimonials} canWrite={canWrite} />;
 }

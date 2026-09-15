@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
 
 type Ticket = {
@@ -29,6 +29,7 @@ const statusLabel: Record<string, string> = {
 export default function AdminSupportPage() {
   const [loading, setLoading] = useState(true);
   const [restricted, setRestricted] = useState(false);
+  const [canWrite, setCanWrite] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [active, setActive] = useState<Ticket | null>(null);
   const [search, setSearch] = useState("");
@@ -54,6 +55,7 @@ export default function AdminSupportPage() {
         setLoading(false);
         return;
       }
+      setCanWrite(hasFullDomainAccess(level));
       const { data } = await supabase
         .from("support_tickets")
         .select("id, subject, message, status, created_at, profiles(name, email)")
@@ -138,22 +140,24 @@ export default function AdminSupportPage() {
             />
           </div>
 
-          <div className="mt-8 flex justify-center gap-4">
-            <button
-              type="button"
-              onClick={() => updateStatus("in_progress")}
-              className="flex items-center gap-2 rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
-            >
-              Mark in-progress ⏱
-            </button>
-            <button
-              type="button"
-              onClick={() => updateStatus("resolved")}
-              className="flex items-center gap-2 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-            >
-              Mark as Resolved ✓
-            </button>
-          </div>
+          {canWrite && (
+            <div className="mt-8 flex justify-center gap-4">
+              <button
+                type="button"
+                onClick={() => updateStatus("in_progress")}
+                className="flex items-center gap-2 rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
+              >
+                Mark in-progress ⏱
+              </button>
+              <button
+                type="button"
+                onClick={() => updateStatus("resolved")}
+                className="flex items-center gap-2 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+              >
+                Mark as Resolved ✓
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );

@@ -38,7 +38,7 @@ describe("UserManagementTable", () => {
   it("asks for confirmation via a modal, not a native dialog, before revoking access", async () => {
     global.fetch = vi.fn();
     const user = userEvent.setup();
-    render(<UserManagementTable accounts={INVITED} roles={ROLES} canDelete currentUserId="someone-else" />);
+    render(<UserManagementTable accounts={INVITED} roles={ROLES} canDelete currentUserId="someone-else" canWrite />);
 
     await user.click(screen.getByRole("button", { name: "Revoke Access" }));
 
@@ -53,7 +53,7 @@ describe("UserManagementTable", () => {
   it("revokes access and refreshes once the modal is confirmed", async () => {
     global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const user = userEvent.setup();
-    render(<UserManagementTable accounts={INVITED} roles={ROLES} canDelete currentUserId="someone-else" />);
+    render(<UserManagementTable accounts={INVITED} roles={ROLES} canDelete currentUserId="someone-else" canWrite />);
 
     await user.click(screen.getByRole("button", { name: "Revoke Access" }));
     await user.click(screen.getByRole("button", { name: "Yes, Revoke Access" }));
@@ -65,14 +65,22 @@ describe("UserManagementTable", () => {
     );
   });
 
+  it("hides Add new admin and Resend Invite when canWrite is false", () => {
+    render(
+      <UserManagementTable accounts={INVITED} roles={ROLES} canDelete={false} currentUserId="someone-else" canWrite={false} />,
+    );
+    expect(screen.queryByRole("button", { name: "Add new admin +" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Resend Invite" })).not.toBeInTheDocument();
+  });
+
   it("hides Revoke Access when canDelete is false", () => {
-    render(<UserManagementTable accounts={INVITED} roles={ROLES} canDelete={false} currentUserId="someone-else" />);
+    render(<UserManagementTable accounts={INVITED} roles={ROLES} canDelete={false} currentUserId="someone-else" canWrite />);
     expect(screen.queryByRole("button", { name: "Revoke Access" })).not.toBeInTheDocument();
   });
 
   it("filters by search text across name and email", async () => {
     const user = userEvent.setup();
-    render(<UserManagementTable accounts={MIXED} roles={ROLES} canDelete={false} currentUserId="someone-else" />);
+    render(<UserManagementTable accounts={MIXED} roles={ROLES} canDelete={false} currentUserId="someone-else" canWrite />);
 
     await user.type(screen.getByPlaceholderText("Search by name or email"), "bob@example.com");
 
@@ -83,7 +91,7 @@ describe("UserManagementTable", () => {
 
   it("filters by status", async () => {
     const user = userEvent.setup();
-    render(<UserManagementTable accounts={MIXED} roles={ROLES} canDelete={false} currentUserId="someone-else" />);
+    render(<UserManagementTable accounts={MIXED} roles={ROLES} canDelete={false} currentUserId="someone-else" canWrite />);
 
     await user.selectOptions(screen.getByDisplayValue("All statuses"), "Suspended");
 
@@ -94,7 +102,7 @@ describe("UserManagementTable", () => {
 
   it("shows an empty state when the search/filter matches nothing", async () => {
     const user = userEvent.setup();
-    render(<UserManagementTable accounts={MIXED} roles={ROLES} canDelete={false} currentUserId="someone-else" />);
+    render(<UserManagementTable accounts={MIXED} roles={ROLES} canDelete={false} currentUserId="someone-else" canWrite />);
 
     await user.type(screen.getByPlaceholderText("Search by name or email"), "nobody-matches-this");
 
@@ -104,7 +112,7 @@ describe("UserManagementTable", () => {
   it("opens the add-admin modal and submits an invite", async () => {
     global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const user = userEvent.setup();
-    render(<UserManagementTable accounts={INVITED} roles={ROLES} canDelete={false} currentUserId="someone-else" />);
+    render(<UserManagementTable accounts={INVITED} roles={ROLES} canDelete={false} currentUserId="someone-else" canWrite />);
 
     await user.click(screen.getByRole("button", { name: "Add new admin +" }));
     await user.type(screen.getByLabelText("Full name"), "Brand New Admin");
@@ -124,7 +132,7 @@ describe("UserManagementTable", () => {
   it("shows the server error and keeps the modal open when the invite fails", async () => {
     global.fetch = vi.fn(async () => new Response(JSON.stringify({ error: "email already invited" }), { status: 500 }));
     const user = userEvent.setup();
-    render(<UserManagementTable accounts={INVITED} roles={ROLES} canDelete={false} currentUserId="someone-else" />);
+    render(<UserManagementTable accounts={INVITED} roles={ROLES} canDelete={false} currentUserId="someone-else" canWrite />);
 
     await user.click(screen.getByRole("button", { name: "Add new admin +" }));
     await user.type(screen.getByLabelText("Full name"), "Brand New Admin");

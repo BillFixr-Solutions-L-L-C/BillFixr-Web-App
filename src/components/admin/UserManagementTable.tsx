@@ -28,11 +28,13 @@ export default function UserManagementTable({
   roles,
   canDelete,
   currentUserId,
+  canWrite,
 }: {
   accounts: AccountRow[];
   roles: RoleOption[];
   canDelete: boolean;
   currentUserId: string;
+  canWrite: boolean;
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -127,13 +129,15 @@ export default function UserManagementTable({
     <div className="min-w-0 rounded-2xl bg-white p-6 shadow-sm">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-gray-900">User Account &amp; Access Control</h2>
-        <button
-          type="button"
-          onClick={() => setShowAdd(true)}
-          className="rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-        >
-          Add new admin +
-        </button>
+        {canWrite && (
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+          >
+            Add new admin +
+          </button>
+        )}
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -207,14 +211,16 @@ export default function UserManagementTable({
                     )}
                     {a.status === "Invited" && (
                       <div className="flex gap-2">
-                        <button
-                          type="button"
-                          disabled={busyId === a.id}
-                          onClick={() => resendInvite(a.id)}
-                          className="rounded-lg border border-primary-300 px-3 py-1 text-xs text-primary-600 disabled:opacity-50"
-                        >
-                          Resend Invite
-                        </button>
+                        {canWrite && (
+                          <button
+                            type="button"
+                            disabled={busyId === a.id}
+                            onClick={() => resendInvite(a.id)}
+                            className="rounded-lg border border-primary-300 px-3 py-1 text-xs text-primary-600 disabled:opacity-50"
+                          >
+                            Resend Invite
+                          </button>
+                        )}
                         {canDelete && a.id !== currentUserId && (
                           <button
                             type="button"

@@ -2,7 +2,7 @@ import UserManagementTable, { type AccountRow } from "@/components/admin/UserMan
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { timeAgo } from "@/lib/timeAgo";
-import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
 
 type ActivityLogRow = {
@@ -40,9 +40,11 @@ type AdminProfile = {
 export default async function UserManagementPage() {
   const supabase = await createClient();
 
-  if (!hasDomainAccess(await getDomainAccess(supabase, "system"))) {
+  const systemAccess = await getDomainAccess(supabase, "system");
+  if (!hasDomainAccess(systemAccess)) {
     return <AccessRestricted />;
   }
+  const canWrite = hasFullDomainAccess(systemAccess);
 
   const {
     data: { user },
@@ -109,6 +111,7 @@ export default async function UserManagementPage() {
             roles={roles ?? []}
             canDelete={Boolean(canDelete)}
             currentUserId={user?.id ?? ""}
+            canWrite={canWrite}
           />
         </div>
 

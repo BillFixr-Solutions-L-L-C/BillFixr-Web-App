@@ -11,7 +11,7 @@ const APPLICANTS = [
 describe("AdminCareersClient applicants tab", () => {
   it("filters by search text across name, email, and role", async () => {
     const user = userEvent.setup();
-    render(<AdminCareersClient initialPostings={[]} initialApplicants={APPLICANTS} />);
+    render(<AdminCareersClient initialPostings={[]} initialApplicants={APPLICANTS} canWrite />);
 
     await user.type(screen.getByPlaceholderText("Search by name, email, or role"), "Designer");
 
@@ -21,7 +21,7 @@ describe("AdminCareersClient applicants tab", () => {
 
   it("filters by status", async () => {
     const user = userEvent.setup();
-    render(<AdminCareersClient initialPostings={[]} initialApplicants={APPLICANTS} />);
+    render(<AdminCareersClient initialPostings={[]} initialApplicants={APPLICANTS} canWrite />);
 
     await user.selectOptions(screen.getByDisplayValue("All statuses"), "New");
 
@@ -31,10 +31,22 @@ describe("AdminCareersClient applicants tab", () => {
 
   it("shows an empty state when nothing matches", async () => {
     const user = userEvent.setup();
-    render(<AdminCareersClient initialPostings={[]} initialApplicants={APPLICANTS} />);
+    render(<AdminCareersClient initialPostings={[]} initialApplicants={APPLICANTS} canWrite />);
 
     await user.type(screen.getByPlaceholderText("Search by name, email, or role"), "nobody-matches");
 
     expect(screen.getByText("No applicants match your search.")).toBeInTheDocument();
+  });
+
+  it("hides Mark Reviewed and New Posting when canWrite is false", async () => {
+    const user = userEvent.setup();
+    render(<AdminCareersClient initialPostings={[]} initialApplicants={APPLICANTS} canWrite={false} />);
+
+    await user.click(screen.getByText("Alice New"));
+    expect(screen.queryByRole("button", { name: "Mark Reviewed" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Back to Applicants" }));
+    await user.click(screen.getByRole("button", { name: "Job Postings" }));
+    expect(screen.queryByRole("button", { name: "+ New Posting" })).not.toBeInTheDocument();
   });
 });

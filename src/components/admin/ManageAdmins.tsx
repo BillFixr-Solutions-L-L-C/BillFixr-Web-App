@@ -21,11 +21,13 @@ export default function ManageAdmins({
   roles,
   canDelete,
   currentUserId,
+  canWrite,
 }: {
   admins: AdminRow[];
   roles: RoleOption[];
   canDelete: boolean;
   currentUserId: string;
+  canWrite: boolean;
 }) {
   const router = useRouter();
   const [showAdd, setShowAdd] = useState(false);
@@ -107,13 +109,15 @@ export default function ManageAdmins({
     <div className="rounded-2xl bg-white p-6 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Manage Admins</h2>
-        <button
-          type="button"
-          onClick={() => setShowAdd(true)}
-          className="rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-        >
-          Add new admin +
-        </button>
+        {canWrite && (
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+          >
+            Add new admin +
+          </button>
+        )}
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">

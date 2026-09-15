@@ -35,30 +35,35 @@ const MULTIPLE_ADMINS: AdminRow[] = [
 
 describe("ManageAdmins", () => {
   it("lists existing admins", () => {
-    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete={false} currentUserId="admin-1" />);
+    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete={false} currentUserId="admin-1" canWrite />);
     expect(screen.getByText("Existing Admin")).toBeInTheDocument();
     expect(screen.getByText("existing@example.com")).toBeInTheDocument();
   });
 
   it("shows an empty state with no admins", () => {
-    render(<ManageAdmins admins={[]} roles={ROLES} canDelete={false} currentUserId="admin-1" />);
+    render(<ManageAdmins admins={[]} roles={ROLES} canDelete={false} currentUserId="admin-1" canWrite />);
     expect(screen.getByText("No admin accounts yet.")).toBeInTheDocument();
   });
 
+  it("hides Add new admin when canWrite is false", () => {
+    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete={false} currentUserId="admin-1" canWrite={false} />);
+    expect(screen.queryByRole("button", { name: "Add new admin +" })).not.toBeInTheDocument();
+  });
+
   it("never shows a delete button for the current user's own row", () => {
-    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete currentUserId="admin-1" />);
+    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete currentUserId="admin-1" canWrite />);
     expect(screen.queryByRole("button", { name: "Delete admin" })).not.toBeInTheDocument();
   });
 
   it("shows a delete button for other admins when canDelete is true", () => {
-    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete currentUserId="someone-else" />);
+    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete currentUserId="someone-else" canWrite />);
     expect(screen.getByRole("button", { name: "Delete admin" })).toBeInTheDocument();
   });
 
   it("opens the add-admin modal and submits an invite", async () => {
     global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const user = userEvent.setup();
-    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete={false} currentUserId="admin-1" />);
+    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete={false} currentUserId="admin-1" canWrite />);
 
     await user.click(screen.getByRole("button", { name: "Add new admin +" }));
     await user.type(screen.getByLabelText("Full name"), "Brand New Admin");
@@ -78,7 +83,7 @@ describe("ManageAdmins", () => {
   it("shows the server error and keeps the modal open when the invite fails", async () => {
     global.fetch = vi.fn(async () => new Response(JSON.stringify({ error: "email already invited" }), { status: 500 }));
     const user = userEvent.setup();
-    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete={false} currentUserId="admin-1" />);
+    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete={false} currentUserId="admin-1" canWrite />);
 
     await user.click(screen.getByRole("button", { name: "Add new admin +" }));
     await user.type(screen.getByLabelText("Full name"), "Brand New Admin");
@@ -92,7 +97,7 @@ describe("ManageAdmins", () => {
   it("asks for confirmation via a modal, not a native dialog, before deleting an admin", async () => {
     global.fetch = vi.fn();
     const user = userEvent.setup();
-    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete currentUserId="someone-else" />);
+    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete currentUserId="someone-else" canWrite />);
 
     await user.click(screen.getByRole("button", { name: "Delete admin" }));
 
@@ -107,7 +112,7 @@ describe("ManageAdmins", () => {
   it("deletes the admin and refreshes once the modal is confirmed", async () => {
     global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const user = userEvent.setup();
-    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete currentUserId="someone-else" />);
+    render(<ManageAdmins admins={ADMINS} roles={ROLES} canDelete currentUserId="someone-else" canWrite />);
 
     await user.click(screen.getByRole("button", { name: "Delete admin" }));
     await user.click(screen.getByRole("button", { name: "Yes, Delete Account" }));
@@ -121,7 +126,7 @@ describe("ManageAdmins", () => {
 
   it("filters by search text across name and email", async () => {
     const user = userEvent.setup();
-    render(<ManageAdmins admins={MULTIPLE_ADMINS} roles={ROLES} canDelete={false} currentUserId="someone-else" />);
+    render(<ManageAdmins admins={MULTIPLE_ADMINS} roles={ROLES} canDelete={false} currentUserId="someone-else" canWrite />);
 
     await user.type(screen.getByPlaceholderText("Search by name or email"), "bob@example.com");
 
@@ -131,7 +136,7 @@ describe("ManageAdmins", () => {
 
   it("filters by role", async () => {
     const user = userEvent.setup();
-    render(<ManageAdmins admins={MULTIPLE_ADMINS} roles={ROLES} canDelete={false} currentUserId="someone-else" />);
+    render(<ManageAdmins admins={MULTIPLE_ADMINS} roles={ROLES} canDelete={false} currentUserId="someone-else" canWrite />);
 
     await user.selectOptions(screen.getByDisplayValue("All roles"), "Super Admin");
 
@@ -141,7 +146,7 @@ describe("ManageAdmins", () => {
 
   it("shows an empty state when the search/filter matches nothing", async () => {
     const user = userEvent.setup();
-    render(<ManageAdmins admins={MULTIPLE_ADMINS} roles={ROLES} canDelete={false} currentUserId="someone-else" />);
+    render(<ManageAdmins admins={MULTIPLE_ADMINS} roles={ROLES} canDelete={false} currentUserId="someone-else" canWrite />);
 
     await user.type(screen.getByPlaceholderText("Search by name or email"), "nobody-matches-this");
 

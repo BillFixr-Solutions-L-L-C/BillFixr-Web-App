@@ -1,6 +1,6 @@
 import ManageAdmins, { type AdminRow, type RoleOption } from "@/components/admin/ManageAdmins";
 import { createClient } from "@/lib/supabase/server";
-import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
 
 type AdminProfile = {
@@ -14,9 +14,11 @@ type AdminProfile = {
 export default async function AdminSettingsPage() {
   const supabase = await createClient();
 
-  if (!hasDomainAccess(await getDomainAccess(supabase, "system"))) {
+  const systemAccess = await getDomainAccess(supabase, "system");
+  if (!hasDomainAccess(systemAccess)) {
     return <AccessRestricted />;
   }
+  const canWrite = hasFullDomainAccess(systemAccess);
 
   const {
     data: { user },
@@ -55,6 +57,7 @@ export default async function AdminSettingsPage() {
         roles={roleOptions}
         canDelete={Boolean(canDelete)}
         currentUserId={user?.id ?? ""}
+        canWrite={canWrite}
       />
     </div>
   );

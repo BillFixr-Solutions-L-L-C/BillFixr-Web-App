@@ -5,7 +5,7 @@ import BillDocumentCard from "@/components/admin/BillDocumentCard";
 import PendingDocumentCard from "@/components/admin/PendingDocumentCard";
 import { createClient } from "@/lib/supabase/server";
 import { getBillDocuments } from "@/lib/billDocuments";
-import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -29,6 +29,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   if (!hasDomainAccess(await getDomainAccess(supabase, "client_data"))) {
     return <AccessRestricted />;
   }
+  const canPromote = hasFullDomainAccess(await getDomainAccess(supabase, "system"));
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -117,7 +118,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
       <div className="mt-8 flex flex-wrap items-start gap-4">
         <AccountActions userId={profile.id} initialStatus={profile.status} canDelete={Boolean(canDelete)} />
-        <PromoteToAdmin userId={profile.id} roles={roles ?? []} />
+        {canPromote && <PromoteToAdmin userId={profile.id} roles={roles ?? []} />}
       </div>
     </div>
   );

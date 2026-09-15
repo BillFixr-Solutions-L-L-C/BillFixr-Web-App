@@ -5,7 +5,7 @@ import { MOCK_ADMIN_CASE_ANALYSIS, type AdminCaseAnalysis } from "@/lib/adminCas
 import { isCaseCompleted } from "@/lib/caseStatus";
 import BillDocumentCard from "@/components/admin/BillDocumentCard";
 import ManualOverridePanel from "@/components/admin/ManualOverridePanel";
-import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
 
 const RISK_COLOR: Record<string, string> = {
@@ -21,6 +21,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   if (!hasDomainAccess(await getDomainAccess(supabase, "client_data"))) {
     return <AccessRestricted />;
   }
+  const canOverride = hasFullDomainAccess(await getDomainAccess(supabase, "negotiation"));
 
   const { data: caseRow } = await supabase
     .from("cases")
@@ -136,6 +137,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             initialOverrideReason={caseRow.override_reason ?? ""}
             initialApprovalChain={caseRow.approval_chain ?? ""}
             initialDecision={caseRow.manual_review_status as "approved" | "rejected" | "escalated" | null}
+            canWrite={canOverride}
           />
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">

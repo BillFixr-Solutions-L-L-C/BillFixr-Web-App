@@ -52,7 +52,13 @@ function linesToArray(value: string): string[] {
     .filter(Boolean);
 }
 
-export default function JobPostingsPanel({ initialPostings }: { initialPostings: Posting[] }) {
+export default function JobPostingsPanel({
+  initialPostings,
+  canWrite,
+}: {
+  initialPostings: Posting[];
+  canWrite: boolean;
+}) {
   const [postings, setPostings] = useState(initialPostings);
   const [editing, setEditing] = useState<Posting | "new" | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -233,13 +239,15 @@ export default function JobPostingsPanel({ initialPostings }: { initialPostings:
     <div className="rounded-2xl bg-white p-6 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-800">Job Postings</h2>
-        <button
-          type="button"
-          onClick={startCreate}
-          className="rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-700"
-        >
-          + New Posting
-        </button>
+        {canWrite && (
+          <button
+            type="button"
+            onClick={startCreate}
+            className="rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+          >
+            + New Posting
+          </button>
+        )}
       </div>
 
       {postings.length === 0 ? (
@@ -264,12 +272,16 @@ export default function JobPostingsPanel({ initialPostings }: { initialPostings:
                     {posting.status === "open" ? "Open" : "Closed"}
                   </td>
                   <td className="flex justify-end gap-4 py-3">
-                    <button type="button" onClick={() => startEdit(posting)} className="font-medium text-primary-600">
-                      Edit
-                    </button>
-                    <button type="button" onClick={() => toggleStatus(posting)} className="font-medium text-gray-500">
-                      {posting.status === "open" ? "Close" : "Reopen"}
-                    </button>
+                    {canWrite && (
+                      <>
+                        <button type="button" onClick={() => startEdit(posting)} className="font-medium text-primary-600">
+                          Edit
+                        </button>
+                        <button type="button" onClick={() => toggleStatus(posting)} className="font-medium text-gray-500">
+                          {posting.status === "open" ? "Close" : "Reopen"}
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -22,6 +22,7 @@ describe("ManualOverridePanel", () => {
         initialOverrideReason=""
         initialApprovalChain=""
         initialDecision={null}
+        canWrite
       />,
     );
     expect(screen.queryByText("Approved")).not.toBeInTheDocument();
@@ -37,6 +38,7 @@ describe("ManualOverridePanel", () => {
         initialOverrideReason=""
         initialApprovalChain=""
         initialDecision="approved"
+        canWrite
       />,
     );
     expect(screen.getByText("Approved")).toBeInTheDocument();
@@ -50,6 +52,7 @@ describe("ManualOverridePanel", () => {
         initialOverrideReason=""
         initialApprovalChain=""
         initialDecision={null}
+        canWrite
       />,
     );
     expect(screen.getByRole("button", { name: "Re-Run AI Analysis" })).toBeDisabled();
@@ -65,6 +68,7 @@ describe("ManualOverridePanel", () => {
         initialOverrideReason=""
         initialApprovalChain=""
         initialDecision={null}
+        canWrite
       />,
     );
 
@@ -93,6 +97,7 @@ describe("ManualOverridePanel", () => {
         initialOverrideReason=""
         initialApprovalChain=""
         initialDecision={null}
+        canWrite
       />,
     );
 
@@ -100,5 +105,23 @@ describe("ManualOverridePanel", () => {
 
     await waitFor(() => expect(screen.getByText("forbidden")).toBeInTheDocument());
     expect(screen.queryByText("Rejected")).not.toBeInTheDocument();
+  });
+
+  it("hides the decision buttons and makes fields read-only when canWrite is false", () => {
+    render(
+      <ManualOverridePanel
+        caseId="case-1"
+        initialNotes="Existing notes"
+        initialOverrideReason=""
+        initialApprovalChain=""
+        initialDecision={null}
+        canWrite={false}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Manual Approve" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Deny & Escalate" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Re-Run AI Analysis" })).toBeDisabled();
+    expect(screen.getByDisplayValue("Existing notes")).toHaveAttribute("readonly");
   });
 });
