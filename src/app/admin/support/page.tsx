@@ -155,6 +155,13 @@ export default function AdminSupportPage() {
   if (active) {
     return (
       <div>
+        <button
+          type="button"
+          onClick={() => setActive(null)}
+          className="mb-4 text-sm font-medium text-primary-600 hover:text-primary-700"
+        >
+          ← Back
+        </button>
         <h1 className="mb-2 font-serif text-3xl font-bold text-gray-900">Support</h1>
         <p className="mb-6 text-sm font-semibold text-gray-500">Customer Tickets</p>
 
@@ -271,33 +278,24 @@ export default function AdminSupportPage() {
             </div>
           )}
 
-          <div className="mt-8 flex justify-center gap-4">
-            <button
-              type="button"
-              onClick={() => setActive(null)}
-              className="rounded-full border border-gray-200 px-6 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
-            >
-              ← Back
-            </button>
-            {canWrite && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => updateStatus("in_progress")}
-                  className="flex items-center gap-2 rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
-                >
-                  Mark in-progress ⏱
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateStatus("resolved")}
-                  className="flex items-center gap-2 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-                >
-                  Mark as Resolved ✓
-                </button>
-              </>
-            )}
-          </div>
+          {canWrite && (
+            <div className="mt-8 flex justify-center gap-4">
+              <button
+                type="button"
+                onClick={() => updateStatus("in_progress")}
+                className="flex items-center gap-2 rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
+              >
+                Mark in-progress ⏱
+              </button>
+              <button
+                type="button"
+                onClick={() => updateStatus("resolved")}
+                className="flex items-center gap-2 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+              >
+                Mark as Resolved ✓
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
