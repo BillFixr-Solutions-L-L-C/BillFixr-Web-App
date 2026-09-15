@@ -160,6 +160,57 @@ describe("SupportPage live chat", () => {
     expect(await screen.findByText("Glad we sorted it out.")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("How can i help you?")).not.toBeInTheDocument();
   });
+
+  it("lets the customer rate a resolved conversation and shows a thank-you after rating", async () => {
+    mock.queueResult("support_tickets", {
+      data: [{ id: "ticket-old", status: "resolved", created_at: "2026-01-01T00:00:00Z", chat_rating: null }],
+      error: null,
+    });
+    mock.queueResult("chat_messages", { data: [{ from: "agent", text: "All set!" }], error: null });
+    mock.queueResult("support_tickets", {
+      data: { id: "ticket-old", status: "resolved", created_at: "2026-01-01T00:00:00Z", chat_rating: null },
+      error: null,
+    });
+    mock.queueResult("support_tickets", { data: null, error: null }); // the rating update itself
+
+    const user = userEvent.setup();
+    render(<SupportPage />);
+
+    await user.click(screen.getByRole("button", { name: "Open live chat" }));
+    await user.click(await screen.findByText("Past conversations (1)"));
+    await user.click(screen.getByText(/Conversation from/));
+
+    expect(await screen.findByText("How was this conversation?")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Rate 5 stars" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Thanks for rating this conversation ★★★★★")).toBeInTheDocument(),
+    );
+    const lastBuilder = mock.from.mock.results[mock.from.mock.results.length - 1].value;
+    expect(lastBuilder.update).toHaveBeenCalledWith({ chat_rating: 5 });
+  });
+
+  it("shows the thank-you message instead of the prompt when already rated", async () => {
+    mock.queueResult("support_tickets", {
+      data: [{ id: "ticket-old", status: "resolved", created_at: "2026-01-01T00:00:00Z", chat_rating: 4 }],
+      error: null,
+    });
+    mock.queueResult("chat_messages", { data: [], error: null });
+    mock.queueResult("support_tickets", {
+      data: { id: "ticket-old", status: "resolved", created_at: "2026-01-01T00:00:00Z", chat_rating: 4 },
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    render(<SupportPage />);
+
+    await user.click(screen.getByRole("button", { name: "Open live chat" }));
+    await user.click(await screen.findByText("Past conversations (1)"));
+    await user.click(screen.getByText(/Conversation from/));
+
+    expect(await screen.findByText("Thanks for rating this conversation ★★★★☆")).toBeInTheDocument();
+    expect(screen.queryByText("How was this conversation?")).not.toBeInTheDocument();
+  });
 });
 
 describe("SupportPage complaint form", () => {

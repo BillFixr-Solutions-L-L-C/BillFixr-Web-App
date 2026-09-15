@@ -8,7 +8,7 @@ const CHAT_POLL_MS = 3000;
 const ONLINE_POLL_MS = 30000;
 
 type ChatMessage = { from: string; text: string };
-type ChatTicket = { id: string; status: string; created_at: string };
+type ChatTicket = { id: string; status: string; created_at: string; chat_rating: number | null };
 
 function Avatar({ className = "" }: { className?: string }) {
   return (
@@ -31,6 +31,7 @@ export default function SupportPage() {
   const [draft, setDraft] = useState("");
   const [isOnline, setIsOnline] = useState<boolean | null>(null);
   const [startingNew, setStartingNew] = useState(false);
+  const [ratingSaving, setRatingSaving] = useState(false);
 
   const liveTicket = tickets.find((t) => t.status !== "resolved") ?? null;
   const pastTickets = tickets.filter((t) => t.status === "resolved");
@@ -46,7 +47,7 @@ export default function SupportPage() {
     const supabase = createClient();
     const { data } = await supabase
       .from("support_tickets")
-      .select("id, status, created_at")
+      .select("id, status, created_at, chat_rating")
       .eq("user_id", uid)
       .eq("subject", "Live Chat")
       .order("created_at", { ascending: false });
@@ -79,7 +80,7 @@ export default function SupportPage() {
     const { data: newTicket } = await supabase
       .from("support_tickets")
       .insert({ user_id: userId, subject: "Live Chat", message: "(live chat)", status: "open" })
-      .select("id, status, created_at")
+      .select("id, status, created_at, chat_rating")
       .single();
     setStartingNew(false);
     if (!newTicket) return;
@@ -114,6 +115,20 @@ export default function SupportPage() {
     });
   }
 
+  async function rateConversation(rating: number) {
+    if (!activeTicketId || ratingSaving) return;
+    setRatingSaving(true);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("support_tickets")
+      .update({ chat_rating: rating })
+      .eq("id", activeTicketId);
+    setRatingSaving(false);
+    if (!error) {
+      setTickets((prev) => prev.map((t) => (t.id === activeTicketId ? { ...t, chat_rating: rating } : t)));
+    }
+  }
+
   // Loads + polls the active thread's messages, and re-checks the
   // ticket's own status each cycle — so if an admin resolves it while
   // this is open, the input closes live instead of on next visit. A
@@ -131,7 +146,11 @@ export default function SupportPage() {
           .select("from, text")
           .eq("ticket_id", activeTicketId)
           .order("created_at", { ascending: true }),
-        supabase.from("support_tickets").select("id, status, created_at").eq("id", activeTicketId).single(),
+        supabase
+          .from("support_tickets")
+          .select("id, status, created_at, chat_rating")
+          .eq("id", activeTicketId)
+          .single(),
       ]);
       if (cancelled) return;
       if (msgs) setMessages(msgs);
@@ -362,6 +381,30 @@ export default function SupportPage() {
                 </button>
               ) : activeTicket?.status === "resolved" ? (
                 <div className="text-center">
+                  {activeTicket.chat_rating == null ? (
+                    <>
+                      <p className="mb-2 text-xs text-gray-500">How was this conversation?</p>
+                      <div className="mb-3 flex justify-center gap-1">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => rateConversation(n)}
+                            disabled={ratingSaving}
+                            aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
+                            className="text-2xl text-accent-400 hover:scale-110 disabled:opacity-50"
+                          >
+                            ★
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="mb-3 text-xs text-primary-600">
+                      Thanks for rating this conversation {"★".repeat(activeTicket.chat_rating)}
+                      {"☆".repeat(5 - activeTicket.chat_rating)}
+                    </p>
+                  )}
                   <p className="mb-2 text-xs text-gray-400">This conversation has ended.</p>
                   <button
                     type="button"

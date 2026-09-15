@@ -11,6 +11,7 @@ type Ticket = {
   message: string;
   status: string;
   created_at: string;
+  chat_rating: number | null;
   profiles: { name: string; email: string } | null;
 };
 
@@ -65,7 +66,7 @@ export default function AdminSupportPage() {
       setCanWrite(hasFullDomainAccess(level));
       const { data } = await supabase
         .from("support_tickets")
-        .select("id, subject, message, status, created_at, profiles(name, email)")
+        .select("id, subject, message, status, created_at, chat_rating, profiles(name, email)")
         .order("created_at", { ascending: false });
       setTickets((data as unknown as Ticket[]) ?? []);
       setLoading(false);
@@ -184,7 +185,15 @@ export default function AdminSupportPage() {
 
           {active.subject === "Live Chat" ? (
             <div className="mt-6">
-              <p className="mb-2 text-sm text-gray-600">Live Chat</p>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm text-gray-600">Live Chat</p>
+                {active.chat_rating != null && (
+                  <p className="text-sm text-accent-500" title={`Customer rated ${active.chat_rating}/5`}>
+                    {"★".repeat(active.chat_rating)}
+                    {"☆".repeat(5 - active.chat_rating)}
+                  </p>
+                )}
+              </div>
               <div className="flex h-72 flex-col gap-3 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-4">
                 {chatMessages.length === 0 ? (
                   <p className="text-center text-sm text-gray-400">No messages yet.</p>
