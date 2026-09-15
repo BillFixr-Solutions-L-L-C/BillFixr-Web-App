@@ -59,6 +59,7 @@ export default function ActiveCasePage() {
   const [chargeAmount, setChargeAmount] = useState<number | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
+  const [successFeePercentage, setSuccessFeePercentage] = useState(30);
 
   useEffect(() => {
     async function load() {
@@ -70,18 +71,28 @@ export default function ActiveCasePage() {
         setLoading(false);
         return;
       }
-      const { data } = await supabase
-        .from("cases")
-        .select(
-          "id, status, bills(filename, storage_url, uploaded_at), errors_detected, savings_found, appeal_letter_text, ai_summary_text",
-        )
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      const [{ data }, { data: settings }] = await Promise.all([
+        supabase
+          .from("cases")
+          .select(
+            "id, status, bills(filename, storage_url, uploaded_at), errors_detected, savings_found, appeal_letter_text, ai_summary_text",
+          )
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase.from("app_settings").select("success_fee_percentage").eq("id", 1).single(),
+      ]);
       setCases((data as unknown as CaseRow[]) ?? []);
+      if (settings?.success_fee_percentage != null) setSuccessFeePercentage(Number(settings.success_fee_percentage));
       setLoading(false);
     }
     load();
   }, []);
+
+  // Formats the same way admins enter it (e.g. "30" or "27.5"), never a
+  // trailing ".00" for the common whole-number case.
+  const successFeeLabel = Number.isInteger(successFeePercentage)
+    ? String(successFeePercentage)
+    : successFeePercentage.toFixed(2);
 
   const selectedCase = cases.find((c) => c.id === selectedCaseId) ?? null;
 
@@ -314,7 +325,7 @@ export default function ActiveCasePage() {
           </div>
           <div className="text-right">
             <p className="text-xs text-gray-400">
-              Please note the 20% of the adjusted bill will charged for services
+              Please note the {successFeeLabel}% of the adjusted bill will charged for services
             </p>
             {paymentError && <p className="mt-2 max-w-xs text-xs text-danger">{paymentError}</p>}
             <button
@@ -523,7 +534,7 @@ export default function ActiveCasePage() {
 
               <div className="text-right">
                 <p className="text-xs text-gray-400">
-                  Please note 20% of the adjusted bill will be charged for services
+                  Please note {successFeeLabel}% of the adjusted bill will be charged for services
                 </p>
                 <button
                   type="button"
