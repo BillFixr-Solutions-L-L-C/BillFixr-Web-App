@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
-import AdminPresenceHeartbeat from "@/components/admin/AdminPresenceHeartbeat";
 
 type Ticket = {
   id: string;
@@ -199,10 +198,6 @@ export default function AdminSupportPage() {
 
           {active.subject === "Live Chat" ? (
             <div className="mt-6">
-              {/* Only pings presence while an admin actually has a Live
-                  Chat conversation open — mounts/unmounts with this
-                  branch, so "Support is online" reflects that. */}
-              <AdminPresenceHeartbeat />
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-sm text-gray-600">Live Chat</p>
                 {active.chat_rating != null && (
