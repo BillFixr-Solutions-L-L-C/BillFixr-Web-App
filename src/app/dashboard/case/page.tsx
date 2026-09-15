@@ -41,6 +41,18 @@ Dave J. Collins`;
 const MOCK_AI_SUMMARY =
   "The provider has acknowledged the mathematical error and insurance coverage discrepancy identified in your bill. They have agreed to adjust the total charge from $5,590 to $2,500, reflecting a correction of the duplicate lab fee and the misclassified insurance rate.";
 
+function BackToCasesButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mb-4 text-sm font-medium text-primary-600 hover:text-primary-700"
+    >
+      ← Back to cases
+    </button>
+  );
+}
+
 function viewForStatus(status: string): View {
   if (status === "response_received" || status === "resolved" || status === "payment_pending" || status === "paid" || status === "closed") {
     return "received";
@@ -115,6 +127,21 @@ export default function ActiveCasePage() {
   // doesn't briefly show the previous case's file while the new fetch is
   // still in flight.
   const activeBillDoc = billDoc?.id === selectedCase?.id ? billDoc : null;
+
+  // The only way back to the case list from any non-list view — none of
+  // them had one before, including mid-payment, so a user who clicked
+  // into a case could only leave via the sidebar (which remounts this
+  // page from scratch) or browser back (which, since no history entry
+  // was pushed for these client-side view changes, leaves the dashboard
+  // section entirely instead of just closing the detail view).
+  function backToList() {
+    setView("list");
+    setSelectedCaseId(null);
+    setClientSecret(null);
+    setIntentId(null);
+    setChargeAmount(null);
+    setPaymentError(null);
+  }
 
   async function advanceCase(toStatus: "response_received" | "paid") {
     if (!selectedCaseId) return;
@@ -273,6 +300,7 @@ export default function ActiveCasePage() {
   if (view === "savings") {
     return (
       <div>
+        <BackToCasesButton onClick={backToList} />
         <PageHeading title="Savings & Payment" />
         <div className="grid gap-6 sm:grid-cols-2">
           <div className="rounded-2xl bg-white p-6 shadow-sm">
@@ -345,6 +373,7 @@ export default function ActiveCasePage() {
     const total = chargeAmount != null ? `$${chargeAmount.toFixed(2)}` : "$1,000";
     return (
       <div>
+        <BackToCasesButton onClick={backToList} />
         <PageHeading title="Active Case" />
         <div className="rounded-2xl bg-white p-6 shadow-sm">
           {clientSecret ? (
@@ -371,6 +400,7 @@ export default function ActiveCasePage() {
   if (view === "paid") {
     return (
       <div>
+        <BackToCasesButton onClick={backToList} />
         <PageHeading title="Active Case" />
         <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
           <p className="text-2xl font-bold text-primary-700">Payment Successful</p>
@@ -390,6 +420,7 @@ export default function ActiveCasePage() {
 
   return (
     <div>
+      <BackToCasesButton onClick={backToList} />
       <PageHeading title="Active Case" />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_auto]">

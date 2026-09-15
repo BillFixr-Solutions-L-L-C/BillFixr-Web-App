@@ -131,6 +131,21 @@ describe("AdminSupportPage", () => {
     expect(screen.queryByPlaceholderText("Type a reply…")).not.toBeInTheDocument();
   });
 
+  it("always shows a way back to the ticket list, even for a read-only admin", async () => {
+    domainAccess = "limited";
+    const user = userEvent.setup();
+    render(<AdminSupportPage />);
+
+    await waitFor(() => expect(screen.getByText("Billing question")).toBeInTheDocument());
+    await user.click(screen.getByText("Billing question"));
+
+    expect(screen.getByText("Description")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "← Back" }));
+
+    expect(screen.getByText("Billing question")).toBeInTheDocument();
+    expect(screen.queryByText("Description")).not.toBeInTheDocument();
+  });
+
   it("hides the reply box and shows a closed notice for a resolved Live Chat ticket", async () => {
     const user = userEvent.setup();
     render(<AdminSupportPage />);

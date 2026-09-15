@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { BillAnalysis } from "@/lib/billAnalysis";
 import type { BillDocument } from "@/lib/billDocuments";
 
@@ -21,6 +22,12 @@ export default function DocumentAnalysisClient({
 
   return (
     <div>
+      <Link
+        href="/dashboard/documents"
+        className="mb-4 inline-block text-sm font-medium text-primary-600 hover:text-primary-700"
+      >
+        ← Back to My Documents
+      </Link>
       <h1 className="font-serif text-4xl font-bold text-gray-900">Analysis Complete - Errors Found</h1>
       <p className="mt-2 text-gray-500">We&apos;ve identify potential issues and opportunity to savivings</p>
 

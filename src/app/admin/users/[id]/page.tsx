@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import AccountActions from "@/components/admin/AccountActions";
 import PromoteToAdmin from "@/components/admin/PromoteToAdmin";
 import BillDocumentCard from "@/components/admin/BillDocumentCard";
@@ -63,6 +64,9 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
   return (
     <div>
+      <Link href="/admin/users" className="mb-4 inline-block text-sm font-medium text-primary-600 hover:text-primary-700">
+        ← Back to Customers
+      </Link>
       <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Customers</h1>
 
       <div className="flex flex-wrap items-center gap-6">

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getBillDocuments } from "@/lib/billDocuments";
 import { MOCK_ADMIN_CASE_ANALYSIS, type AdminCaseAnalysis } from "@/lib/adminCaseAnalysis";
@@ -43,6 +44,9 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div>
+      <Link href="/admin" className="mb-4 inline-block text-sm font-medium text-primary-600 hover:text-primary-700">
+        ← Back to Dashboard
+      </Link>
       <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Case Detail: #{id.slice(0, 8)}</h1>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">

@@ -271,24 +271,33 @@ export default function AdminSupportPage() {
             </div>
           )}
 
-          {canWrite && (
-            <div className="mt-8 flex justify-center gap-4">
-              <button
-                type="button"
-                onClick={() => updateStatus("in_progress")}
-                className="flex items-center gap-2 rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
-              >
-                Mark in-progress ⏱
-              </button>
-              <button
-                type="button"
-                onClick={() => updateStatus("resolved")}
-                className="flex items-center gap-2 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-              >
-                Mark as Resolved ✓
-              </button>
-            </div>
-          )}
+          <div className="mt-8 flex justify-center gap-4">
+            <button
+              type="button"
+              onClick={() => setActive(null)}
+              className="rounded-full border border-gray-200 px-6 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+            >
+              ← Back
+            </button>
+            {canWrite && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => updateStatus("in_progress")}
+                  className="flex items-center gap-2 rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
+                >
+                  Mark in-progress ⏱
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateStatus("resolved")}
+                  className="flex items-center gap-2 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+                >
+                  Mark as Resolved ✓
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
