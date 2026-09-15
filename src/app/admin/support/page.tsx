@@ -208,27 +208,33 @@ export default function AdminSupportPage() {
                   )
                 )}
               </div>
-              {canWrite && (
-                <div className="mt-3 flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={chatReply}
-                    onChange={(e) => setChatReply(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") sendChatReply();
-                    }}
-                    placeholder="Type a reply…"
-                    className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm focus:border-primary-400 focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={sendChatReply}
-                    disabled={chatSending || !chatReply.trim()}
-                    className="rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                  >
-                    Send
-                  </button>
-                </div>
+              {active.status === "resolved" ? (
+                <p className="mt-3 text-center text-sm text-gray-400">
+                  This conversation has been marked resolved. Reopen it below to reply.
+                </p>
+              ) : (
+                canWrite && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={chatReply}
+                      onChange={(e) => setChatReply(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") sendChatReply();
+                      }}
+                      placeholder="Type a reply…"
+                      className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm focus:border-primary-400 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={sendChatReply}
+                      disabled={chatSending || !chatReply.trim()}
+                      className="rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                    >
+                      Send
+                    </button>
+                  </div>
+                )
               )}
             </div>
           ) : (

@@ -15,9 +15,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const { data: ticket } = await supabase.from("support_tickets").select("id, user_id").eq("id", ticketId).single();
+  const { data: ticket } = await supabase
+    .from("support_tickets")
+    .select("id, user_id, status")
+    .eq("id", ticketId)
+    .single();
   if (!ticket || ticket.user_id !== user.id) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
+  if (ticket.status === "resolved") {
+    return NextResponse.json({ error: "This conversation has ended." }, { status: 409 });
   }
 
   const { error } = await supabase

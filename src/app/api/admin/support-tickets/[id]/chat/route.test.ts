@@ -62,6 +62,16 @@ describe("POST /api/admin/support-tickets/[id]/chat", () => {
     expect(res.status).toBe(404);
   });
 
+  it("returns 409 when the ticket has been resolved", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: { id: "admin-1" } } });
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    serverMock.queueResult("support_tickets", { data: { id: "ticket-1", status: "resolved" }, error: null });
+
+    const res = await POST(makeRequest({ text: "hi" }), { params });
+
+    expect(res.status).toBe(409);
+  });
+
   it("returns 500 on a database error", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: { id: "admin-1" } } });
     serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });

@@ -8,6 +8,7 @@ const TICKETS = [
   { id: "t-2", subject: "Can't upload", message: "Help", status: "in_progress", created_at: "2026-01-02", profiles: { name: "Bob", email: "bob@example.com" } },
   { id: "t-3", subject: "Refund request", message: "Help", status: "resolved", created_at: "2026-01-03", profiles: { name: "Carol", email: "carol@example.com" } },
   { id: "t-4", subject: "Live Chat", message: "(live chat)", status: "open", created_at: "2026-01-04", profiles: { name: "Dave", email: "dave@example.com" } },
+  { id: "t-5", subject: "Live Chat", message: "(live chat)", status: "resolved", created_at: "2026-01-05", profiles: { name: "Erin", email: "erin@example.com" } },
 ];
 
 let domainAccess = "full";
@@ -108,8 +109,8 @@ describe("AdminSupportPage", () => {
     const user = userEvent.setup();
     render(<AdminSupportPage />);
 
-    await waitFor(() => expect(screen.getByText("Live Chat")).toBeInTheDocument());
-    await user.click(screen.getByText("Live Chat"));
+    await waitFor(() => expect(screen.getByText("Dave")).toBeInTheDocument());
+    await user.click(screen.getByText("Dave"));
 
     await waitFor(() =>
       expect(screen.getByText("Am I making payment before I get the adjusted bill?")).toBeInTheDocument(),
@@ -123,11 +124,25 @@ describe("AdminSupportPage", () => {
     const user = userEvent.setup();
     render(<AdminSupportPage />);
 
-    await waitFor(() => expect(screen.getByText("Live Chat")).toBeInTheDocument());
-    await user.click(screen.getByText("Live Chat"));
+    await waitFor(() => expect(screen.getByText("Dave")).toBeInTheDocument());
+    await user.click(screen.getByText("Dave"));
 
     await waitFor(() => expect(screen.getByText("No messages yet.")).toBeInTheDocument());
     expect(screen.queryByPlaceholderText("Type a reply…")).not.toBeInTheDocument();
+  });
+
+  it("hides the reply box and shows a closed notice for a resolved Live Chat ticket", async () => {
+    const user = userEvent.setup();
+    render(<AdminSupportPage />);
+
+    await waitFor(() => expect(screen.getByText("Erin")).toBeInTheDocument());
+    await user.click(screen.getByText("Erin"));
+
+    await waitFor(() => expect(screen.getByText("No messages yet.")).toBeInTheDocument());
+    expect(screen.queryByPlaceholderText("Type a reply…")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("This conversation has been marked resolved. Reopen it below to reply."),
+    ).toBeInTheDocument();
   });
 
   it("sends a reply through the gated route and appends it to the thread", async () => {
@@ -135,8 +150,8 @@ describe("AdminSupportPage", () => {
     const user = userEvent.setup();
     render(<AdminSupportPage />);
 
-    await waitFor(() => expect(screen.getByText("Live Chat")).toBeInTheDocument());
-    await user.click(screen.getByText("Live Chat"));
+    await waitFor(() => expect(screen.getByText("Dave")).toBeInTheDocument());
+    await user.click(screen.getByText("Dave"));
     await waitFor(() => expect(screen.getByText("No messages yet.")).toBeInTheDocument());
 
     await user.type(screen.getByPlaceholderText("Type a reply…"), "On it now");

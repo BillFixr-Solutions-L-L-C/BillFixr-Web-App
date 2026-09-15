@@ -46,6 +46,13 @@ describe("POST /api/dashboard/chat/send", () => {
     expect(res.status).toBe(404);
   });
 
+  it("returns 409 when the ticket has been resolved", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    serverMock.queueResult("support_tickets", { data: { id: "ticket-1", user_id: USER.id, status: "resolved" }, error: null });
+    const res = await POST(makeRequest({ ticketId: "ticket-1", text: "hi" }));
+    expect(res.status).toBe(409);
+  });
+
   it("returns 500 when the user-message insert fails", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: USER } });
     serverMock.queueResult("support_tickets", { data: { id: "ticket-1", user_id: USER.id }, error: null });

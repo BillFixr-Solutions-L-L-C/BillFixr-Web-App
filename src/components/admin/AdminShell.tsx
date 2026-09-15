@@ -1,6 +1,7 @@
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminTopbar from "@/components/admin/AdminTopbar";
 import AdminIdleTimeout from "@/components/admin/AdminIdleTimeout";
+import AdminPresenceHeartbeat from "@/components/admin/AdminPresenceHeartbeat";
 import type { AccessLevel, Domain } from "@/lib/domainAccess";
 
 type Notification = { id: string; type: string; message: string; read: boolean; created_at: string };
@@ -19,6 +20,7 @@ export default function AdminShell({
   return (
     <div className="flex min-h-screen flex-col bg-white md:flex-row">
       <AdminIdleTimeout />
+      <AdminPresenceHeartbeat />
       <AdminSidebar domainAccess={domainAccess} />
       <div className="min-w-0 flex-1">
         <AdminTopbar user={user} initialNotifications={initialNotifications} />

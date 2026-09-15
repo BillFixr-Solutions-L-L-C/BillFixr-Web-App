@@ -14,9 +14,28 @@ async function fillComplaintForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByRole("textbox"), "My bill still shows the wrong amount.");
 }
 
+async function openChatAndStartConversation(user: ReturnType<typeof userEvent.setup>) {
+  mock.queueResult("support_tickets", { data: [], error: null }); // no existing tickets
+  mock.queueResult("support_tickets", {
+    data: { id: "ticket-1", status: "open", created_at: "2026-01-01T00:00:00Z" },
+    error: null,
+  });
+  mock.queueResult("support_tickets", {
+    data: { id: "ticket-1", status: "open", created_at: "2026-01-01T00:00:00Z" },
+    error: null,
+  });
+  mock.queueResult("chat_messages", { data: [], error: null });
+
+  await user.click(screen.getByRole("button", { name: "Open live chat" }));
+  await screen.findByText("Start a conversation with our support team below.");
+  await user.click(screen.getByRole("button", { name: "Start a new conversation" }));
+  await screen.findByRole("button", { name: "Voice input" });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mock.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+  mock.rpc.mockResolvedValue({ data: false, error: null });
 });
 
 describe("SupportPage live chat", () => {
@@ -25,32 +44,54 @@ describe("SupportPage live chat", () => {
     global.fetch = originalFetch;
   });
 
-  it("shows the voice input control as disabled rather than a dead-looking active button", async () => {
-    mock.queueResult("support_tickets", { data: null, error: null }); // no existing "Live Chat" ticket
-    mock.queueResult("support_tickets", { data: { id: "ticket-1" }, error: null }); // created one
-    mock.queueResult("chat_messages", { data: [], error: null });
+  it("prompts to start a conversation when there's no existing live ticket", async () => {
+    mock.queueResult("support_tickets", { data: [], error: null });
     const user = userEvent.setup();
     render(<SupportPage />);
 
     await user.click(screen.getByRole("button", { name: "Open live chat" }));
 
-    expect(await screen.findByRole("button", { name: "Voice input" })).toBeDisabled();
+    expect(await screen.findByText("Start a conversation with our support team below.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start a new conversation" })).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("How can i help you?")).not.toBeInTheDocument();
   });
 
-  it("sends the message to the gated route and does not fabricate an agent reply", async () => {
-    global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    mock.queueResult("support_tickets", { data: null, error: null });
-    mock.queueResult("support_tickets", { data: { id: "ticket-1" }, error: null });
-    mock.queueResult("chat_messages", { data: [], error: null });
+  it("resumes an existing open ticket instead of starting a new one", async () => {
+    mock.queueResult("support_tickets", {
+      data: [{ id: "ticket-1", status: "in_progress", created_at: "2026-01-01T00:00:00Z" }],
+      error: null,
+    });
+    mock.queueResult("support_tickets", {
+      data: { id: "ticket-1", status: "in_progress", created_at: "2026-01-01T00:00:00Z" },
+      error: null,
+    });
+    mock.queueResult("chat_messages", { data: [{ from: "user", text: "hi" }], error: null });
     const user = userEvent.setup();
     render(<SupportPage />);
 
     await user.click(screen.getByRole("button", { name: "Open live chat" }));
-    await screen.findByRole("button", { name: "Voice input" });
+
+    expect(await screen.findByText("hi")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("How can i help you?")).toBeInTheDocument();
+  });
+
+  it("shows the voice input control as disabled rather than a dead-looking active button", async () => {
+    const user = userEvent.setup();
+    render(<SupportPage />);
+
+    await openChatAndStartConversation(user);
+
+    expect(screen.getByRole("button", { name: "Voice input" })).toBeDisabled();
+  });
+
+  it("sends the message to the gated route", async () => {
+    global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const user = userEvent.setup();
+    render(<SupportPage />);
+
+    await openChatAndStartConversation(user);
 
     await user.type(screen.getByPlaceholderText("How can i help you?"), "Is my case still active?");
-    // "Send" also matches the complaint form's submit button below, so
-    // disambiguate: the chat widget's is the last one in the DOM.
     const sendButtons = screen.getAllByRole("button", { name: "Send" });
     await user.click(sendButtons[sendButtons.length - 1]);
 
@@ -62,6 +103,62 @@ describe("SupportPage live chat", () => {
         body: JSON.stringify({ ticketId: "ticket-1", text: "Is my case still active?" }),
       }),
     );
+  });
+
+  it("shows Support is online when the presence check comes back true", async () => {
+    mock.rpc.mockResolvedValue({ data: true, error: null });
+    mock.queueResult("support_tickets", { data: [], error: null });
+    const user = userEvent.setup();
+    render(<SupportPage />);
+
+    await user.click(screen.getByRole("button", { name: "Open live chat" }));
+
+    expect(await screen.findByText("Support is online")).toBeInTheDocument();
+  });
+
+  it("shows the offline message when no one is available", async () => {
+    mock.rpc.mockResolvedValue({ data: false, error: null });
+    mock.queueResult("support_tickets", { data: [], error: null });
+    const user = userEvent.setup();
+    render(<SupportPage />);
+
+    await user.click(screen.getByRole("button", { name: "Open live chat" }));
+
+    expect(await screen.findByText("We'll reply as soon as we can")).toBeInTheDocument();
+  });
+
+  it("closes a resolved conversation and offers to start a new one", async () => {
+    mock.queueResult("support_tickets", {
+      data: [{ id: "ticket-1", status: "resolved", created_at: "2026-01-01T00:00:00Z" }],
+      error: null,
+    });
+    const user = userEvent.setup();
+    render(<SupportPage />);
+
+    await user.click(screen.getByRole("button", { name: "Open live chat" }));
+
+    // A fully resolved ticket set means there's no "live" one to resume —
+    // same empty prompt as never having chatted, but it now also shows up
+    // in Past conversations.
+    expect(await screen.findByText("Start a conversation with our support team below.")).toBeInTheDocument();
+    expect(screen.getByText("Past conversations (1)")).toBeInTheDocument();
+  });
+
+  it("lets the customer browse a past conversation read-only", async () => {
+    mock.queueResult("support_tickets", {
+      data: [{ id: "ticket-old", status: "resolved", created_at: "2026-01-01T00:00:00Z" }],
+      error: null,
+    });
+    mock.queueResult("chat_messages", { data: [{ from: "agent", text: "Glad we sorted it out." }], error: null });
+    const user = userEvent.setup();
+    render(<SupportPage />);
+
+    await user.click(screen.getByRole("button", { name: "Open live chat" }));
+    await user.click(await screen.findByText("Past conversations (1)"));
+    await user.click(screen.getByText(/Conversation from/));
+
+    expect(await screen.findByText("Glad we sorted it out.")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("How can i help you?")).not.toBeInTheDocument();
   });
 });
 

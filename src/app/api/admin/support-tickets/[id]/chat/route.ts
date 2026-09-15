@@ -28,9 +28,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const { data: ticket } = await supabase.from("support_tickets").select("id").eq("id", id).single();
+  const { data: ticket } = await supabase.from("support_tickets").select("id, status").eq("id", id).single();
   if (!ticket) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
+  if (ticket.status === "resolved") {
+    return NextResponse.json({ error: "This conversation has been marked resolved." }, { status: 409 });
   }
 
   const { error } = await supabase.from("chat_messages").insert({ ticket_id: id, from: "agent", text: text.trim() });
