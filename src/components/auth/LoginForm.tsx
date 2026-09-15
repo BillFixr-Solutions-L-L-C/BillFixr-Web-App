@@ -8,6 +8,7 @@ import PasswordInput from "@/components/auth/PasswordInput";
 
 const LINK_ERROR_MESSAGES: Record<string, string> = {
   invalid_or_expired_link: "That link is invalid or has expired. Request a new one, or log in below.",
+  inactivity_timeout: "You were signed out after a period of inactivity. Please log in again.",
 };
 
 export default function LoginForm() {
