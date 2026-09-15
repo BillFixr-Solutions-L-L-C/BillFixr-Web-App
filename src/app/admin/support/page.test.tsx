@@ -13,9 +13,11 @@ const TICKETS = [
 
 let domainAccess = "full";
 let chatMessages: { from: string; text: string }[] = [];
+const profilesUpdateSpy = vi.fn();
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
+    auth: { getUser: async () => ({ data: { user: { id: "admin-1" } } }) },
     rpc: async () => ({ data: domainAccess, error: null }),
     from: (table: string) => {
       if (table === "chat_messages") {
@@ -26,6 +28,9 @@ vi.mock("@/lib/supabase/client", () => ({
             }),
           }),
         };
+      }
+      if (table === "profiles") {
+        return { update: (v: unknown) => (profilesUpdateSpy(v), { eq: async () => ({ error: null }) }) };
       }
       return {
         select: () => ({
@@ -40,6 +45,7 @@ const originalFetch = global.fetch;
 beforeEach(() => {
   domainAccess = "full";
   chatMessages = [];
+  profilesUpdateSpy.mockClear();
 });
 afterEach(() => {
   global.fetch = originalFetch;
@@ -101,6 +107,16 @@ describe("AdminSupportPage", () => {
     expect(screen.queryByPlaceholderText("Type a reply…")).not.toBeInTheDocument();
   });
 
+  it("does not ping presence while viewing a regular (non-chat) ticket", async () => {
+    const user = userEvent.setup();
+    render(<AdminSupportPage />);
+
+    await waitFor(() => expect(screen.getByText("Billing question")).toBeInTheDocument());
+    await user.click(screen.getByText("Billing question"));
+
+    expect(profilesUpdateSpy).not.toHaveBeenCalled();
+  });
+
   it("shows the chat thread and reply box for a Live Chat ticket", async () => {
     chatMessages = [
       { from: "user", text: "Am I making payment before I get the adjusted bill?" },
@@ -117,6 +133,9 @@ describe("AdminSupportPage", () => {
     );
     expect(screen.getByText("After it's adjusted, yes.")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Type a reply…")).toBeInTheDocument();
+    expect(profilesUpdateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ last_seen_at: expect.any(String) }),
+    );
   });
 
   it("hides the reply box for a Live Chat ticket when canWrite is false", async () => {
