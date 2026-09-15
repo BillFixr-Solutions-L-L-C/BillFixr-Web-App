@@ -75,6 +75,34 @@ describe("SupportPage live chat", () => {
     expect(screen.getByPlaceholderText("How can i help you?")).toBeInTheDocument();
   });
 
+  it("shows the support logo on agent messages and the customer's own avatar on their messages", async () => {
+    mock.queueResult("profiles", { data: { avatar_url: "https://example.com/me.jpg" }, error: null });
+    mock.queueResult("support_tickets", {
+      data: [{ id: "ticket-1", status: "in_progress", created_at: "2026-01-01T00:00:00Z" }],
+      error: null,
+    });
+    mock.queueResult("support_tickets", {
+      data: { id: "ticket-1", status: "in_progress", created_at: "2026-01-01T00:00:00Z" },
+      error: null,
+    });
+    mock.queueResult("chat_messages", {
+      data: [
+        { from: "user", text: "hi" },
+        { from: "agent", text: "hello there" },
+      ],
+      error: null,
+    });
+    const user = userEvent.setup();
+    const { container } = render(<SupportPage />);
+
+    await user.click(screen.getByRole("button", { name: "Open live chat" }));
+    await screen.findByText("hello there");
+
+    const images = Array.from(container.querySelectorAll("img"));
+    expect(images.some((img) => img.getAttribute("src")?.includes("logo-icon-green"))).toBe(true);
+    expect(images.some((img) => img.getAttribute("src")?.includes("me.jpg"))).toBe(true);
+  });
+
   it("shows the voice input control as disabled rather than a dead-looking active button", async () => {
     const user = userEvent.setup();
     render(<SupportPage />);

@@ -11,8 +11,9 @@ const ONLINE_POLL_MS = 30000;
 type ChatMessage = { from: string; text: string };
 type ChatTicket = { id: string; status: string; created_at: string; chat_rating: number | null };
 
-// The real BillFixr mark, not a hand-drawn placeholder — represents
-// "this is from BillFixr support" wherever it appears in the widget.
+// The real BillFixr mark — represents "this is from BillFixr support",
+// so it only appears on the support/agent side of the conversation (and
+// on the widget's own chrome: the launcher button, the corner accent).
 function Avatar({ className = "" }: { className?: string }) {
   return (
     <span className={`inline-flex shrink-0 items-center justify-center rounded-full bg-primary-50 ${className}`}>
@@ -21,12 +22,24 @@ function Avatar({ className = "" }: { className?: string }) {
   );
 }
 
+// The customer's own avatar — their uploaded photo if they have one, same
+// fallback placeholder used for it everywhere else in the dashboard
+// (Sidebar.tsx, ProfileForm.tsx).
+function UserAvatar({ avatarUrl, className = "" }: { avatarUrl: string | null; className?: string }) {
+  if (avatarUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={avatarUrl} alt="" className={`shrink-0 rounded-full object-cover ${className}`} />;
+  }
+  return <span className={`inline-block shrink-0 rounded-full bg-primary-100 ${className}`} />;
+}
+
 const complaintOptions = ["Payment issue", "Case status question", "Document access", "Other"];
 
 export default function SupportPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatLoaded, setChatLoaded] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [tickets, setTickets] = useState<ChatTicket[]>([]);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -75,6 +88,9 @@ export default function SupportPage() {
     } = await supabase.auth.getUser();
     if (!user) return;
     setUserId(user.id);
+
+    const { data: profile } = await supabase.from("profiles").select("avatar_url").eq("id", user.id).single();
+    setUserAvatarUrl(profile?.avatar_url ?? null);
 
     const list = await loadTickets(user.id);
     const live = list.find((t) => t.status !== "resolved");
@@ -373,15 +389,15 @@ export default function SupportPage() {
                 ) : (
                   messages.map((m, i) =>
                     m.from === "agent" ? (
-                      <div
-                        key={i}
-                        className="ml-auto max-w-[80%] rounded-2xl bg-primary-50 px-4 py-3 text-sm text-primary-800"
-                      >
-                        {m.text}
+                      <div key={i} className="ml-auto flex max-w-[80%] items-end justify-end gap-2">
+                        <div className="rounded-2xl bg-primary-50 px-4 py-3 text-sm text-primary-800">
+                          {m.text}
+                        </div>
+                        <Avatar className="h-7 w-7" />
                       </div>
                     ) : (
                       <div key={i} className="flex items-end gap-2">
-                        <Avatar className="h-7 w-7" />
+                        <UserAvatar avatarUrl={userAvatarUrl} className="h-7 w-7" />
                         <div className="max-w-[75%] rounded-2xl bg-gray-100 px-4 py-3 text-sm text-gray-700">
                           {m.text}
                         </div>
