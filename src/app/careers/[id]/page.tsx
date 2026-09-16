@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import Navbar from "@/components/landing/Navbar";
 import BeforeYouPay from "@/components/landing/BeforeYouPay";
 import Footer from "@/components/landing/Footer";
@@ -18,6 +19,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       <Navbar />
 
       <section className="mx-auto max-w-5xl px-6 pb-10 pt-6">
+        <Link href="/careers" className="mb-4 inline-block text-sm font-medium text-primary-700 hover:text-primary-800">
+          ← Back to all openings
+        </Link>
         <h1 className="text-3xl font-bold uppercase text-primary-900 sm:text-4xl">{job.title}</h1>
         <p className="mt-2 text-primary-900/60">{job.location}</p>
 
