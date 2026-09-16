@@ -37,6 +37,21 @@ describe("LoginForm", () => {
     expect(screen.getByText(/link is invalid or has expired/)).toBeInTheDocument();
   });
 
+  it("shows the inactivity sign-out message in the informational (green) tone, not red", () => {
+    searchParamsValue = "error=inactivity_timeout";
+    render(<LoginForm />);
+    const message = screen.getByText(/signed out after a period of inactivity/);
+    expect(message).toHaveClass("text-primary-600");
+    expect(message).not.toHaveClass("text-danger");
+  });
+
+  it("keeps the link-expired message in the danger (red) tone", () => {
+    searchParamsValue = "error=invalid_or_expired_link";
+    render(<LoginForm />);
+    const message = screen.getByText(/link is invalid or has expired/);
+    expect(message).toHaveClass("text-danger");
+  });
+
   it("does not show an error banner on a normal load", () => {
     render(<LoginForm />);
     expect(screen.queryByText(/link is invalid or has expired/)).not.toBeInTheDocument();

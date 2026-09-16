@@ -6,15 +6,23 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PasswordInput from "@/components/auth/PasswordInput";
 
-const LINK_ERROR_MESSAGES: Record<string, string> = {
-  invalid_or_expired_link: "That link is invalid or has expired. Request a new one, or log in below.",
-  inactivity_timeout: "You were signed out after a period of inactivity. Please log in again.",
+// "danger" for genuine failures (red); "info" for expected, non-error
+// states like a routine inactivity sign-out (brand green, not alarming).
+const LINK_MESSAGES: Record<string, { text: string; tone: "danger" | "info" }> = {
+  invalid_or_expired_link: {
+    text: "That link is invalid or has expired. Request a new one, or log in below.",
+    tone: "danger",
+  },
+  inactivity_timeout: {
+    text: "You were signed out after a period of inactivity. Please log in again.",
+    tone: "info",
+  },
 };
 
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const linkError = LINK_ERROR_MESSAGES[searchParams.get("error") ?? ""];
+  const linkMessage = LINK_MESSAGES[searchParams.get("error") ?? ""];
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +62,11 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
-      {linkError && <p className="text-sm text-danger">{linkError}</p>}
+      {linkMessage && (
+        <p className={`text-sm ${linkMessage.tone === "danger" ? "text-danger" : "text-primary-600"}`}>
+          {linkMessage.text}
+        </p>
+      )}
       <input
         type="email"
         placeholder="Email"
