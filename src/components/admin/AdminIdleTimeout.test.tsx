@@ -92,6 +92,22 @@ describe("AdminIdleTimeout", () => {
     expect(push).toHaveBeenCalledWith("/login?error=inactivity_timeout");
   });
 
+  it("still redirects to login when signOut() fails (e.g. no network)", async () => {
+    signOut.mockRejectedValueOnce(new Error("Failed to fetch"));
+    render(<AdminIdleTimeout />);
+    act(() => {
+      vi.advanceTimersByTime(IDLE_TIMEOUT_MS - WARNING_MS);
+    });
+    expect(screen.getByText("Still there?")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(WARNING_MS);
+    });
+
+    expect(push).toHaveBeenCalledWith("/login?error=inactivity_timeout");
+    expect(screen.queryByText("Still there?")).not.toBeInTheDocument();
+  });
+
   it("ignores background activity while the warning is already showing", async () => {
     render(<AdminIdleTimeout />);
     act(() => {

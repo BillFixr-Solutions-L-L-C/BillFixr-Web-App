@@ -29,8 +29,18 @@ export default function AdminIdleTimeout() {
 
   async function signOutForInactivity() {
     clearAllTimers();
+    setShowWarning(false);
     const supabase = createClient();
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Best-effort — e.g. no network (a laptop woken up offline after
+      // sitting idle overnight, past the 30-minute threshold, is exactly
+      // when this fires). Without this, the failed signOut() call would
+      // throw before ever reaching the redirect below, leaving the
+      // warning modal stuck open indefinitely instead of routing to
+      // login once connectivity (or just the next navigation) works.
+    }
     router.push("/login?error=inactivity_timeout");
     router.refresh();
   }
