@@ -5,7 +5,10 @@ import { sendEmail } from "@/lib/email";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { escapeHtml } from "@/lib/html";
 
-const STATUS_EMAIL_CONTENT: Record<string, { subject: string; heading: string; body: (subject: string) => string }> = {
+const STATUS_EMAIL_CONTENT: Record<
+  string,
+  { subject: string; heading: string; body: (subject: string, note?: string) => string }
+> = {
   in_progress: {
     subject: "We're looking into your support ticket",
     heading: "We're on it",
@@ -14,7 +17,10 @@ const STATUS_EMAIL_CONTENT: Record<string, { subject: string; heading: string; b
   resolved: {
     subject: "Your support ticket has been resolved",
     heading: "Your ticket has been resolved",
-    body: (subject) =>
+    // An admin-written note (from the "Reply to customer" box) replaces
+    // the generic line so the customer sees what was actually fixed.
+    body: (subject, note) =>
+      note ||
       `Your ticket about "${subject}" has been marked resolved. If you still need help, just send another message from Support.`,
   },
 };
@@ -24,9 +30,12 @@ const STATUS_EMAIL_CONTENT: Record<string, { subject: string; heading: string; b
 // change can also notify the customer by email (sendEmail is server-only).
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { status } = await request.json();
+  const { status, note } = await request.json();
 
   if (!(status in STATUS_EMAIL_CONTENT)) {
+    return NextResponse.json({ error: "invalid request" }, { status: 400 });
+  }
+  if (note !== undefined && typeof note !== "string") {
     return NextResponse.json({ error: "invalid request" }, { status: 400 });
   }
 
@@ -68,7 +77,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         html: ticketStatusEmailHtml({
           name: profile.name ?? "there",
           heading: content.heading,
-          body: content.body(updated?.subject ?? "your ticket"),
+          body: content.body(updated?.subject ?? "your ticket", note?.trim() || undefined),
         }),
       });
     } catch (err) {

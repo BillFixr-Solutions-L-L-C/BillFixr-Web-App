@@ -13,6 +13,7 @@ const TICKETS = [
 
 let domainAccess = "full";
 let chatMessages: { from: string; text: string }[] = [];
+let ticketsData: typeof TICKETS = TICKETS;
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
@@ -29,7 +30,7 @@ vi.mock("@/lib/supabase/client", () => ({
       }
       return {
         select: () => ({
-          order: async () => ({ data: TICKETS, error: null }),
+          order: async () => ({ data: ticketsData, error: null }),
         }),
       };
     },
@@ -40,6 +41,7 @@ const originalFetch = global.fetch;
 beforeEach(() => {
   domainAccess = "full";
   chatMessages = [];
+  ticketsData = TICKETS;
 });
 afterEach(() => {
   global.fetch = originalFetch;
@@ -223,5 +225,108 @@ describe("AdminSupportPage", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("picks up a newly-arrived ticket without a manual refresh", async () => {
+    vi.useFakeTimers();
+    try {
+      render(<AdminSupportPage />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.queryByText("Brand new ticket")).not.toBeInTheDocument();
+
+      ticketsData = [
+        {
+          id: "t-6",
+          subject: "Brand new ticket",
+          message: "Help",
+          status: "open",
+          created_at: "2026-01-06",
+          profiles: { name: "Frank", email: "frank@example.com" },
+        },
+        ...TICKETS,
+      ];
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20000);
+      });
+
+      expect(screen.getByText("Brand new ticket")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not poll the ticket list while a ticket is open", async () => {
+    vi.useFakeTimers();
+    try {
+      render(<AdminSupportPage />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      fireEvent.click(screen.getByText("Billing question"));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      ticketsData = [
+        {
+          id: "t-6",
+          subject: "Brand new ticket",
+          message: "Help",
+          status: "open",
+          created_at: "2026-01-06",
+          profiles: { name: "Frank", email: "frank@example.com" },
+        },
+        ...TICKETS,
+      ];
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20000);
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "← Back" }));
+      expect(screen.queryByText("Brand new ticket")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("lets an admin write a custom reply that's sent as the resolution note", async () => {
+    global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const user = userEvent.setup();
+    render(<AdminSupportPage />);
+
+    await waitFor(() => expect(screen.getByText("Billing question")).toBeInTheDocument());
+    await user.click(screen.getByText("Billing question"));
+
+    await user.type(
+      screen.getByPlaceholderText(/We've corrected the billing error/),
+      "We've corrected the billing error and updated your account.",
+    );
+    await user.click(screen.getByRole("button", { name: "Mark as Resolved ✓" }));
+
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/admin/support-tickets/t-1",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify({
+            status: "resolved",
+            note: "We've corrected the billing error and updated your account.",
+          }),
+        }),
+      ),
+    );
+  });
+
+  it("doesn't show the reply box for an already-resolved ticket, but still allows reopening", async () => {
+    const user = userEvent.setup();
+    render(<AdminSupportPage />);
+
+    await waitFor(() => expect(screen.getByText("Refund request")).toBeInTheDocument());
+    await user.click(screen.getByText("Refund request"));
+
+    expect(screen.queryByPlaceholderText(/We've corrected the billing error/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark in-progress ⏱" })).toBeInTheDocument();
   });
 });

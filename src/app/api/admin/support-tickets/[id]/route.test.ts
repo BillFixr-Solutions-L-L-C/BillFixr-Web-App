@@ -80,6 +80,33 @@ describe("PATCH /api/admin/support-tickets/[id]", () => {
     expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: "jane@example.com" }));
   });
 
+  it("uses the admin's custom note as the resolution email body when provided", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: { id: "admin-1" } } });
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    serverMock.queueResult("support_tickets", {
+      data: { subject: "Payment issue", profiles: { name: "Jane", email: "jane@example.com" } },
+      error: null,
+    });
+
+    const res = await PATCH(
+      makeRequest({ status: "resolved", note: "We refunded the duplicate charge." }),
+      { params },
+    );
+
+    expect(res.status).toBe(200);
+    const [emailCall] = sendEmail.mock.calls[0];
+    expect(emailCall.html).toContain("We refunded the duplicate charge.");
+  });
+
+  it("rejects a non-string note", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: { id: "admin-1" } } });
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+
+    const res = await PATCH(makeRequest({ status: "resolved", note: 123 }), { params });
+
+    expect(res.status).toBe(400);
+  });
+
   it("still returns ok when the notification email fails to send", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: { id: "admin-1" } } });
     serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });

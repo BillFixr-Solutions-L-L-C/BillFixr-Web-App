@@ -18,6 +18,7 @@ type Ticket = {
 type ChatMessage = { from: string; text: string };
 
 const CHAT_POLL_MS = 3000;
+const TICKET_LIST_POLL_MS = 20000;
 
 const statusTone: Record<string, string> = {
   open: "text-accent-600",
@@ -42,6 +43,8 @@ export default function AdminSupportPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatReply, setChatReply] = useState("");
   const [chatSending, setChatSending] = useState(false);
+  const [resolveNote, setResolveNote] = useState("");
+  const [resolving, setResolving] = useState(false);
   // Same race guard as the customer widget: an in-flight poll that
   // started before a reply landed can otherwise overwrite the optimistic
   // append with an older, reply-less snapshot.
@@ -58,6 +61,14 @@ export default function AdminSupportPage() {
     );
   });
 
+  async function fetchTickets(supabase: ReturnType<typeof createClient>) {
+    const { data } = await supabase
+      .from("support_tickets")
+      .select("id, subject, message, status, created_at, chat_rating, profiles(name, email)")
+      .order("created_at", { ascending: false });
+    setTickets((data as unknown as Ticket[]) ?? []);
+  }
+
   useEffect(() => {
     async function load() {
       const supabase = createClient();
@@ -68,24 +79,34 @@ export default function AdminSupportPage() {
         return;
       }
       setCanWrite(hasFullDomainAccess(level));
-      const { data } = await supabase
-        .from("support_tickets")
-        .select("id, subject, message, status, created_at, chat_rating, profiles(name, email)")
-        .order("created_at", { ascending: false });
-      setTickets((data as unknown as Ticket[]) ?? []);
+      await fetchTickets(supabase);
       setLoading(false);
     }
     load();
   }, []);
 
-  async function updateStatus(status: string) {
+  // Keeps the ticket table current without a manual refresh — mirrors the
+  // interval-poll pattern already used for chat messages and the
+  // notification bell. Only runs while the list itself is on screen; an
+  // open ticket has its own polling (or none, for a static ticket).
+  useEffect(() => {
+    if (loading || restricted || active) return;
+    const supabase = createClient();
+    const interval = setInterval(() => fetchTickets(supabase), TICKET_LIST_POLL_MS);
+    return () => clearInterval(interval);
+  }, [loading, restricted, active]);
+
+  async function updateStatus(status: string, note?: string) {
     if (!active) return;
+    setResolving(true);
     await fetch(`/api/admin/support-tickets/${active.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, note: note?.trim() || undefined }),
     });
+    setResolving(false);
     setTickets((prev) => prev.map((t) => (t.id === active.id ? { ...t, status } : t)));
+    setResolveNote("");
     setActive(null);
   }
 
@@ -121,6 +142,7 @@ export default function AdminSupportPage() {
   function selectTicket(t: Ticket) {
     unconfirmedRef.current = [];
     setChatMessages([]);
+    setResolveNote("");
     setActive(t);
   }
 
@@ -279,21 +301,40 @@ export default function AdminSupportPage() {
           )}
 
           {canWrite && (
-            <div className="mt-8 flex justify-center gap-4">
-              <button
-                type="button"
-                onClick={() => updateStatus("in_progress")}
-                className="flex items-center gap-2 rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
-              >
-                Mark in-progress ⏱
-              </button>
-              <button
-                type="button"
-                onClick={() => updateStatus("resolved")}
-                className="flex items-center gap-2 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-              >
-                Mark as Resolved ✓
-              </button>
+            <div className="mt-8">
+              {active.status !== "resolved" && (
+                <>
+                  <label className="text-sm text-gray-600">
+                    Reply to customer{" "}
+                    <span className="text-gray-400">(optional — included in the resolved email)</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={resolveNote}
+                    onChange={(e) => setResolveNote(e.target.value)}
+                    placeholder="e.g. We've corrected the billing error and updated your account."
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none"
+                  />
+                </>
+              )}
+              <div className="mt-4 flex justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => updateStatus("in_progress")}
+                  disabled={resolving}
+                  className="flex items-center gap-2 rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-60"
+                >
+                  Mark in-progress ⏱
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateStatus("resolved", resolveNote)}
+                  disabled={resolving}
+                  className="flex items-center gap-2 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
+                >
+                  Mark as Resolved ✓
+                </button>
+              </div>
             </div>
           )}
         </div>
