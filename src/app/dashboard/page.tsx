@@ -11,6 +11,7 @@ import FlowCard from "@/components/dashboard/FlowCard";
 import BillPreview from "@/components/dashboard/BillPreview";
 import { createClient } from "@/lib/supabase/client";
 import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
+import { prepareBillFile } from "@/lib/billUpload";
 
 type Stage =
   | "upload"
@@ -50,6 +51,7 @@ export default function DashboardHome() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [preparingFile, setPreparingFile] = useState(false);
 
   const fileName = pendingFile?.name ?? "";
 
@@ -319,7 +321,16 @@ export default function DashboardHome() {
       ) : (
         <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
           <div className="flex min-h-[440px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 px-6 py-10 text-center">
-            {stage === "upload" && (
+            {stage === "upload" && preparingFile && (
+              <div className="flex flex-col items-center">
+                <p className="text-2xl font-bold text-[#003322]">Preparing your file…</p>
+                <p className="mt-2 max-w-sm text-base text-[#a6b1bb]">
+                  Compressing photos and getting everything ready to upload.
+                </p>
+              </div>
+            )}
+
+            {stage === "upload" && !preparingFile && (
               <label className="flex cursor-pointer flex-col items-center">
                 <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-primary-50">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -339,7 +350,8 @@ export default function DashboardHome() {
                 <p className="mt-2 max-w-sm text-base text-[#a6b1bb]">
                   Drag and drop your files,{" "}
                   <span className="font-medium text-[#0f7545]">or click here to choose</span> from
-                  your device. Supported files includes Jpeg, png, doc, pdf.
+                  your device. Supported files includes Jpeg, png, doc, pdf. Max 10MB — select
+                  multiple photos for a multi-page bill.
                 </p>
                 <span className="mt-5 rounded-full bg-[#0f7545] px-8 py-3 text-base font-semibold text-white">
                   Upload Your Bill
@@ -347,19 +359,30 @@ export default function DashboardHome() {
                 <input
                   type="file"
                   accept="application/pdf,image/png,image/jpeg"
+                  multiple
                   className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setPendingFile(file);
+                  onChange={async (e) => {
+                    const files = e.target.files;
+                    e.target.value = "";
+                    if (!files || files.length === 0) return;
+
+                    setUploadError(null);
+                    setPreparingFile(true);
+                    try {
+                      const prepared = await prepareBillFile(files);
+                      setPendingFile(prepared);
                       setStage("terms");
+                    } catch (err) {
+                      setUploadError(err instanceof Error ? err.message : "That file couldn't be used.");
+                    } finally {
+                      setPreparingFile(false);
                     }
                   }}
                 />
               </label>
             )}
 
-            {stage === "upload" && uploadError && (
+            {stage === "upload" && !preparingFile && uploadError && (
               <p className="mt-4 text-sm text-danger">{uploadError}</p>
             )}
 
