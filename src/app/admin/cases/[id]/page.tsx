@@ -6,6 +6,7 @@ import { MOCK_ADMIN_CASE_ANALYSIS, type AdminCaseAnalysis } from "@/lib/adminCas
 import { isCaseCompleted } from "@/lib/caseStatus";
 import BillDocumentCard from "@/components/admin/BillDocumentCard";
 import ManualOverridePanel from "@/components/admin/ManualOverridePanel";
+import CaseDocumentsPanel from "@/components/admin/CaseDocumentsPanel";
 import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
 
@@ -41,6 +42,12 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const analysis = (caseRow.admin_analysis as AdminCaseAnalysis | null) ?? MOCK_ADMIN_CASE_ANALYSIS;
   const [billDoc] = bill ? await getBillDocuments(supabase, [bill]) : [null];
   const delivered = isCaseCompleted(caseRow.status);
+
+  const { data: caseDocuments } = await supabase
+    .from("case_documents")
+    .select("id, type, filename, created_at")
+    .eq("case_id", id)
+    .order("created_at", { ascending: true });
 
   return (
     <div>
@@ -143,6 +150,8 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             initialDecision={caseRow.manual_review_status as "approved" | "rejected" | "escalated" | null}
             canWrite={canOverride}
           />
+
+          <CaseDocumentsPanel caseId={id} existing={caseDocuments ?? []} canWrite={canOverride} />
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold text-gray-900">Reply Drafts</h2>

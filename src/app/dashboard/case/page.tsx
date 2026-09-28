@@ -8,6 +8,7 @@ import BillPreview from "@/components/dashboard/BillPreview";
 import { createClient } from "@/lib/supabase/client";
 import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
 import { getBillDocuments, type BillDocument } from "@/lib/billDocuments";
+import { COMPLETED_STATUSES } from "@/lib/caseStatus";
 
 type View = "list" | "pending" | "received" | "letter" | "summary" | "savings" | "payment" | "paid";
 
@@ -90,6 +91,9 @@ export default function ActiveCasePage() {
             "id, status, bills(filename, storage_url, uploaded_at), errors_detected, savings_found, appeal_letter_text, ai_summary_text",
           )
           .eq("user_id", user.id)
+          // Completed cases live on their own page (/dashboard/completed).
+          // The just-paid confirmation still shows here from local state.
+          .not("status", "in", `(${COMPLETED_STATUSES.join(",")})`)
           .order("created_at", { ascending: false }),
         supabase.from("app_settings").select("success_fee_percentage").eq("id", 1).single(),
       ]);

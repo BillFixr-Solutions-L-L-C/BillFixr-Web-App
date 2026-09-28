@@ -6,6 +6,7 @@ const CHAIN_METHODS = [
   "select",
   "eq",
   "neq",
+  "not",
   "in",
   "or",
   "order",
@@ -59,6 +60,13 @@ export function createSupabaseMock() {
     queues.set(table, queue);
   }
 
+  // vi.clearAllMocks() only clears call history — queued results survive it,
+  // so anything a test queues but doesn't consume leaks into the next test
+  // and makes failures land far from their cause. Call this in beforeEach.
+  function reset() {
+    queues.clear();
+  }
+
   const getUser = vi.fn();
   const rpc = vi.fn();
   const deleteUser = vi.fn();
@@ -69,6 +77,7 @@ export function createSupabaseMock() {
   const storageDownload = vi.fn();
   const storageCreateSignedUrl = vi.fn();
   const storageRemove = vi.fn();
+  const storageUpload = vi.fn();
 
   const client = {
     auth: {
@@ -83,6 +92,7 @@ export function createSupabaseMock() {
         download: storageDownload,
         createSignedUrl: storageCreateSignedUrl,
         remove: storageRemove,
+        upload: storageUpload,
       })),
     },
   };
@@ -90,6 +100,7 @@ export function createSupabaseMock() {
   return {
     client,
     queueResult,
+    reset,
     getUser,
     rpc,
     deleteUser,
@@ -100,6 +111,7 @@ export function createSupabaseMock() {
     storageDownload,
     storageCreateSignedUrl,
     storageRemove,
+    storageUpload,
     from,
   };
 }

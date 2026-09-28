@@ -4,18 +4,21 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "@/components/Logo";
-import NavIcon from "@/components/dashboard/NavIcon";
+import NavIcon, { type NavIconName } from "@/components/dashboard/NavIcon";
 
-const topLinks = [
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "My Document", href: "/dashboard/documents" },
-  { label: "Active Case", href: "/dashboard/case" },
+type Link = { label: string; href: string; icon: NavIconName };
+
+const topLinks: Link[] = [
+  { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  { label: "My Document", href: "/dashboard/documents", icon: "document" },
+  { label: "Active Case", href: "/dashboard/case", icon: "case" },
+  { label: "Completed Case", href: "/dashboard/completed", icon: "completed" },
+  { label: "Support", href: "/dashboard/support", icon: "support" },
 ];
 
-const bottomLinks = [
-  { label: "Support", href: "/dashboard/support" },
-  { label: "Settings", href: "/dashboard/settings" },
-  { label: "Log out", href: "/dashboard/logout" },
+const bottomLinks: Link[] = [
+  { label: "Settings", href: "/dashboard/settings", icon: "settings" },
+  { label: "Log out", href: "/dashboard/logout", icon: "logout" },
 ];
 
 function MenuIcon() {
@@ -26,9 +29,12 @@ function MenuIcon() {
   );
 }
 
-function NavLink({ label, href, onNavigate }: { label: string; href: string; onNavigate?: () => void }) {
+function NavLink({ label, href, icon, onNavigate }: Link & { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const active = pathname === href;
+  // Detail routes live under their section (e.g. /dashboard/documents/[id]),
+  // so the section stays highlighted while you're inside one. /dashboard
+  // itself is exact — everything else is nested under it.
+  const active = href === "/dashboard" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <Link
@@ -37,10 +43,10 @@ function NavLink({ label, href, onNavigate }: { label: string; href: string; onN
       className={`flex items-center gap-3 rounded-lg border-l-[6px] py-3 pl-3 pr-4 text-base font-medium transition ${
         active
           ? "border-[#0f7545] bg-[#ebebeb] text-[#0f7545]"
-          : "border-transparent text-[#4d6276] hover:bg-gray-50"
+          : `border-transparent hover:bg-gray-50 ${icon === "logout" ? "text-danger" : "text-[#4d6276]"}`
       }`}
     >
-      <NavIcon active={active} />
+      <NavIcon name={icon} active={active} />
       {label}
     </Link>
   );
