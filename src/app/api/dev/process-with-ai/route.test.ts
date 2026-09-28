@@ -184,8 +184,13 @@ describe("POST /api/dev/process-with-ai", () => {
     expect(await res.json()).toEqual({ ok: true, errorsDetected: 1, savingsFound: 100 });
     expect(processCase).toHaveBeenCalledWith("case-1", expect.objectContaining({ filename: "bill.pdf" }));
 
-    const billUpdate = adminMock.from.mock.results[0].value.update as ReturnType<typeof vi.fn>;
-    expect(billUpdate).toHaveBeenCalledWith(
+    // Located by table rather than call order: the route now checks the
+    // cached AI reading first, so positions shift.
+    const callIndex = (table: string) => adminMock.from.mock.calls.findIndex(([t]) => t === table);
+    const updateFor = (table: string) =>
+      adminMock.from.mock.results[callIndex(table)].value.update as ReturnType<typeof vi.fn>;
+
+    expect(updateFor("bills")).toHaveBeenCalledWith(
       expect.objectContaining({
         provider_name: "North Valley Hospital",
         service_date: "2026-07-18",
@@ -193,7 +198,7 @@ describe("POST /api/dev/process-with-ai", () => {
       }),
     );
 
-    const caseUpdate = adminMock.from.mock.results[1].value.update as ReturnType<typeof vi.fn>;
+    const caseUpdate = updateFor("cases");
     expect(caseUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         errors_detected: 1,

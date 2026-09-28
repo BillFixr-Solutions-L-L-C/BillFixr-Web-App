@@ -29,10 +29,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const fields = {
     clientName: text(body, "clientName"),
     address: text(body, "address", MAX_ADDRESS),
-    nextgenNumber: text(body, "nextgenNumber"),
+    clientHospitalNumber: text(body, "clientHospitalNumber"),
     hospitalName: text(body, "hospitalName"),
     billingManagerEmail: text(body, "billingManagerEmail"),
     hospitalAddress: text(body, "hospitalAddress", MAX_ADDRESS),
+    supportEmail: text(body, "supportEmail"),
     billingPhone: text(body, "billingPhone"),
   };
   if (Object.values(fields).some((v) => v === false)) {
@@ -40,6 +41,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
   if (fields.billingManagerEmail && !EMAIL_PATTERN.test(fields.billingManagerEmail as string)) {
     return NextResponse.json({ error: "Enter a valid billing manager email." }, { status: 400 });
+  }
+  if (fields.supportEmail && !EMAIL_PATTERN.test(fields.supportEmail as string)) {
+    return NextResponse.json({ error: "Enter a valid support email." }, { status: 400 });
   }
   if (!fields.clientName) {
     return NextResponse.json({ error: "Your name is required." }, { status: 400 });
@@ -65,7 +69,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .update({
       name: fields.clientName,
       address: fields.address,
-      nextgen_number: fields.nextgenNumber,
+      client_hospital_number: fields.clientHospitalNumber,
     })
     .eq("id", user.id);
   if (profileError) {
@@ -79,6 +83,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       provider_name: fields.hospitalName,
       provider_email: fields.billingManagerEmail,
       provider_address: fields.hospitalAddress,
+      provider_support_email: fields.supportEmail,
       provider_phone: fields.billingPhone,
     })
     .eq("id", id);

@@ -1,33 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { describeMissing, missingRequiredInformation } from "@/lib/requiredInformation";
 
 export type CaseInformation = {
   clientName: string;
   email: string;
   address: string;
-  nextgenNumber: string;
+  clientHospitalNumber: string;
   hospitalName: string;
   billingManagerEmail: string;
   hospitalAddress: string;
+  supportEmail: string;
   billingPhone: string;
 };
 
-type Field = { key: keyof CaseInformation; label: string; wide?: boolean; readOnly?: boolean };
+type Field = { key: keyof CaseInformation; label: string; wide?: boolean; readOnly?: boolean; required?: boolean };
 
 const PERSONAL: Field[] = [
-  { key: "clientName", label: "Client Name" },
+  { key: "clientName", label: "Client Name", required: true },
   { key: "email", label: "Email", readOnly: true },
   { key: "address", label: "Address", wide: true },
-  { key: "nextgenNumber", label: "NextGen Number" },
+  { key: "clientHospitalNumber", label: "Client Hospital Number" },
 ];
 
-// Figma lists "Billing Manager Email" twice in this section; the second is
-// a design slip, so the four distinct fields are used here.
 const HOSPITAL: Field[] = [
-  { key: "hospitalName", label: "Hospital Name" },
-  { key: "billingManagerEmail", label: "Billing Manager Email" },
+  { key: "hospitalName", label: "Hospital Name", required: true },
+  { key: "billingManagerEmail", label: "Billing Manager Email", required: true },
   { key: "hospitalAddress", label: "Address", wide: true },
+  { key: "supportEmail", label: "Support Email" },
   { key: "billingPhone", label: "Billing Phone Number" },
 ];
 
@@ -58,6 +59,7 @@ function Section({
           <div key={f.key} className={f.wide ? "sm:row-span-2" : undefined}>
             <label htmlFor={`info-${f.key}`} className="text-sm text-gray-600">
               {f.label}
+              {f.required && <span className="ml-1 text-danger">*</span>}
             </label>
             {f.wide ? (
               <textarea
@@ -119,6 +121,43 @@ export default function CaseInformationStep({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedNote, setSavedNote] = useState(false);
+  const [reading, setReading] = useState(true);
+  const [readNote, setReadNote] = useState<string | null>(null);
+
+  // Ask the AI to read the hospital details off the document as soon as the
+  // step opens, so the customer corrects rather than types. Whatever it
+  // can't find is left for them to fill in; a failure here is not fatal.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch(`/api/dashboard/bills/${billId}/extract`, { method: "POST" }).catch(() => null);
+      if (cancelled) return;
+      const body = await res?.json().catch(() => null);
+      if (res?.ok && body?.fields) {
+        // Only fills blanks — never overwrites something already typed.
+        setValues((v) => ({
+          ...v,
+          hospitalName: v.hospitalName || body.fields.hospitalName || "",
+          billingManagerEmail: v.billingManagerEmail || body.fields.billingManagerEmail || "",
+          hospitalAddress: v.hospitalAddress || body.fields.hospitalAddress || "",
+          billingPhone: v.billingPhone || body.fields.billingPhone || "",
+        }));
+        setReadNote("We filled in what we could read from your bill. Check it's right.");
+      } else {
+        setReadNote("We couldn't read your bill automatically — please fill these in.");
+      }
+      setReading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [billId]);
+
+  const missing = missingRequiredInformation({
+    clientName: values.clientName,
+    hospitalName: values.hospitalName,
+    billingManagerEmail: values.billingManagerEmail,
+  });
 
   function change(key: keyof CaseInformation, value: string) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -146,6 +185,12 @@ export default function CaseInformationStep({
 
   return (
     <div className="space-y-10">
+      {reading ? (
+        <p className="text-center text-sm text-gray-500">Reading the details off your bill…</p>
+      ) : (
+        readNote && <p className="text-center text-sm text-gray-500">{readNote}</p>
+      )}
+
       <Section
         title="Personal Information"
         fields={PERSONAL}
@@ -183,6 +228,9 @@ export default function CaseInformationStep({
 
       {error && <p className="text-center text-sm text-danger">{error}</p>}
       {savedNote && !error && <p className="text-center text-sm text-primary-600">Information saved.</p>}
+      {missing.length > 0 && !error && (
+        <p className="text-center text-sm text-accent-600">{describeMissing(missing)}</p>
+      )}
 
       <div className="flex justify-center">
         <button
@@ -190,8 +238,9 @@ export default function CaseInformationStep({
           onClick={async () => {
             if (await save(true)) onContinue();
           }}
-          disabled={saving}
-          className="rounded-full bg-[#0f7545] px-12 py-3 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
+          disabled={saving || missing.length > 0}
+          title={missing.length > 0 ? describeMissing(missing) : undefined}
+          className="rounded-full bg-[#0f7545] px-12 py-3 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save Information"}
         </button>

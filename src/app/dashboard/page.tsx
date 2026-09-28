@@ -18,10 +18,11 @@ const EMPTY_CASE_INFORMATION: CaseInformation = {
   clientName: "",
   email: "",
   address: "",
-  nextgenNumber: "",
+  clientHospitalNumber: "",
   hospitalName: "",
   billingManagerEmail: "",
   hospitalAddress: "",
+  supportEmail: "",
   billingPhone: "",
 };
 
@@ -130,7 +131,7 @@ export default function DashboardHome() {
     // whatever the customer leaves empty when it reads the bill.
     const { data: profile } = await supabase
       .from("profiles")
-      .select("name, email, address, nextgen_number")
+      .select("name, email, address, client_hospital_number")
       .eq("id", user.id)
       .single();
     setCaseInformation({
@@ -138,7 +139,7 @@ export default function DashboardHome() {
       clientName: profile?.name ?? "",
       email: profile?.email ?? user.email ?? "",
       address: profile?.address ?? "",
-      nextgenNumber: profile?.nextgen_number ?? "",
+      clientHospitalNumber: profile?.client_hospital_number ?? "",
     });
 
     setBillId(billRow.id);

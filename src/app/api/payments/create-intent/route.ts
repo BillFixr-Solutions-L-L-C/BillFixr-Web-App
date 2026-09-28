@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, COMMITMENT_FEE_CENTS, MIN_CHARGE_CENTS } from "@/lib/stripe";
+import { describeMissing, missingRequiredInformation } from "@/lib/requiredInformation";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -36,9 +37,26 @@ async function handleCommitmentFee(supabase: SupabaseClient, userId: string, bil
     return NextResponse.json({ error: "invalid request" }, { status: 400 });
   }
 
-  const { data: bill } = await supabase.from("bills").select("id, user_id").eq("id", billId).single();
+  const { data: bill } = await supabase
+    .from("bills")
+    .select("id, user_id, provider_name, provider_email")
+    .eq("id", billId)
+    .single();
   if (!bill || bill.user_id !== userId) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
+
+  // A bill can't be scanned until it carries the details the case needs.
+  // Enforced here as well as in the form, so an incomplete bill can't be
+  // pushed through by calling this directly.
+  const { data: profile } = await supabase.from("profiles").select("name").eq("id", userId).single();
+  const missing = missingRequiredInformation({
+    clientName: profile?.name ?? null,
+    hospitalName: bill.provider_name,
+    billingManagerEmail: bill.provider_email,
+  });
+  if (missing.length > 0) {
+    return NextResponse.json({ error: describeMissing(missing), missing }, { status: 409 });
   }
 
   const admin = createAdminClient();

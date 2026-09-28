@@ -33,6 +33,13 @@ function makeRequest(body: unknown) {
 }
 
 const USER = { id: "user-1" };
+// A bill carrying the details required before it may be scanned.
+const READY_BILL = {
+  id: "bill-1",
+  user_id: USER.id,
+  provider_name: "General Hospital",
+  provider_email: "billing@hospital.com",
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -63,8 +70,31 @@ describe("POST /api/payments/create-intent", () => {
       expect(res.status).toBe(404);
     });
 
+    it("refuses to start payment while the bill is missing required details", async () => {
+      serverMock.queueResult("bills", { data: { ...READY_BILL, provider_email: null }, error: null });
+      serverMock.queueResult("profiles", { data: { name: "Jane" }, error: null });
+
+      const res = await POST(makeRequest({ type: "commitment_fee", billId: "bill-1" }));
+      const body = await res.json();
+
+      expect(res.status).toBe(409);
+      expect(body.missing).toEqual(["Billing Manager Email"]);
+      expect(paymentIntentsCreate).not.toHaveBeenCalled();
+    });
+
+    it("refuses when the customer has no name on file", async () => {
+      serverMock.queueResult("bills", { data: READY_BILL, error: null });
+      serverMock.queueResult("profiles", { data: { name: "" }, error: null });
+
+      const res = await POST(makeRequest({ type: "commitment_fee", billId: "bill-1" }));
+
+      expect(res.status).toBe(409);
+      expect((await res.json()).missing).toEqual(["Client Name"]);
+    });
+
     it("creates a new PaymentIntent and payment_records row when none exists", async () => {
-      serverMock.queueResult("bills", { data: { id: "bill-1", user_id: USER.id }, error: null });
+      serverMock.queueResult("bills", { data: READY_BILL, error: null });
+      serverMock.queueResult("profiles", { data: { name: "Jane" }, error: null });
       adminMock.queueResult("payment_records", { data: null, error: null }); // existing check: none
       paymentIntentsCreate.mockResolvedValue({ id: "pi_new", client_secret: "secret_new" });
       adminMock.queueResult("payment_records", { data: null, error: null }); // insert
@@ -81,7 +111,8 @@ describe("POST /api/payments/create-intent", () => {
     });
 
     it("reuses an existing pending intent instead of creating a new one", async () => {
-      serverMock.queueResult("bills", { data: { id: "bill-1", user_id: USER.id }, error: null });
+      serverMock.queueResult("bills", { data: READY_BILL, error: null });
+      serverMock.queueResult("profiles", { data: { name: "Jane" }, error: null });
       adminMock.queueResult("payment_records", { data: { processor_ref: "pi_existing", status: "pending" }, error: null });
       paymentIntentsRetrieve.mockResolvedValue({ id: "pi_existing", status: "requires_payment_method", client_secret: "secret_existing", amount: 500 });
 
@@ -94,7 +125,8 @@ describe("POST /api/payments/create-intent", () => {
     });
 
     it("returns alreadyPaid without touching Stripe when the record is already paid", async () => {
-      serverMock.queueResult("bills", { data: { id: "bill-1", user_id: USER.id }, error: null });
+      serverMock.queueResult("bills", { data: READY_BILL, error: null });
+      serverMock.queueResult("profiles", { data: { name: "Jane" }, error: null });
       adminMock.queueResult("payment_records", { data: { processor_ref: "pi_paid", status: "paid" }, error: null });
 
       const res = await POST(makeRequest({ type: "commitment_fee", billId: "bill-1" }));

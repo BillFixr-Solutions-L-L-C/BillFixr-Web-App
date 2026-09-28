@@ -3,14 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAiServiceConfig, processCase } from "@/lib/ai-service";
 import { mapAdminCaseAnalysis, mapBillAnalysis, mapCaseFields } from "@/lib/aiAnalysisMapping";
-
-function guessContentType(filename: string): string {
-  const ext = filename.toLowerCase().split(".").pop();
-  if (ext === "pdf") return "application/pdf";
-  if (ext === "png") return "image/png";
-  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
-  return "application/octet-stream";
-}
+import { guessContentType } from "@/lib/contentType";
+import type { AiCaseProcessingResponse } from "@/types/ai";
 
 // Stands in for the real trigger (an automated pipeline kicking this off
 // right after upload) the same way /api/dev/advance-case stands in for
@@ -63,20 +57,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, alreadyProcessed: true });
   }
 
-  const { data: fileBlob, error: downloadError } = await admin.storage.from("bills").download(bill.storage_url);
-  if (downloadError || !fileBlob) {
-    return NextResponse.json({ error: "failed to load the stored bill file" }, { status: 500 });
-  }
+  // The information step already had the AI read this document to fill in
+  // the hospital details; that whole response was parked in
+  // bill_extractions. Reuse it rather than paying for a second reading —
+  // this is where the parts held back until payment get written out.
+  const { data: cached } = await admin
+    .from("bill_extractions")
+    .select("result")
+    .eq("bill_id", bill.id)
+    .maybeSingle();
 
-  let result;
-  try {
-    result = await processCase(caseId, {
-      filename: bill.filename,
-      bytes: new Blob([await fileBlob.arrayBuffer()], { type: guessContentType(bill.filename) }),
-    });
-  } catch (err) {
-    console.error("AI service processing failed for case", caseId, err);
-    return NextResponse.json({ error: "AI processing failed" }, { status: 502 });
+  let result = cached?.result as AiCaseProcessingResponse | undefined;
+
+  if (!result) {
+    const { data: fileBlob, error: downloadError } = await admin.storage.from("bills").download(bill.storage_url);
+    if (downloadError || !fileBlob) {
+      return NextResponse.json({ error: "failed to load the stored bill file" }, { status: 500 });
+    }
+    try {
+      result = await processCase(caseId, {
+        filename: bill.filename,
+        bytes: new Blob([await fileBlob.arrayBuffer()], { type: guessContentType(bill.filename) }),
+      });
+    } catch (err) {
+      console.error("AI service processing failed for case", caseId, err);
+      return NextResponse.json({ error: "AI processing failed" }, { status: 502 });
+    }
+    await admin.from("bill_extractions").upsert({ bill_id: bill.id, result });
   }
 
   const extraction = result.processed_documents[0]?.extraction;

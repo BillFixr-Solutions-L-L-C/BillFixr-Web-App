@@ -14,10 +14,11 @@ const USER = { id: "user-1" };
 const VALID = {
   clientName: "Jane Doe",
   address: "1 Main St",
-  nextgenNumber: "45962",
+  clientHospitalNumber: "45962",
   hospitalName: "General Hospital",
   billingManagerEmail: "billing@hospital.com",
   hospitalAddress: "2 Care Rd",
+  supportEmail: "support@hospital.com",
   billingPhone: "555-0100",
 };
 
@@ -84,12 +85,13 @@ describe("PATCH /api/dashboard/bills/[id]/information", () => {
     expect(updateArg(serverMock, 1)).toEqual({
       name: "Jane Doe",
       address: "1 Main St",
-      nextgen_number: "45962",
+      client_hospital_number: "45962",
     });
     expect(updateArg(adminMock)).toEqual({
       provider_name: "General Hospital",
       provider_email: "billing@hospital.com",
       provider_address: "2 Care Rd",
+      provider_support_email: "support@hospital.com",
       provider_phone: "555-0100",
     });
   });
@@ -100,7 +102,7 @@ describe("PATCH /api/dashboard/bills/[id]/information", () => {
     adminMock.queueResult("bills", { data: null, error: null });
 
     await PATCH(
-      makeRequest({ ...VALID, hospitalName: "", billingManagerEmail: "", billingPhone: "  ", nextgenNumber: "" }),
+      makeRequest({ ...VALID, hospitalName: "", billingManagerEmail: "", billingPhone: "  ", clientHospitalNumber: "" }),
       { params },
     );
 
@@ -109,7 +111,7 @@ describe("PATCH /api/dashboard/bills/[id]/information", () => {
       provider_email: null,
       provider_phone: null,
     });
-    expect(updateArg(serverMock, 1)).toMatchObject({ nextgen_number: null });
+    expect(updateArg(serverMock, 1)).toMatchObject({ client_hospital_number: null });
   });
 
   it("returns 500 when the bill write fails", async () => {
