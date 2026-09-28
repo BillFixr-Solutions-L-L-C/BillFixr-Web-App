@@ -94,13 +94,17 @@ describe("POST /api/dashboard/bills/[id]/extract", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.fields.hospital).toEqual({
+    expect(body.fields).toEqual({
+      clientName: "Jordan Patient",
+      address: "9 Patient Way",
       hospitalName: "Riverside General",
       billingManagerEmail: "billing@riverside.com",
       hospitalAddress: "2 Care Rd",
+      // the bill carries one provider contact, so there's no separate
+      // support address to offer
+      supportEmail: "",
       billingPhone: "555-0100",
     });
-    expect(body.fields.personal).toEqual({ clientName: "Jordan Patient", address: "9 Patient Way" });
     const serialized = JSON.stringify(body);
     expect(serialized).not.toContain("secret findings");
     expect(serialized).not.toContain("secret letter");
@@ -124,7 +128,7 @@ describe("POST /api/dashboard/bills/[id]/extract", () => {
 
     const body = await (await POST(req(), { params })).json();
 
-    expect(body.fields.hospital.hospitalName).toBe("Typed By Customer");
+    expect(body.fields.hospitalName).toBe("Typed By Customer");
   });
 
   it("reports a document it cannot read", async () => {

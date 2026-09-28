@@ -87,22 +87,27 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
+  // Keyed by the form's own field names so a single field's "Search by AI"
+  // can pick out just the one it needs.
+  //
   // Patient details are handed back for the form but not persisted here —
   // the account's own name/address shouldn't be silently rewritten from a
   // document; that only happens when the customer saves the step.
+  //
+  // supportEmail has no counterpart in the extraction (a bill carries one
+  // provider contact), so it is only offered when it differs from the
+  // billing address already found, rather than echoing the same value back.
+  const providerEmail = merged.provider_email ?? "";
   return NextResponse.json({
     ok: true,
     fields: {
-      personal: {
-        clientName: extraction.patient?.name ?? "",
-        address: extraction.patient?.address ?? "",
-      },
-      hospital: {
-        hospitalName: merged.provider_name ?? "",
-        billingManagerEmail: merged.provider_email ?? "",
-        hospitalAddress: merged.provider_address ?? "",
-        billingPhone: merged.provider_phone ?? "",
-      },
+      clientName: extraction.patient?.name ?? "",
+      address: extraction.patient?.address ?? "",
+      hospitalName: merged.provider_name ?? "",
+      billingManagerEmail: providerEmail,
+      hospitalAddress: merged.provider_address ?? "",
+      supportEmail: extraction.provider?.email && extraction.provider.email !== providerEmail ? extraction.provider.email : "",
+      billingPhone: merged.provider_phone ?? "",
     },
   });
 }

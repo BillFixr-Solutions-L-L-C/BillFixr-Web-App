@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { describeMissing, missingRequiredInformation } from "@/lib/requiredInformation";
 
-type SectionName = "personal" | "hospital";
-
 function SparkIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -29,7 +27,15 @@ export type CaseInformation = {
   billingPhone: string;
 };
 
-type Field = { key: keyof CaseInformation; label: string; wide?: boolean; readOnly?: boolean; required?: boolean };
+type Field = {
+  key: keyof CaseInformation;
+  label: string;
+  wide?: boolean;
+  readOnly?: boolean;
+  required?: boolean;
+  // Figma places a "Search by AI" button beside the two email fields.
+  searchable?: boolean;
+};
 
 // Everything is required except Email, which comes from the account and
 // can't be edited here.
@@ -42,9 +48,9 @@ const PERSONAL: Field[] = [
 
 const HOSPITAL: Field[] = [
   { key: "hospitalName", label: "Hospital Name", required: true },
-  { key: "billingManagerEmail", label: "Billing Manager Email", required: true },
+  { key: "billingManagerEmail", label: "Billing Manager Email", required: true, searchable: true },
   { key: "hospitalAddress", label: "Address", wide: true, required: true },
-  { key: "supportEmail", label: "Support Email", required: true },
+  { key: "supportEmail", label: "Support Email", required: true, searchable: true },
   { key: "billingPhone", label: "Billing Phone Number", required: true },
 ];
 
@@ -58,8 +64,8 @@ function Section({
   onSave,
   saving,
   onSearch,
-  searching,
-  note,
+  searchingKey,
+  notes,
 }: {
   title: string;
   fields: Field[];
@@ -69,25 +75,13 @@ function Section({
   onChange: (key: keyof CaseInformation, value: string) => void;
   onSave: () => void;
   saving: boolean;
-  onSearch: () => void;
-  searching: boolean;
-  note?: string;
+  onSearch: (key: keyof CaseInformation) => void;
+  searchingKey: keyof CaseInformation | null;
+  notes: Partial<Record<keyof CaseInformation, string>>;
 }) {
   return (
     <section>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-serif text-2xl font-bold text-gray-900">{title}</h2>
-        <button
-          type="button"
-          onClick={onSearch}
-          disabled={searching}
-          className="flex items-center gap-2 rounded-full border border-[#0f7545] px-5 py-2 text-sm font-semibold text-[#0f7545] hover:bg-primary-50 disabled:opacity-60"
-        >
-          <SparkIcon />
-          {searching ? "Searching…" : "Search by AI"}
-        </button>
-      </div>
-      {note && <p className="mt-2 text-sm text-gray-500">{note}</p>}
+      <h2 className="font-serif text-2xl font-bold text-gray-900">{title}</h2>
       <div className="mt-5 grid gap-x-8 gap-y-5 sm:grid-cols-2">
         {fields.map((f) => (
           <div key={f.key} className={f.wide ? "sm:row-span-2" : undefined}>
@@ -105,15 +99,31 @@ function Section({
                 className="mt-1 w-full rounded-xl border border-primary-200 px-4 py-2.5 text-sm text-primary-800 read-only:bg-gray-50 read-only:text-gray-500 focus:border-primary-400 focus:outline-none"
               />
             ) : (
-              <input
-                id={`info-${f.key}`}
-                type="text"
-                value={values[f.key]}
-                readOnly={!editing || f.readOnly}
-                onChange={(e) => onChange(f.key, e.target.value)}
-                className="mt-1 w-full rounded-xl border border-primary-200 px-4 py-2.5 text-sm text-primary-800 read-only:bg-gray-50 read-only:text-gray-500 focus:border-primary-400 focus:outline-none"
-              />
+              // Figma puts a "Search by AI" button immediately to the right
+              // of the field it fills (the two email fields).
+              <div className="mt-1 flex items-center gap-3">
+                <input
+                  id={`info-${f.key}`}
+                  type="text"
+                  value={values[f.key]}
+                  readOnly={!editing || f.readOnly}
+                  onChange={(e) => onChange(f.key, e.target.value)}
+                  className="w-full min-w-0 rounded-xl border border-primary-200 px-4 py-2.5 text-sm text-primary-800 read-only:bg-gray-50 read-only:text-gray-500 focus:border-primary-400 focus:outline-none"
+                />
+                {f.searchable && (
+                  <button
+                    type="button"
+                    onClick={() => onSearch(f.key)}
+                    disabled={searchingKey === f.key}
+                    className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#0f7545] px-4 py-2 text-xs font-semibold text-[#0f7545] hover:bg-primary-50 disabled:opacity-60"
+                  >
+                    <SparkIcon />
+                    {searchingKey === f.key ? "Searching…" : "Search by AI"}
+                  </button>
+                )}
+              </div>
             )}
+            {notes[f.key] && <p className="mt-1 text-xs text-gray-500">{notes[f.key]}</p>}
           </div>
         ))}
       </div>
@@ -155,15 +165,15 @@ export default function CaseInformationStep({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedNote, setSavedNote] = useState(false);
-  const [searching, setSearching] = useState<SectionName | null>(null);
-  const [searchNote, setSearchNote] = useState<Partial<Record<SectionName, string>>>({});
+  const [searching, setSearching] = useState<keyof CaseInformation | null>(null);
+  const [searchNote, setSearchNote] = useState<Partial<Record<keyof CaseInformation, string>>>({});
 
-  // "Search by AI": reads the uploaded bill and fills the blanks in one
-  // section. Only fills what's empty, so it can't wipe out a correction the
-  // customer has already made.
-  async function searchByAi(section: SectionName) {
-    setSearching(section);
-    setSearchNote((n) => ({ ...n, [section]: "" }));
+  // "Search by AI" sits beside a single field (Figma puts one on each of
+  // the two email fields). It reads the uploaded bill and fills just that
+  // field, and only when it's empty, so it can't overwrite a correction.
+  async function searchByAi(key: keyof CaseInformation) {
+    setSearching(key);
+    setSearchNote((n) => ({ ...n, [key]: "" }));
 
     const res = await fetch(`/api/dashboard/bills/${billId}/extract`, { method: "POST" }).catch(() => null);
     const body = await res?.json().catch(() => null);
@@ -172,28 +182,18 @@ export default function CaseInformationStep({
     if (!res?.ok || !body?.fields) {
       setSearchNote((n) => ({
         ...n,
-        [section]: body?.error ?? "We couldn't read your bill. Please fill these in yourself.",
+        [key]: body?.error ?? "We couldn't read your bill. Please type it in yourself.",
       }));
       return;
     }
 
-    const found: Record<string, string> = body.fields[section] ?? {};
-    let filled = 0;
-    setValues((v) => {
-      const next = { ...v };
-      for (const [key, value] of Object.entries(found)) {
-        const k = key as keyof CaseInformation;
-        if (!next[k]?.trim() && value?.trim()) {
-          next[k] = value;
-          filled++;
-        }
-      }
-      return next;
-    });
-    setSearchNote((n) => ({
-      ...n,
-      [section]: filled > 0 ? `Filled ${filled} field${filled > 1 ? "s" : ""} from your bill. Check it's right.` : "Nothing new found on your bill for this section.",
-    }));
+    const found = String(body.fields[key] ?? "").trim();
+    if (!found) {
+      setSearchNote((n) => ({ ...n, [key]: "Couldn't find this on your bill." }));
+      return;
+    }
+    setValues((v) => (v[key]?.trim() ? v : { ...v, [key]: found }));
+    setSearchNote((n) => ({ ...n, [key]: "Found on your bill — check it's right." }));
   }
 
   const missing = missingRequiredInformation({
@@ -242,9 +242,9 @@ export default function CaseInformationStep({
         onChange={change}
         onSave={() => save(true)}
         saving={saving && editing === "personal"}
-        onSearch={() => searchByAi("personal")}
-        searching={searching === "personal"}
-        note={searchNote.personal}
+        onSearch={searchByAi}
+        searchingKey={searching}
+        notes={searchNote}
       />
 
       <hr className="border-gray-200" />
@@ -258,9 +258,9 @@ export default function CaseInformationStep({
         onChange={change}
         onSave={() => save(true)}
         saving={saving && editing === "hospital"}
-        onSearch={() => searchByAi("hospital")}
-        searching={searching === "hospital"}
-        note={searchNote.hospital}
+        onSearch={searchByAi}
+        searchingKey={searching}
+        notes={searchNote}
       />
 
       {previews.length > 0 && (

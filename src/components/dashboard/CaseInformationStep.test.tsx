@@ -74,13 +74,11 @@ describe("CaseInformationStep", () => {
     body: {
       ok: true,
       fields: {
-        personal: { clientName: "AI Patient", address: "9 Patient Way" },
-        hospital: {
-          hospitalName: "Riverside General",
-          billingManagerEmail: "billing@riverside.com",
-          hospitalAddress: "2 Care Rd",
-          billingPhone: "555-0100",
-        },
+        clientName: "AI Patient",
+        hospitalName: "Riverside General",
+        billingManagerEmail: "billing@riverside.com",
+        supportEmail: "support@riverside.com",
+        billingPhone: "555-0100",
       },
     },
   };
@@ -91,47 +89,39 @@ describe("CaseInformationStep", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it("fills the hospital fields when Search by AI is pressed on that section", async () => {
+  it("fills the one field its button sits beside", async () => {
     mockFetch(READ_OK);
     const user = userEvent.setup();
     renderStep();
 
-    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[1]);
-
-    await waitFor(() => expect(screen.getByLabelText(/^Hospital Name/)).toHaveValue("Riverside General"));
-    expect(screen.getByLabelText(/^Billing Manager Email/)).toHaveValue("billing@riverside.com");
-    expect(screen.getByText(/Filled 4 fields from your bill/i)).toBeInTheDocument();
-  });
-
-  it("fills only its own section, not the other one", async () => {
-    mockFetch(READ_OK);
-    const user = userEvent.setup();
-    renderStep({ ...BLANK, clientName: "", address: "" });
-
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
-    await waitFor(() => expect(screen.getByLabelText(/^Client Name/)).toHaveValue("AI Patient"));
-    expect(screen.getByLabelText(/^Hospital Name/)).toHaveValue("");
+    await waitFor(() =>
+      expect(screen.getByLabelText(/^Billing Manager Email/)).toHaveValue("billing@riverside.com"),
+    );
+    // the other searchable field is untouched
+    expect(screen.getByLabelText(/^Support Email/)).toHaveValue("");
+    expect(screen.getByText(/Found on your bill/i)).toBeInTheDocument();
   });
 
   it("never overwrites a value the customer already has", async () => {
     mockFetch(READ_OK);
     const user = userEvent.setup();
-    renderStep({ ...BLANK, hospitalName: "Typed By Customer" });
+    renderStep({ ...BLANK, billingManagerEmail: "typed@customer.com" });
 
-    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[1]);
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
-    await waitFor(() => expect(screen.getByText(/Filled 3 fields/i)).toBeInTheDocument());
-    expect(screen.getByLabelText(/^Hospital Name/)).toHaveValue("Typed By Customer");
+    await waitFor(() => expect(screen.getByText(/Found on your bill/i)).toBeInTheDocument());
+    expect(screen.getByLabelText(/^Billing Manager Email/)).toHaveValue("typed@customer.com");
   });
 
-  it("says when there was nothing new to fill", async () => {
-    mockFetch({ ok: true, body: { ok: true, fields: { personal: {}, hospital: {} } } });
+  it("says when the value isn't on the bill", async () => {
+    mockFetch({ ok: true, body: { ok: true, fields: { billingManagerEmail: "" } } });
     const user = userEvent.setup();
     renderStep();
 
-    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[1]);
-    expect(await screen.findByText(/Nothing new found/i)).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+    expect(await screen.findByText(/Couldn't find this on your bill/i)).toBeInTheDocument();
   });
 
   it("reports when the bill can't be read, and still lets them fill it in", async () => {
@@ -181,7 +171,9 @@ describe("CaseInformationStep", () => {
 
   it("marks the required fields", async () => {
     renderStep();
-    expect(screen.getByLabelText(/^Client Name/).closest("div")?.textContent).toContain("*");
+    expect(document.querySelector('label[for="info-clientName"]')?.textContent).toContain("*");
+    // every field except the read-only Email
+    expect(document.querySelectorAll("label span.text-danger")).toHaveLength(8);
   });
 
   it("keeps fields read-only until Edit is pressed, and email always", async () => {
