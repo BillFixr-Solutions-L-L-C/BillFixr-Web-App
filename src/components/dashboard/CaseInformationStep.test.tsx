@@ -28,13 +28,21 @@ const COMPLETE: CaseInformation = {
 
 const originalFetch = global.fetch;
 
-// "Search by AI" hits the extract endpoint; everything else (the save) is
-// a plain success.
-function mockFetch(extract?: { ok: boolean; body: unknown }) {
+// Two different endpoints now: /extract reads the bill on open, and
+// /find-contact backs the two "Search by AI" buttons. Anything else (the
+// save) is a plain success.
+function mockFetch(opts: {
+  extract?: { ok: boolean; body: unknown };
+  contact?: { status: number; body: unknown };
+} = {}) {
   global.fetch = vi.fn(async (url: string) => {
     if (String(url).endsWith("/extract")) {
-      const e = extract ?? { ok: true, body: { ok: true, fields: { personal: {}, hospital: {} } } };
+      const e = opts.extract ?? { ok: true, body: { ok: true, fields: {} } };
       return new Response(JSON.stringify(e.body), { status: e.ok ? 200 : 502 });
+    }
+    if (String(url).endsWith("/find-contact")) {
+      const c = opts.contact ?? { status: 200, body: { ok: true, value: null } };
+      return new Response(JSON.stringify(c.body), { status: c.status });
     }
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   }) as unknown as typeof fetch;
@@ -69,70 +77,92 @@ describe("CaseInformationStep", () => {
     expect(screen.queryByLabelText(/NextGen/)).not.toBeInTheDocument();
   });
 
-  const READ_OK = {
+  const BILL_READ = {
     ok: true,
     body: {
       ok: true,
       fields: {
         clientName: "AI Patient",
         hospitalName: "Riverside General",
-        billingManagerEmail: "billing@riverside.com",
-        supportEmail: "support@riverside.com",
+        hospitalAddress: "2 Care Rd",
         billingPhone: "555-0100",
       },
     },
   };
 
-  it("does not call the AI until Search by AI is pressed", async () => {
-    renderStep();
-    await waitFor(() => expect(screen.getByText("Hospital Information")).toBeInTheDocument());
-    expect(global.fetch).not.toHaveBeenCalled();
+  it("reads what's on the bill as soon as the step opens", async () => {
+    mockFetch({ extract: BILL_READ });
+    renderStep({ ...BLANK, clientName: "" });
+
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Name/)).toHaveValue("Riverside General"));
+    expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("555-0100");
+    expect(screen.getByLabelText(/^Client Name/)).toHaveValue("AI Patient");
   });
 
-  it("fills the one field its button sits beside", async () => {
-    mockFetch(READ_OK);
-    const user = userEvent.setup();
+  it("leaves the two email fields for the lookup, not the bill read", async () => {
+    mockFetch({ extract: BILL_READ });
     renderStep();
 
-    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
-
-    await waitFor(() =>
-      expect(screen.getByLabelText(/^Billing Manager Email/)).toHaveValue("billing@riverside.com"),
-    );
-    // the other searchable field is untouched
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Name/)).toHaveValue("Riverside General"));
+    expect(screen.getByLabelText(/^Billing Manager Email/)).toHaveValue("");
     expect(screen.getByLabelText(/^Support Email/)).toHaveValue("");
-    expect(screen.getByText(/Found on your bill/i)).toBeInTheDocument();
   });
 
-  it("never overwrites a value the customer already has", async () => {
-    mockFetch(READ_OK);
+  it("never overwrites a value the customer already has when reading the bill", async () => {
+    mockFetch({ extract: BILL_READ });
+    renderStep({ ...BLANK, hospitalName: "Typed By Customer" });
+
+    await waitFor(() => expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("555-0100"));
+    expect(screen.getByLabelText(/^Hospital Name/)).toHaveValue("Typed By Customer");
+  });
+
+  it("looks the address up when Search by AI is pressed, not from the bill", async () => {
+    mockFetch({ extract: BILL_READ, contact: { status: 200, body: { ok: true, value: "billing@riverside.com" } } });
     const user = userEvent.setup();
-    renderStep({ ...BLANK, billingManagerEmail: "typed@customer.com" });
+    renderStep();
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Name/)).toHaveValue("Riverside General"));
 
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
-    await waitFor(() => expect(screen.getByText(/Found on your bill/i)).toBeInTheDocument());
-    expect(screen.getByLabelText(/^Billing Manager Email/)).toHaveValue("typed@customer.com");
+    await waitFor(() => expect(screen.getByLabelText(/^Billing Manager Email/)).toHaveValue("billing@riverside.com"));
+    expect(screen.getByText(/Found — check it's right/i)).toBeInTheDocument();
+    const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.map(([u]) => String(u));
+    expect(calls.some((u) => u.endsWith("/find-contact"))).toBe(true);
   });
 
-  it("says when the value isn't on the bill", async () => {
-    mockFetch({ ok: true, body: { ok: true, fields: { billingManagerEmail: "" } } });
+  it("asks for each field separately", async () => {
+    mockFetch({ extract: BILL_READ, contact: { status: 200, body: { ok: true, value: "x@y.com" } } });
     const user = userEvent.setup();
     renderStep();
-
-    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
-    expect(await screen.findByText(/Couldn't find this on your bill/i)).toBeInTheDocument();
-  });
-
-  it("reports when the bill can't be read, and still lets them fill it in", async () => {
-    mockFetch({ ok: false, body: { error: "We couldn't read this document." } });
-    const user = userEvent.setup();
-    renderStep();
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Name/)).toHaveValue("Riverside General"));
 
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[1]);
 
-    expect(await screen.findByText("We couldn't read this document.")).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Hospital Name/)).toBeInTheDocument();
+    const call = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.find(([u]) => String(u).endsWith("/find-contact"))!;
+    expect(JSON.parse(call[1].body)).toEqual({ field: "supportEmail" });
+  });
+
+  it("says so when no address could be found", async () => {
+    mockFetch({ extract: BILL_READ, contact: { status: 200, body: { ok: true, value: null } } });
+    const user = userEvent.setup();
+    renderStep();
+
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+    expect(await screen.findByText(/couldn't find an address for this hospital/i)).toBeInTheDocument();
+  });
+
+  it("reports a lookup that isn't available, and still lets them type it", async () => {
+    mockFetch({
+      extract: BILL_READ,
+      contact: { status: 503, body: { error: "Automatic search isn't available right now — please type it in." } },
+    });
+    const user = userEvent.setup();
+    renderStep();
+
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+
+    expect(await screen.findByText(/Automatic search isn't available right now/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Billing Manager Email/)).toBeInTheDocument();
   });
 
   it("blocks continuing while fields are blank, and says how many are left", async () => {

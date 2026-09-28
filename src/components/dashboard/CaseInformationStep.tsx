@@ -1,7 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { describeMissing, missingRequiredInformation } from "@/lib/requiredInformation";
+
+// Fields the AI can read straight off the uploaded bill. The two email
+// addresses are deliberately absent — they aren't printed on a bill and
+// are looked up separately via the "Search by AI" buttons.
+const FROM_BILL = [
+  "clientName",
+  "address",
+  "hospitalName",
+  "hospitalAddress",
+  "billingPhone",
+] as const satisfies readonly (keyof CaseInformation)[];
 
 function SparkIcon() {
   return (
@@ -165,35 +176,66 @@ export default function CaseInformationStep({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedNote, setSavedNote] = useState(false);
+  const [reading, setReading] = useState(true);
   const [searching, setSearching] = useState<keyof CaseInformation | null>(null);
   const [searchNote, setSearchNote] = useState<Partial<Record<keyof CaseInformation, string>>>({});
 
-  // "Search by AI" sits beside a single field (Figma puts one on each of
-  // the two email fields). It reads the uploaded bill and fills just that
-  // field, and only when it's empty, so it can't overwrite a correction.
+  // Everything that IS printed on the bill is read off it as soon as the
+  // step opens, so the customer corrects rather than types. Only blanks are
+  // filled, and the two email fields are left out — see searchByAi.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch(`/api/dashboard/bills/${billId}/extract`, { method: "POST" }).catch(() => null);
+      const body = await res?.json().catch(() => null);
+      if (cancelled || !res?.ok || !body?.fields) {
+        if (!cancelled) setReading(false);
+        return;
+      }
+      setValues((v) => {
+        const next = { ...v };
+        for (const key of FROM_BILL) {
+          const found = String(body.fields[key] ?? "").trim();
+          if (found && !next[key]?.trim()) next[key] = found;
+        }
+        return next;
+      });
+      setReading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [billId]);
+
+  // The billing-manager and support addresses aren't printed on a bill, so
+  // these buttons look the hospital up instead of reading the document.
   async function searchByAi(key: keyof CaseInformation) {
     setSearching(key);
     setSearchNote((n) => ({ ...n, [key]: "" }));
 
-    const res = await fetch(`/api/dashboard/bills/${billId}/extract`, { method: "POST" }).catch(() => null);
+    const res = await fetch(`/api/dashboard/bills/${billId}/find-contact`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ field: key }),
+    }).catch(() => null);
     const body = await res?.json().catch(() => null);
     setSearching(null);
 
-    if (!res?.ok || !body?.fields) {
+    if (!res?.ok) {
       setSearchNote((n) => ({
         ...n,
-        [key]: body?.error ?? "We couldn't read your bill. Please type it in yourself.",
+        [key]: body?.error ?? "We couldn't search for this — please type it in.",
       }));
       return;
     }
 
-    const found = String(body.fields[key] ?? "").trim();
+    const found = String(body?.value ?? "").trim();
     if (!found) {
-      setSearchNote((n) => ({ ...n, [key]: "Couldn't find this on your bill." }));
+      setSearchNote((n) => ({ ...n, [key]: "We couldn't find an address for this hospital." }));
       return;
     }
     setValues((v) => (v[key]?.trim() ? v : { ...v, [key]: found }));
-    setSearchNote((n) => ({ ...n, [key]: "Found on your bill — check it's right." }));
+    setSearchNote((n) => ({ ...n, [key]: "Found — check it's right." }));
   }
 
   const missing = missingRequiredInformation({
@@ -233,6 +275,10 @@ export default function CaseInformationStep({
 
   return (
     <div className="space-y-10">
+      {reading && (
+        <p className="text-center text-sm text-gray-500">Reading the details off your bill…</p>
+      )}
+
       <Section
         title="Personal Information"
         fields={PERSONAL}

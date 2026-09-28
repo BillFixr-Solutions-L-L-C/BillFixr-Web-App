@@ -71,3 +71,38 @@ export async function processCase(
 
   return (await response.json()) as AiCaseProcessingResponse;
 }
+
+// A hospital's billing-manager and support email addresses are not printed
+// on a bill, so unlike everything else on the information step these can't
+// be extracted from the document — they have to be looked up from outside
+// it. That lookup belongs to the AI service.
+//
+// CONTRACT STUB: the AI service does not expose this endpoint yet (it
+// currently serves document ingestion/extraction/analysis only). Written
+// against the shape we need so it starts working the moment that endpoint
+// ships; until then the call 404s and the caller reports the lookup as
+// unavailable, leaving the customer to type the address in. Same
+// activate-automatically-later shape used elsewhere in this codebase.
+export type AiProviderContact = {
+  billing_email: string | null;
+  support_email: string | null;
+  phone: string | null;
+};
+
+export async function findProviderContact(provider: {
+  name: string;
+  address?: string | null;
+}): Promise<AiProviderContact> {
+  const response = await aiServiceFetch("/v1/providers/contact", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: provider.name, address: provider.address ?? null }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`AI provider contact lookup failed with status ${response.status}: ${detail}`);
+  }
+
+  return (await response.json()) as AiProviderContact;
+}
