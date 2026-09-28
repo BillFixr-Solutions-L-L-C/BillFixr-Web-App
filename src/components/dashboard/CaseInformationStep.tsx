@@ -17,19 +17,21 @@ export type CaseInformation = {
 
 type Field = { key: keyof CaseInformation; label: string; wide?: boolean; readOnly?: boolean; required?: boolean };
 
+// Everything is required except Email, which comes from the account and
+// can't be edited here.
 const PERSONAL: Field[] = [
   { key: "clientName", label: "Client Name", required: true },
   { key: "email", label: "Email", readOnly: true },
-  { key: "address", label: "Address", wide: true },
-  { key: "clientHospitalNumber", label: "Client Hospital Number" },
+  { key: "address", label: "Address", wide: true, required: true },
+  { key: "clientHospitalNumber", label: "Client Hospital Number", required: true },
 ];
 
 const HOSPITAL: Field[] = [
   { key: "hospitalName", label: "Hospital Name", required: true },
   { key: "billingManagerEmail", label: "Billing Manager Email", required: true },
-  { key: "hospitalAddress", label: "Address", wide: true },
-  { key: "supportEmail", label: "Support Email" },
-  { key: "billingPhone", label: "Billing Phone Number" },
+  { key: "hospitalAddress", label: "Address", wide: true, required: true },
+  { key: "supportEmail", label: "Support Email", required: true },
+  { key: "billingPhone", label: "Billing Phone Number", required: true },
 ];
 
 function Section({
@@ -155,8 +157,13 @@ export default function CaseInformationStep({
 
   const missing = missingRequiredInformation({
     clientName: values.clientName,
+    address: values.address,
+    clientHospitalNumber: values.clientHospitalNumber,
     hospitalName: values.hospitalName,
     billingManagerEmail: values.billingManagerEmail,
+    hospitalAddress: values.hospitalAddress,
+    supportEmail: values.supportEmail,
+    billingPhone: values.billingPhone,
   });
 
   function change(key: keyof CaseInformation, value: string) {

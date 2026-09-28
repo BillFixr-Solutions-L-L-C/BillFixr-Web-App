@@ -67,8 +67,28 @@ export default function DashboardHome() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [preparingFile, setPreparingFile] = useState(false);
   const [caseInformation, setCaseInformation] = useState<CaseInformation>(EMPTY_CASE_INFORMATION);
+  const [dragActive, setDragActive] = useState(false);
 
   const fileName = pendingFile?.name ?? "";
+  // Dropping is only meaningful on the empty upload step — not while a
+  // file is already being prepared or the flow has moved on.
+  const canDrop = stage === "upload" && !preparingFile;
+
+  // Shared by the file picker and by dropping onto the dashed box.
+  async function handleFiles(files: File[]) {
+    if (files.length === 0) return;
+    setUploadError(null);
+    setPreparingFile(true);
+    try {
+      const prepared = await prepareBillFile(files);
+      setPendingFile(prepared);
+      setStage("terms");
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "That file couldn't be used.");
+    } finally {
+      setPreparingFile(false);
+    }
+  }
 
   // Object URLs for the thumbnails the information step shows. Derived
   // rather than stored, with the effect only revoking the previous URL so
@@ -369,7 +389,29 @@ export default function DashboardHome() {
         )
       ) : (
         <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
-          <div className="flex min-h-[440px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 px-6 py-10 text-center">
+          <div
+            onDragOver={(e) => {
+              if (!canDrop) return;
+              // Without preventDefault the browser just opens the file,
+              // and onDrop never fires.
+              e.preventDefault();
+              setDragActive(true);
+            }}
+            onDragLeave={(e) => {
+              // Ignore the events fired while moving over child elements.
+              if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+              setDragActive(false);
+            }}
+            onDrop={(e) => {
+              if (!canDrop) return;
+              e.preventDefault();
+              setDragActive(false);
+              handleFiles(Array.from(e.dataTransfer.files));
+            }}
+            className={`flex min-h-[440px] flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-10 text-center transition ${
+              dragActive ? "border-[#0f7545] bg-primary-50" : "border-gray-200"
+            }`}
+          >
             {stage === "upload" && preparingFile && (
               <div className="flex flex-col items-center">
                 <p className="text-2xl font-bold text-[#003322]">Preparing your file…</p>
@@ -410,26 +452,14 @@ export default function DashboardHome() {
                   accept="application/pdf,image/png,image/jpeg"
                   multiple
                   className="hidden"
-                  onChange={async (e) => {
+                  onChange={(e) => {
                     // Copy the files out BEFORE clearing the input: the
                     // FileList is live, so resetting value empties the very
                     // list we just grabbed and the upload silently no-ops.
                     // (Clearing it is what lets the same file be picked again.)
                     const files = Array.from(e.target.files ?? []);
                     e.target.value = "";
-                    if (files.length === 0) return;
-
-                    setUploadError(null);
-                    setPreparingFile(true);
-                    try {
-                      const prepared = await prepareBillFile(files);
-                      setPendingFile(prepared);
-                      setStage("terms");
-                    } catch (err) {
-                      setUploadError(err instanceof Error ? err.message : "That file couldn't be used.");
-                    } finally {
-                      setPreparingFile(false);
-                    }
+                    handleFiles(files);
                   }}
                 />
               </label>

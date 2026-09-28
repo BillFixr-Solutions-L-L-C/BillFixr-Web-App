@@ -39,7 +39,11 @@ const READY_BILL = {
   user_id: USER.id,
   provider_name: "General Hospital",
   provider_email: "billing@hospital.com",
+  provider_address: "2 Care Rd",
+  provider_support_email: "support@hospital.com",
+  provider_phone: "555-0100",
 };
+const READY_PROFILE = { name: "Jane", address: "1 Main St", client_hospital_number: "45962" };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -72,7 +76,7 @@ describe("POST /api/payments/create-intent", () => {
 
     it("refuses to start payment while the bill is missing required details", async () => {
       serverMock.queueResult("bills", { data: { ...READY_BILL, provider_email: null }, error: null });
-      serverMock.queueResult("profiles", { data: { name: "Jane" }, error: null });
+      serverMock.queueResult("profiles", { data: READY_PROFILE, error: null });
 
       const res = await POST(makeRequest({ type: "commitment_fee", billId: "bill-1" }));
       const body = await res.json();
@@ -84,7 +88,7 @@ describe("POST /api/payments/create-intent", () => {
 
     it("refuses when the customer has no name on file", async () => {
       serverMock.queueResult("bills", { data: READY_BILL, error: null });
-      serverMock.queueResult("profiles", { data: { name: "" }, error: null });
+      serverMock.queueResult("profiles", { data: { ...READY_PROFILE, name: "" }, error: null });
 
       const res = await POST(makeRequest({ type: "commitment_fee", billId: "bill-1" }));
 
@@ -92,9 +96,19 @@ describe("POST /api/payments/create-intent", () => {
       expect((await res.json()).missing).toEqual(["Client Name"]);
     });
 
+    it("refuses when a hospital field is blank", async () => {
+      serverMock.queueResult("bills", { data: { ...READY_BILL, provider_phone: null }, error: null });
+      serverMock.queueResult("profiles", { data: READY_PROFILE, error: null });
+
+      const res = await POST(makeRequest({ type: "commitment_fee", billId: "bill-1" }));
+
+      expect(res.status).toBe(409);
+      expect((await res.json()).missing).toEqual(["Billing Phone Number"]);
+    });
+
     it("creates a new PaymentIntent and payment_records row when none exists", async () => {
       serverMock.queueResult("bills", { data: READY_BILL, error: null });
-      serverMock.queueResult("profiles", { data: { name: "Jane" }, error: null });
+      serverMock.queueResult("profiles", { data: READY_PROFILE, error: null });
       adminMock.queueResult("payment_records", { data: null, error: null }); // existing check: none
       paymentIntentsCreate.mockResolvedValue({ id: "pi_new", client_secret: "secret_new" });
       adminMock.queueResult("payment_records", { data: null, error: null }); // insert
@@ -112,7 +126,7 @@ describe("POST /api/payments/create-intent", () => {
 
     it("reuses an existing pending intent instead of creating a new one", async () => {
       serverMock.queueResult("bills", { data: READY_BILL, error: null });
-      serverMock.queueResult("profiles", { data: { name: "Jane" }, error: null });
+      serverMock.queueResult("profiles", { data: READY_PROFILE, error: null });
       adminMock.queueResult("payment_records", { data: { processor_ref: "pi_existing", status: "pending" }, error: null });
       paymentIntentsRetrieve.mockResolvedValue({ id: "pi_existing", status: "requires_payment_method", client_secret: "secret_existing", amount: 500 });
 
@@ -126,7 +140,7 @@ describe("POST /api/payments/create-intent", () => {
 
     it("returns alreadyPaid without touching Stripe when the record is already paid", async () => {
       serverMock.queueResult("bills", { data: READY_BILL, error: null });
-      serverMock.queueResult("profiles", { data: { name: "Jane" }, error: null });
+      serverMock.queueResult("profiles", { data: READY_PROFILE, error: null });
       adminMock.queueResult("payment_records", { data: { processor_ref: "pi_paid", status: "paid" }, error: null });
 
       const res = await POST(makeRequest({ type: "commitment_fee", billId: "bill-1" }));

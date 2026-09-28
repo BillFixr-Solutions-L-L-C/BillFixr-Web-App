@@ -15,6 +15,17 @@ const BLANK: CaseInformation = {
   billingPhone: "",
 };
 
+// Every field filled, so the step is ready to continue.
+const COMPLETE: CaseInformation = {
+  ...BLANK,
+  clientHospitalNumber: "45962",
+  hospitalName: "General",
+  billingManagerEmail: "b@h.com",
+  hospitalAddress: "2 Care Rd",
+  supportEmail: "s@h.com",
+  billingPhone: "555-0100",
+};
+
 const originalFetch = global.fetch;
 
 // The step asks the AI to read the bill on mount; each test says what that
@@ -86,24 +97,42 @@ describe("CaseInformationStep", () => {
     expect(await screen.findByText(/couldn't read your bill automatically/i)).toBeInTheDocument();
   });
 
-  it("blocks continuing until the required fields are there", async () => {
+  it("blocks continuing while fields are blank, and says how many are left", async () => {
+    renderStep();
+    await waitFor(() => expect(screen.getByText(/couldn't read|filled in/i)).toBeInTheDocument());
+
+    expect(screen.getByRole("button", { name: "Save Information" })).toBeDisabled();
+    expect(screen.getByText(/Fill in all \d+ remaining required fields/)).toBeInTheDocument();
+  });
+
+  it("still blocks on a single missing field, and names it", async () => {
+    renderStep({ ...COMPLETE, billingPhone: "" });
+    await waitFor(() => expect(screen.getByText(/couldn't read|filled in/i)).toBeInTheDocument());
+
+    expect(screen.getByRole("button", { name: "Save Information" })).toBeDisabled();
+    expect(screen.getByText(/Add Billing Phone Number before scanning/)).toBeInTheDocument();
+  });
+
+  it("continues once every field is filled", async () => {
     const user = userEvent.setup();
-    const onContinue = renderStep();
+    const onContinue = renderStep(COMPLETE);
     await waitFor(() => expect(screen.getByText(/couldn't read|filled in/i)).toBeInTheDocument());
 
     const button = screen.getByRole("button", { name: "Save Information" });
-    expect(button).toBeDisabled();
-    expect(screen.getByText(/Add Hospital Name and Billing Manager Email before scanning/)).toBeInTheDocument();
+    expect(button).toBeEnabled();
+    await user.click(button);
+    await waitFor(() => expect(onContinue).toHaveBeenCalled());
+  });
+
+  it("lets a blank field be typed in and unblocks", async () => {
+    const user = userEvent.setup();
+    renderStep({ ...COMPLETE, billingPhone: "" });
+    await waitFor(() => expect(screen.getByText(/couldn't read|filled in/i)).toBeInTheDocument());
 
     await user.click(screen.getAllByRole("button", { name: "Edit" })[1]);
-    await user.type(screen.getByLabelText(/^Hospital Name/), "Riverside General");
-    expect(screen.getByRole("button", { name: "Save Information" })).toBeDisabled();
+    await user.type(screen.getByLabelText(/^Billing Phone Number/), "555-0100");
 
-    await user.type(screen.getByLabelText(/^Billing Manager Email/), "billing@riverside.com");
     expect(screen.getByRole("button", { name: "Save Information" })).toBeEnabled();
-
-    await user.click(screen.getByRole("button", { name: "Save Information" }));
-    await waitFor(() => expect(onContinue).toHaveBeenCalled());
   });
 
   it("marks the required fields", async () => {
@@ -127,16 +156,18 @@ describe("CaseInformationStep", () => {
 
   it("sends the renamed fields when saving", async () => {
     const user = userEvent.setup();
-    renderStep({ ...BLANK, hospitalName: "H", billingManagerEmail: "b@h.com" });
+    renderStep(COMPLETE);
     await waitFor(() => expect(screen.getByText(/couldn't read|filled in/i)).toBeInTheDocument());
 
-    await user.click(screen.getAllByRole("button", { name: "Edit" })[1]);
-    await user.type(screen.getByLabelText(/^Support Email/), "support@h.com");
     await user.click(screen.getByRole("button", { name: "Save Information" }));
 
     await waitFor(() => expect((global.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(1));
     const saveCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.at(-1)!;
     expect(saveCall[0]).toBe("/api/dashboard/bills/bill-1/information");
-    expect(JSON.parse(saveCall[1].body)).toMatchObject({ supportEmail: "support@h.com", clientHospitalNumber: "" });
+    expect(JSON.parse(saveCall[1].body)).toMatchObject({
+      supportEmail: "s@h.com",
+      clientHospitalNumber: "45962",
+      billingPhone: "555-0100",
+    });
   });
 });

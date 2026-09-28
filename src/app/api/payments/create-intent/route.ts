@@ -39,21 +39,30 @@ async function handleCommitmentFee(supabase: SupabaseClient, userId: string, bil
 
   const { data: bill } = await supabase
     .from("bills")
-    .select("id, user_id, provider_name, provider_email")
+    .select("id, user_id, provider_name, provider_email, provider_address, provider_support_email, provider_phone")
     .eq("id", billId)
     .single();
   if (!bill || bill.user_id !== userId) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
-  // A bill can't be scanned until it carries the details the case needs.
+  // A bill can't be scanned until its information step is complete.
   // Enforced here as well as in the form, so an incomplete bill can't be
   // pushed through by calling this directly.
-  const { data: profile } = await supabase.from("profiles").select("name").eq("id", userId).single();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("name, address, client_hospital_number")
+    .eq("id", userId)
+    .single();
   const missing = missingRequiredInformation({
     clientName: profile?.name ?? null,
+    address: profile?.address ?? null,
+    clientHospitalNumber: profile?.client_hospital_number ?? null,
     hospitalName: bill.provider_name,
     billingManagerEmail: bill.provider_email,
+    hospitalAddress: bill.provider_address,
+    supportEmail: bill.provider_support_email,
+    billingPhone: bill.provider_phone,
   });
   if (missing.length > 0) {
     return NextResponse.json({ error: describeMissing(missing), missing }, { status: 409 });
