@@ -176,33 +176,15 @@ function CheckoutInner({
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="relative mt-5 overflow-hidden rounded-2xl bg-gradient-to-br from-primary-600 to-primary-900 p-6 text-white shadow-lg">
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10"
-        />
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-14 -left-6 h-32 w-32 rounded-full bg-black/10"
-        />
-
-        <div className="relative flex items-center justify-between">
-          <span className="h-7 w-10 rounded-md bg-gradient-to-br from-yellow-200/90 to-yellow-500/80" />
-          <span className="text-sm font-semibold italic tracking-wide">Card</span>
-        </div>
-
-        <p className="relative mt-7 font-mono text-xl tracking-widest">•••• •••• •••• ••••</p>
-
-        <div className="relative mt-6 flex items-center justify-between text-xs">
-          <div>
-            <p className="text-white/60">Card Holder</p>
-            <p className="mt-1 font-medium uppercase tracking-wide">YOUR NAME</p>
-          </div>
-          <div>
-            <p className="text-white/60">Expires</p>
-            <p className="mt-1 font-medium">MM/YY</p>
-          </div>
-        </div>
+      {/* A decorative card mock used to sit here showing "•••• •••• ••••"
+          and "YOUR NAME". It could never fill in: card data lives inside
+          Stripe's iframe and is deliberately unreadable by this page, which
+          is the whole point of using the Payment Element. A permanently
+          blank fake card reads as broken, so it's gone — the amount being
+          charged is what actually belongs at the top. */}
+      <div className="mt-5 flex items-baseline justify-between rounded-2xl bg-primary-50 px-5 py-4">
+        <span className="text-sm font-medium text-primary-800">Amount due today</span>
+        <span className="text-2xl font-bold text-[#0f7545]">{total}</span>
       </div>
 
       {/* Stripe's iframe can take a moment to finish its own internal
