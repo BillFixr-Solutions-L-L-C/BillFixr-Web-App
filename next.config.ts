@@ -26,7 +26,13 @@ const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://js.stripe.com",
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: ${SUPABASE_ORIGIN}`,
+  // blob: is required by the bill upload: photos are read into an <img>
+  // from a URL.createObjectURL() blob to be resized/compressed before
+  // upload, and the same blobs back the thumbnails on the information
+  // step. Without it the browser blocks the read and every photo upload
+  // is rejected as unreadable. Blobs are same-origin and script-created,
+  // so this doesn't widen what can be fetched from the network.
+  `img-src 'self' data: blob: ${SUPABASE_ORIGIN}`,
   "font-src 'self' data:",
   `connect-src 'self' ${SUPABASE_ORIGIN} https://api.stripe.com`,
   "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
