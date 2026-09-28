@@ -42,7 +42,9 @@ export async function POST(request: Request) {
 
   const { data: caseRow } = await supabase
     .from("cases")
-    .select("id, user_id, bill_id, bills(id, filename, storage_url, analysis_result)")
+    .select(
+      "id, user_id, bill_id, bills(id, filename, storage_url, analysis_result, provider_name, provider_email, provider_phone, provider_address)",
+    )
     .eq("id", caseId)
     .single();
   const bill = Array.isArray(caseRow?.bills) ? caseRow.bills[0] : caseRow?.bills;
@@ -90,9 +92,15 @@ export async function POST(request: Request) {
     .from("bills")
     .update({
       analysis_result: billAnalysis,
-      provider_name: extraction.provider.name,
       service_date: extraction.date_of_service_start,
       statement_date: extraction.statement_date,
+      // Fills the Hospital Information step. The customer can edit these
+      // before analysis runs, so anything they already entered wins — the
+      // AI only fills what is still blank.
+      provider_name: bill.provider_name ?? extraction.provider.name,
+      provider_email: bill.provider_email ?? extraction.provider.email,
+      provider_phone: bill.provider_phone ?? extraction.provider.phone,
+      provider_address: bill.provider_address ?? extraction.provider.address,
     })
     .eq("id", bill.id);
   if (billUpdateError) {

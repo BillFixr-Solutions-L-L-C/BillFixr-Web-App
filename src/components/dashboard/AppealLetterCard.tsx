@@ -9,6 +9,9 @@ export type AppealLetterData = {
   text: string | null;
   providerEmail: string | null;
   sentAt: string | null;
+  // Set while the case is still in progress; null once it's completed, so
+  // the finished letter downloads clean.
+  watermark?: string | null;
 };
 
 export default function AppealLetterCard({ letter }: { letter: AppealLetterData }) {
@@ -59,7 +62,7 @@ export default function AppealLetterCard({ letter }: { letter: AppealLetterData 
     setDownloadError(null);
     try {
       const { buildLetterPdf } = await import("@/lib/letterPdf");
-      const bytes = await buildLetterPdf(text);
+      const bytes = await buildLetterPdf(text, letter.watermark ?? null);
       const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
       const a = document.createElement("a");
       a.href = url;

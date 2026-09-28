@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, type PDFFont } from "pdf-lib";
+import { PDFDocument, StandardFonts, degrees, type PDFFont } from "pdf-lib";
 import { parseLetter, type LetterRun } from "@/lib/letterFormat";
 
 const PAGE_WIDTH = 612;
@@ -30,7 +30,24 @@ function makeSafe(font: PDFFont) {
 
 type Word = { text: string; font: PDFFont };
 
-export async function buildLetterPdf(text: string): Promise<Uint8Array> {
+// Baked into the file itself, unlike the on-screen overlay — a letter
+// downloaded while the case is still in progress carries the mark with it.
+function stampWatermark(page: ReturnType<PDFDocument["addPage"]>, font: PDFFont, label: string) {
+  const size = 46;
+  const width = font.widthOfTextAtSize(label, size);
+  for (let row = 0; row < 4; row++) {
+    page.drawText(label, {
+      x: (PAGE_WIDTH - width) / 2 - 60,
+      y: 130 + row * 180,
+      size,
+      font,
+      rotate: degrees(24),
+      opacity: 0.08,
+    });
+  }
+}
+
+export async function buildLetterPdf(text: string, watermark?: string | null): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const fonts: Fonts = {
     regular: await pdf.embedFont(StandardFonts.Helvetica),
@@ -40,13 +57,19 @@ export async function buildLetterPdf(text: string): Promise<Uint8Array> {
   };
   const safe = makeSafe(fonts.regular);
 
-  let page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  function startPage() {
+    const created = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    if (watermark) stampWatermark(created, fonts.bold, watermark);
+    return created;
+  }
+
+  let page = startPage();
   let y = PAGE_HEIGHT - MARGIN;
 
   function newLine() {
     y -= LINE_HEIGHT;
     if (y < MARGIN) {
-      page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      page = startPage();
       y = PAGE_HEIGHT - MARGIN;
     }
   }

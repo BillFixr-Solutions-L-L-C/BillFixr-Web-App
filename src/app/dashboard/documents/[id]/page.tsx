@@ -4,6 +4,7 @@ import { getBillDocuments } from "@/lib/billDocuments";
 import { MOCK_BILL_ANALYSIS, type BillAnalysis } from "@/lib/billAnalysis";
 import DocumentAnalysisClient from "@/components/dashboard/DocumentAnalysisClient";
 import { EMPTY_VALUE, HEADER_FIELD_DEFS, type HeaderField, type HeaderKey } from "@/lib/headerInfo";
+import { isCaseCompleted } from "@/lib/caseStatus";
 
 export default async function DocumentAnalysisPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,7 +35,7 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
   // everything else gated on Phase 2 in this codebase.
   const { data: caseRow } = await supabase
     .from("cases")
-    .select("id, errors_detected, appeal_letter_text, provider_email, letter_sent_at")
+    .select("id, status, errors_detected, appeal_letter_text, provider_email, letter_sent_at")
     .eq("bill_id", bill.id)
     .maybeSingle();
 
@@ -71,12 +72,16 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
   };
   const headerInfo: HeaderField[] = HEADER_FIELD_DEFS.map((def) => ({ ...def, value: headerValues[def.key] }));
 
+  // Documents stay watermarked until the case is completed.
+  const inProgress = Boolean(caseRow) && !isCaseCompleted(caseRow!.status);
+
   const appealLetter = caseRow
     ? {
         caseId: caseRow.id,
         text: caseRow.appeal_letter_text,
         providerEmail: caseRow.provider_email,
         sentAt: caseRow.letter_sent_at,
+        watermark: inProgress ? "BillFixr" : null,
       }
     : null;
 
@@ -88,6 +93,7 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
       locked={locked}
       appealLetter={appealLetter}
       headerEditBillId={analyzed ? bill.id : null}
+      watermark={inProgress}
     />
   );
 }

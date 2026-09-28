@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import WelcomeBanner from "@/components/dashboard/WelcomeBanner";
 import DashboardStats from "@/components/dashboard/DashboardStats";
@@ -12,12 +12,25 @@ import BillPreview from "@/components/dashboard/BillPreview";
 import { createClient } from "@/lib/supabase/client";
 import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
 import { prepareBillFile } from "@/lib/billUpload";
+import CaseInformationStep, { type CaseInformation } from "@/components/dashboard/CaseInformationStep";
+
+const EMPTY_CASE_INFORMATION: CaseInformation = {
+  clientName: "",
+  email: "",
+  address: "",
+  nextgenNumber: "",
+  hospitalName: "",
+  billingManagerEmail: "",
+  hospitalAddress: "",
+  billingPhone: "",
+};
 
 type Stage =
   | "upload"
   | "terms"
   | "uploading"
   | "uploaded"
+  | "information"
   | "ready"
   | "feePrompt"
   | "payment"
@@ -52,12 +65,22 @@ export default function DashboardHome() {
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [preparingFile, setPreparingFile] = useState(false);
+  const [caseInformation, setCaseInformation] = useState<CaseInformation>(EMPTY_CASE_INFORMATION);
 
   const fileName = pendingFile?.name ?? "";
 
+  // Object URLs for the thumbnails the information step shows. Derived
+  // rather than stored, with the effect only revoking the previous URL so
+  // a re-upload doesn't leak the last file's blob.
+  const filePreviews = useMemo(
+    () => (pendingFile?.type.startsWith("image/") ? [URL.createObjectURL(pendingFile)] : []),
+    [pendingFile],
+  );
+  useEffect(() => () => filePreviews.forEach((url) => URL.revokeObjectURL(url)), [filePreviews]);
+
   useEffect(() => {
     if (stage === "uploaded") {
-      const t = setTimeout(() => setStage("ready"), 1200);
+      const t = setTimeout(() => setStage("information"), 1200);
       return () => clearTimeout(t);
     }
   }, [stage]);
@@ -101,6 +124,22 @@ export default function DashboardHome() {
       setStage("upload");
       return;
     }
+
+    // Personal Information starts from what we already know about the
+    // customer; Hospital Information starts blank and the AI fills
+    // whatever the customer leaves empty when it reads the bill.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("name, email, address, nextgen_number")
+      .eq("id", user.id)
+      .single();
+    setCaseInformation({
+      ...EMPTY_CASE_INFORMATION,
+      clientName: profile?.name ?? "",
+      email: profile?.email ?? user.email ?? "",
+      address: profile?.address ?? "",
+      nextgenNumber: profile?.nextgen_number ?? "",
+    });
 
     setBillId(billRow.id);
     setUploadedAt(billRow.uploaded_at);
@@ -219,7 +258,16 @@ export default function DashboardHome() {
       {stage === "negotiating" && <TextStepper activeStep={2} />}
       <DashboardStats values={stats} />
 
-      {hasFile ? (
+      {stage === "information" && billId ? (
+        <div className="mt-6 rounded-2xl bg-white p-8 shadow-sm">
+          <CaseInformationStep
+            billId={billId}
+            initial={caseInformation}
+            previews={filePreviews}
+            onContinue={() => setStage("ready")}
+          />
+        </div>
+      ) : hasFile ? (
         stage === "scanning" ? (
           <FlowCard>
             <p className="text-3xl font-bold leading-tight text-[#003322]">

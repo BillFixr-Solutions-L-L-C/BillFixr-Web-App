@@ -6,6 +6,7 @@ import type { BillAnalysis, BillIssue } from "@/lib/billAnalysis";
 import type { BillDocument } from "@/lib/billDocuments";
 import AppealLetterCard, { type AppealLetterData } from "@/components/dashboard/AppealLetterCard";
 import HeaderInformationCard from "@/components/dashboard/HeaderInformationCard";
+import WatermarkOverlay from "@/components/dashboard/WatermarkOverlay";
 import type { HeaderField } from "@/lib/headerInfo";
 
 const PRIORITY_TAG: Record<BillIssue["priority"], string> = {
@@ -50,6 +51,7 @@ export default function DocumentAnalysisClient({
   locked = false,
   appealLetter = null,
   headerEditBillId = null,
+  watermark = false,
 }: {
   analysis: BillAnalysis;
   headerInfo: HeaderField[];
@@ -57,6 +59,7 @@ export default function DocumentAnalysisClient({
   locked?: boolean;
   appealLetter?: AppealLetterData | null;
   headerEditBillId?: string | null;
+  watermark?: boolean;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -238,8 +241,11 @@ export default function DocumentAnalysisClient({
             </button>
             <p className="mb-4 text-sm font-semibold text-gray-800">{doc.filename}</p>
             {doc.isImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={doc.previewUrl} alt={doc.filename} className="w-full rounded-lg" />
+              <span className="relative block overflow-hidden rounded-lg">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={doc.previewUrl} alt={doc.filename} className="w-full rounded-lg" />
+                {watermark && <WatermarkOverlay />}
+              </span>
             ) : (
               <a
                 href={doc.previewUrl}

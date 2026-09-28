@@ -5,6 +5,7 @@ import Link from "next/link";
 import PageHeading from "@/components/dashboard/PageHeading";
 import PaymentForm from "@/components/dashboard/PaymentForm";
 import BillPreview from "@/components/dashboard/BillPreview";
+import WatermarkOverlay from "@/components/dashboard/WatermarkOverlay";
 import { createClient } from "@/lib/supabase/client";
 import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
 import { getBillDocuments, type BillDocument } from "@/lib/billDocuments";
@@ -328,8 +329,9 @@ export default function ActiveCasePage() {
                 </button>
               )}
             </div>
-            <div className="mt-4">
+            <div className="relative mt-4 overflow-hidden">
               <BillPreview />
+              <WatermarkOverlay />
             </div>
           </div>
           <div className="rounded-2xl bg-white p-6 shadow-sm">
@@ -344,8 +346,9 @@ export default function ActiveCasePage() {
                 ⬇ Download as PDF
               </button>
             </div>
-            <div className="mt-4">
+            <div className="relative mt-4 overflow-hidden">
               <BillPreview />
+              <WatermarkOverlay />
             </div>
           </div>
         </div>
