@@ -82,13 +82,22 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
+  // Patient details are handed back for the form but not persisted here —
+  // the account's own name/address shouldn't be silently rewritten from a
+  // document; that only happens when the customer saves the step.
   return NextResponse.json({
     ok: true,
     fields: {
-      hospitalName: merged.provider_name ?? "",
-      billingManagerEmail: merged.provider_email ?? "",
-      hospitalAddress: merged.provider_address ?? "",
-      billingPhone: merged.provider_phone ?? "",
+      personal: {
+        clientName: extraction.patient?.name ?? "",
+        address: extraction.patient?.address ?? "",
+      },
+      hospital: {
+        hospitalName: merged.provider_name ?? "",
+        billingManagerEmail: merged.provider_email ?? "",
+        hospitalAddress: merged.provider_address ?? "",
+        billingPhone: merged.provider_phone ?? "",
+      },
     },
   });
 }

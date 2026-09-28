@@ -34,6 +34,7 @@ const AI_RESULT = {
   processed_documents: [
     {
       extraction: {
+        patient: { name: "Jordan Patient", email: null, phone: null, address: "9 Patient Way" },
         provider: { name: "Riverside General", email: "billing@riverside.com", phone: "555-0100", address: "2 Care Rd" },
         date_of_service_start: "2026-07-14",
         statement_date: "2026-07-20",
@@ -93,12 +94,13 @@ describe("POST /api/dashboard/bills/[id]/extract", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.fields).toEqual({
+    expect(body.fields.hospital).toEqual({
       hospitalName: "Riverside General",
       billingManagerEmail: "billing@riverside.com",
       hospitalAddress: "2 Care Rd",
       billingPhone: "555-0100",
     });
+    expect(body.fields.personal).toEqual({ clientName: "Jordan Patient", address: "9 Patient Way" });
     const serialized = JSON.stringify(body);
     expect(serialized).not.toContain("secret findings");
     expect(serialized).not.toContain("secret letter");
@@ -122,7 +124,7 @@ describe("POST /api/dashboard/bills/[id]/extract", () => {
 
     const body = await (await POST(req(), { params })).json();
 
-    expect(body.fields.hospitalName).toBe("Typed By Customer");
+    expect(body.fields.hospital.hospitalName).toBe("Typed By Customer");
   });
 
   it("reports a document it cannot read", async () => {

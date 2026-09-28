@@ -1,7 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { describeMissing, missingRequiredInformation } from "@/lib/requiredInformation";
+
+type SectionName = "personal" | "hospital";
+
+function SparkIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3l1.9 4.9L19 9.8l-4.9 1.9L12 16.6l-1.9-4.9L5 9.8l5.1-1.9L12 3Z"
+        fill="currentColor"
+      />
+      <path d="M18.5 15l.8 2.1 2.2.8-2.2.8-.8 2.1-.8-2.1-2.2-.8 2.2-.8.8-2.1Z" fill="currentColor" />
+    </svg>
+  );
+}
 
 export type CaseInformation = {
   clientName: string;
@@ -43,6 +57,9 @@ function Section({
   onChange,
   onSave,
   saving,
+  onSearch,
+  searching,
+  note,
 }: {
   title: string;
   fields: Field[];
@@ -52,10 +69,25 @@ function Section({
   onChange: (key: keyof CaseInformation, value: string) => void;
   onSave: () => void;
   saving: boolean;
+  onSearch: () => void;
+  searching: boolean;
+  note?: string;
 }) {
   return (
     <section>
-      <h2 className="font-serif text-2xl font-bold text-gray-900">{title}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-serif text-2xl font-bold text-gray-900">{title}</h2>
+        <button
+          type="button"
+          onClick={onSearch}
+          disabled={searching}
+          className="flex items-center gap-2 rounded-full border border-[#0f7545] px-5 py-2 text-sm font-semibold text-[#0f7545] hover:bg-primary-50 disabled:opacity-60"
+        >
+          <SparkIcon />
+          {searching ? "Searching…" : "Search by AI"}
+        </button>
+      </div>
+      {note && <p className="mt-2 text-sm text-gray-500">{note}</p>}
       <div className="mt-5 grid gap-x-8 gap-y-5 sm:grid-cols-2">
         {fields.map((f) => (
           <div key={f.key} className={f.wide ? "sm:row-span-2" : undefined}>
@@ -123,37 +155,46 @@ export default function CaseInformationStep({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedNote, setSavedNote] = useState(false);
-  const [reading, setReading] = useState(true);
-  const [readNote, setReadNote] = useState<string | null>(null);
+  const [searching, setSearching] = useState<SectionName | null>(null);
+  const [searchNote, setSearchNote] = useState<Partial<Record<SectionName, string>>>({});
 
-  // Ask the AI to read the hospital details off the document as soon as the
-  // step opens, so the customer corrects rather than types. Whatever it
-  // can't find is left for them to fill in; a failure here is not fatal.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const res = await fetch(`/api/dashboard/bills/${billId}/extract`, { method: "POST" }).catch(() => null);
-      if (cancelled) return;
-      const body = await res?.json().catch(() => null);
-      if (res?.ok && body?.fields) {
-        // Only fills blanks — never overwrites something already typed.
-        setValues((v) => ({
-          ...v,
-          hospitalName: v.hospitalName || body.fields.hospitalName || "",
-          billingManagerEmail: v.billingManagerEmail || body.fields.billingManagerEmail || "",
-          hospitalAddress: v.hospitalAddress || body.fields.hospitalAddress || "",
-          billingPhone: v.billingPhone || body.fields.billingPhone || "",
-        }));
-        setReadNote("We filled in what we could read from your bill. Check it's right.");
-      } else {
-        setReadNote("We couldn't read your bill automatically — please fill these in.");
+  // "Search by AI": reads the uploaded bill and fills the blanks in one
+  // section. Only fills what's empty, so it can't wipe out a correction the
+  // customer has already made.
+  async function searchByAi(section: SectionName) {
+    setSearching(section);
+    setSearchNote((n) => ({ ...n, [section]: "" }));
+
+    const res = await fetch(`/api/dashboard/bills/${billId}/extract`, { method: "POST" }).catch(() => null);
+    const body = await res?.json().catch(() => null);
+    setSearching(null);
+
+    if (!res?.ok || !body?.fields) {
+      setSearchNote((n) => ({
+        ...n,
+        [section]: body?.error ?? "We couldn't read your bill. Please fill these in yourself.",
+      }));
+      return;
+    }
+
+    const found: Record<string, string> = body.fields[section] ?? {};
+    let filled = 0;
+    setValues((v) => {
+      const next = { ...v };
+      for (const [key, value] of Object.entries(found)) {
+        const k = key as keyof CaseInformation;
+        if (!next[k]?.trim() && value?.trim()) {
+          next[k] = value;
+          filled++;
+        }
       }
-      setReading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [billId]);
+      return next;
+    });
+    setSearchNote((n) => ({
+      ...n,
+      [section]: filled > 0 ? `Filled ${filled} field${filled > 1 ? "s" : ""} from your bill. Check it's right.` : "Nothing new found on your bill for this section.",
+    }));
+  }
 
   const missing = missingRequiredInformation({
     clientName: values.clientName,
@@ -192,12 +233,6 @@ export default function CaseInformationStep({
 
   return (
     <div className="space-y-10">
-      {reading ? (
-        <p className="text-center text-sm text-gray-500">Reading the details off your bill…</p>
-      ) : (
-        readNote && <p className="text-center text-sm text-gray-500">{readNote}</p>
-      )}
-
       <Section
         title="Personal Information"
         fields={PERSONAL}
@@ -207,6 +242,9 @@ export default function CaseInformationStep({
         onChange={change}
         onSave={() => save(true)}
         saving={saving && editing === "personal"}
+        onSearch={() => searchByAi("personal")}
+        searching={searching === "personal"}
+        note={searchNote.personal}
       />
 
       <hr className="border-gray-200" />
@@ -220,6 +258,9 @@ export default function CaseInformationStep({
         onChange={change}
         onSave={() => save(true)}
         saving={saving && editing === "hospital"}
+        onSearch={() => searchByAi("hospital")}
+        searching={searching === "hospital"}
+        note={searchNote.hospital}
       />
 
       {previews.length > 0 && (
