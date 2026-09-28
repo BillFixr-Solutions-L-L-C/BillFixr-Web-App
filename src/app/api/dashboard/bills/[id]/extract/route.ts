@@ -36,8 +36,13 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "This bill has no stored file." }, { status: 400 });
   }
   if (!getAiServiceConfig()) {
-    // The step still works by hand; it just can't prefill.
-    return NextResponse.json({ error: "AI service is not configured.", fields: null }, { status: 503 });
+    // Customer-facing wording: "not configured" is our problem, not
+    // something they can act on. The step still works by hand.
+    console.warn("Bill extraction requested but AI_SERVICE_BASE_URL is not set");
+    return NextResponse.json(
+      { error: "Automatic reading isn't available right now — please fill these in yourself.", fields: null },
+      { status: 503 },
+    );
   }
 
   const admin = createAdminClient();
