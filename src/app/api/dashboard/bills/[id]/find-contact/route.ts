@@ -15,10 +15,18 @@ function isContactField(value: unknown): value is ContactField {
 // which is why it's a separate route from /extract.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { field } = await request.json();
+  const { field, hospitalName, hospitalAddress } = await request.json();
 
   if (!isContactField(field)) {
     return NextResponse.json({ error: "invalid request" }, { status: 400 });
+  }
+  // The customer may have just typed the hospital name and not saved yet,
+  // so the form sends what's on screen; it's only ever used as the search
+  // term. Falls back to whatever is stored.
+  for (const v of [hospitalName, hospitalAddress]) {
+    if (v !== undefined && (typeof v !== "string" || v.length > 200)) {
+      return NextResponse.json({ error: "invalid request" }, { status: 400 });
+    }
   }
 
   const supabase = await createClient();
@@ -38,8 +46,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
+  const searchName = (typeof hospitalName === "string" ? hospitalName : bill.provider_name)?.trim();
+  const searchAddress = (typeof hospitalAddress === "string" ? hospitalAddress : bill.provider_address)?.trim() || null;
+
   // The lookup is by hospital, so there's nothing to search on without one.
-  if (!bill.provider_name?.trim()) {
+  if (!searchName) {
     return NextResponse.json({ error: "Add the hospital name first, then search.", value: null }, { status: 400 });
   }
   if (!getAiServiceConfig()) {
@@ -52,7 +63,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   let contact;
   try {
-    contact = await findProviderContact({ name: bill.provider_name, address: bill.provider_address });
+    contact = await findProviderContact({ name: searchName, address: searchAddress });
   } catch (err) {
     console.error("Provider contact lookup failed for bill", id, err);
     return NextResponse.json(

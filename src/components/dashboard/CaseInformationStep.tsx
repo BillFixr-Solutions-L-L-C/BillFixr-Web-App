@@ -216,7 +216,13 @@ export default function CaseInformationStep({
     const res = await fetch(`/api/dashboard/bills/${billId}/find-contact`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ field: key }),
+      // Send what's on screen: the hospital name may have just been typed
+      // and not saved yet, and that's what the lookup searches on.
+      body: JSON.stringify({
+        field: key,
+        hospitalName: values.hospitalName,
+        hospitalAddress: values.hospitalAddress,
+      }),
     }).catch(() => null);
     const body = await res?.json().catch(() => null);
     setSearching(null);

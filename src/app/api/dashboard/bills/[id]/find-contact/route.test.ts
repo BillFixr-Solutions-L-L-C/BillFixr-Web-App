@@ -67,6 +67,25 @@ describe("POST /api/dashboard/bills/[id]/find-contact", () => {
     expect(findProviderContact).not.toHaveBeenCalled();
   });
 
+  it("searches on the name the customer just typed, before it's been saved", async () => {
+    owns({ ...BILL, provider_name: null, provider_address: null });
+    findProviderContact.mockResolvedValue({ billing_email: "b@r.com", support_email: null, phone: null });
+    adminMock.queueResult("bills", { data: null, error: null });
+
+    const res = await POST(
+      req({ field: "billingManagerEmail", hospitalName: "Typed Hospital", hospitalAddress: "9 New Rd" }),
+      { params },
+    );
+
+    expect(res.status).toBe(200);
+    expect(findProviderContact).toHaveBeenCalledWith({ name: "Typed Hospital", address: "9 New Rd" });
+  });
+
+  it("rejects an over-long search term", async () => {
+    const res = await POST(req({ field: "billingManagerEmail", hospitalName: "a".repeat(201) }), { params });
+    expect(res.status).toBe(400);
+  });
+
   it("degrades gracefully when the AI isn't configured", async () => {
     getAiServiceConfig.mockReturnValue(null);
     owns();

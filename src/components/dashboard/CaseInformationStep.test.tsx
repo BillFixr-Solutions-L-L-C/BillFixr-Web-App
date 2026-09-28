@@ -139,7 +139,7 @@ describe("CaseInformationStep", () => {
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[1]);
 
     const call = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.find(([u]) => String(u).endsWith("/find-contact"))!;
-    expect(JSON.parse(call[1].body)).toEqual({ field: "supportEmail" });
+    expect(JSON.parse(call[1].body)).toMatchObject({ field: "supportEmail", hospitalName: "Riverside General" });
   });
 
   it("says so when no address could be found", async () => {
