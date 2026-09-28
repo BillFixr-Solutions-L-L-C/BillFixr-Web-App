@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getBillDocuments } from "@/lib/billDocuments";
 import { MOCK_BILL_ANALYSIS, type BillAnalysis } from "@/lib/billAnalysis";
 import DocumentAnalysisClient from "@/components/dashboard/DocumentAnalysisClient";
+import { EMPTY_VALUE, HEADER_FIELD_DEFS, type HeaderField, type HeaderKey } from "@/lib/headerInfo";
 
 export default async function DocumentAnalysisPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -53,16 +54,22 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
     doc.downloadUrl = null;
   }
 
-  const headerInfo = [
-    { label: "Member name", value: analysis.memberName },
-    { label: "Member ID", value: analysis.memberId },
-    { label: "Group", value: analysis.group },
-    { label: "Claim number", value: analysis.claimNumber },
-    { label: "Provider name", value: bill.provider_name ?? "Crown Med Hospital Center" },
-    { label: "Account number", value: analysis.accountNumber },
-    { label: "Date of service", value: bill.service_date ?? "2026-07-14" },
-    { label: "Statement date", value: bill.statement_date ?? "2026-07-14" },
-  ];
+  // Once the AI has actually analyzed the bill, show what it found (or an
+  // honest "not found") and let the customer correct it. The sample
+  // hospital/dates below are only the placeholder content shown before any
+  // analysis exists, and that state isn't editable.
+  const analyzed = Boolean(bill.analysis_result);
+  const headerValues: Record<HeaderKey, string> = {
+    memberName: analysis.memberName,
+    memberId: analysis.memberId,
+    group: analysis.group,
+    claimNumber: analysis.claimNumber,
+    providerName: bill.provider_name ?? (analyzed ? EMPTY_VALUE.providerName : "Crown Med Hospital Center"),
+    accountNumber: analysis.accountNumber,
+    serviceDate: bill.service_date ?? (analyzed ? EMPTY_VALUE.serviceDate : "2026-07-14"),
+    statementDate: bill.statement_date ?? (analyzed ? EMPTY_VALUE.statementDate : "2026-07-14"),
+  };
+  const headerInfo: HeaderField[] = HEADER_FIELD_DEFS.map((def) => ({ ...def, value: headerValues[def.key] }));
 
   const appealLetter = caseRow
     ? {
@@ -80,6 +87,7 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
       doc={doc}
       locked={locked}
       appealLetter={appealLetter}
+      headerEditBillId={analyzed ? bill.id : null}
     />
   );
 }

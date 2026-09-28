@@ -5,8 +5,8 @@ import Link from "next/link";
 import type { BillAnalysis, BillIssue } from "@/lib/billAnalysis";
 import type { BillDocument } from "@/lib/billDocuments";
 import AppealLetterCard, { type AppealLetterData } from "@/components/dashboard/AppealLetterCard";
-
-type HeaderField = { label: string; value: string };
+import HeaderInformationCard from "@/components/dashboard/HeaderInformationCard";
+import type { HeaderField } from "@/lib/headerInfo";
 
 const PRIORITY_TAG: Record<BillIssue["priority"], string> = {
   High: "bg-danger text-white",
@@ -49,12 +49,14 @@ export default function DocumentAnalysisClient({
   doc,
   locked = false,
   appealLetter = null,
+  headerEditBillId = null,
 }: {
   analysis: BillAnalysis;
   headerInfo: HeaderField[];
   doc: BillDocument;
   locked?: boolean;
   appealLetter?: AppealLetterData | null;
+  headerEditBillId?: string | null;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -75,17 +77,7 @@ export default function DocumentAnalysisClient({
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">Header Information</p>
-          <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-5">
-            {headerInfo.map((f) => (
-              <div key={f.label}>
-                <p className="text-xs text-gray-400">{f.label}</p>
-                <p className="mt-1 text-sm font-medium text-gray-800">{f.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        <HeaderInformationCard fields={headerInfo} billId={headerEditBillId} />
 
         <div className="rounded-2xl bg-white p-6 shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">Files</p>
