@@ -15,6 +15,26 @@ function humanizeCategory(category: string): string {
   return category.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+const PRIORITY_BY_SEVERITY = { error: "High", warning: "Medium", info: "Low" } as const;
+
+// The AI links savings to a category, not to an individual issue, so an
+// issue's "Potential Savings" is the total of that category's savings
+// opportunities, or null when there are none. There is no benchmark or
+// native priority in the AI response: priority is derived from severity.
+function mapIssues(analysis: AiCaseAnalysis): NonNullable<BillAnalysis["issues"]> {
+  return analysis.issues.map((issue) => {
+    const matching = analysis.savings_opportunities.filter((s) => s.category === issue.category);
+    const saved = matching.reduce((sum, s) => sum + (s.estimated_savings.amount ?? 0), 0);
+    return {
+      category: humanizeCategory(issue.category),
+      priority: PRIORITY_BY_SEVERITY[issue.severity] ?? "Low",
+      summary: issue.summary,
+      evidence: issue.evidence,
+      potentialSavings: saved > 0 ? formatMoney({ amount: saved, currency: "USD" }) : null,
+    };
+  });
+}
+
 // The one field this app's jsonb contract needs that the AI extraction
 // doesn't produce at all: insurance member ID / group number aren't part
 // of MedicalBillExtraction. Kept as an honest "not found" string, same
@@ -48,6 +68,7 @@ export function mapBillAnalysis(extraction: AiMedicalBillExtraction, analysis: A
     errorsFound: analysis.issues.length,
     estimatedSavings: savings > 0 ? formatMoney({ amount: savings, currency: "USD" }) : "$0.00",
     detectedIssues: analysis.issues.map((issue) => issue.summary),
+    issues: mapIssues(analysis),
     overBilled: formatMoney(extraction.patient_responsibility),
     adjustedCharges: formatMoney({ amount: adjusted, currency: "USD" }),
   };

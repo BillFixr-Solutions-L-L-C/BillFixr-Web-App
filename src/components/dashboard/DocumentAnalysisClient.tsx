@@ -2,21 +2,59 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { BillAnalysis } from "@/lib/billAnalysis";
+import type { BillAnalysis, BillIssue } from "@/lib/billAnalysis";
 import type { BillDocument } from "@/lib/billDocuments";
+import AppealLetterCard, { type AppealLetterData } from "@/components/dashboard/AppealLetterCard";
 
 type HeaderField = { label: string; value: string };
+
+const PRIORITY_TAG: Record<BillIssue["priority"], string> = {
+  High: "bg-danger text-white",
+  Medium: "bg-accent-500 text-white",
+  Low: "bg-primary-600 text-white",
+};
+
+function IssueCard({ issue, index }: { issue: BillIssue; index: number }) {
+  return (
+    <div className="rounded-2xl bg-white p-6 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-xl font-bold text-[#003322]">Issue {index + 1}</p>
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${PRIORITY_TAG[issue.priority]}`}>
+            {issue.priority} Priority
+          </span>
+          <span className="rounded-full border border-accent-300 px-3 py-1 text-xs font-medium text-gray-700">
+            {issue.category}
+          </span>
+        </div>
+        {issue.potentialSavings && (
+          <p className="text-[#a6b1bb]">
+            Potential Savings <span className="ml-2 text-2xl font-bold text-[#0f7545]">{issue.potentialSavings}</span>
+          </p>
+        )}
+      </div>
+      <p className="mt-4 text-base text-gray-900">{issue.summary}</p>
+      {issue.evidence.map((line) => (
+        <p key={line} className="mt-1 text-sm text-[#a6b1bb]">
+          {line}
+        </p>
+      ))}
+    </div>
+  );
+}
 
 export default function DocumentAnalysisClient({
   analysis,
   headerInfo,
   doc,
   locked = false,
+  appealLetter = null,
 }: {
   analysis: BillAnalysis;
   headerInfo: HeaderField[];
   doc: BillDocument;
   locked?: boolean;
+  appealLetter?: AppealLetterData | null;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -101,6 +139,14 @@ export default function DocumentAnalysisClient({
         </div>
       </div>
 
+      {analysis.issues && analysis.issues.length > 0 && (
+        <div className="mt-6 space-y-4">
+          {analysis.issues.map((issue, i) => (
+            <IssueCard key={`${issue.category}-${i}`} issue={issue} index={i} />
+          ))}
+        </div>
+      )}
+
       <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
         <p className="text-sm font-semibold text-primary-700">Total Amount Breakdown</p>
         <div className="mt-4 overflow-x-auto">
@@ -167,6 +213,8 @@ export default function DocumentAnalysisClient({
           </table>
         </div>
       </div>
+
+      {appealLetter && <AppealLetterCard letter={appealLetter} />}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex gap-4">

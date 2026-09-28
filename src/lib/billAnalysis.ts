@@ -22,8 +22,20 @@ export type BillAnalysis = {
   errorsFound: number;
   estimatedSavings: string;
   detectedIssues: string[];
+  // Per-issue detail for the Figma "Issue N" cards. Optional: analyses
+  // stored before this existed simply don't render cards.
+  issues?: BillIssue[];
   overBilled: string;
   adjustedCharges: string;
+};
+
+export type BillIssue = {
+  category: string;
+  priority: "High" | "Medium" | "Low";
+  summary: string;
+  evidence: string[];
+  // null when the AI produced no savings opportunity for this category.
+  potentialSavings: string | null;
 };
 
 export const MOCK_BILL_ANALYSIS: BillAnalysis = {
@@ -48,6 +60,15 @@ export const MOCK_BILL_ANALYSIS: BillAnalysis = {
   errorsFound: 10,
   estimatedSavings: "$2,500",
   detectedIssues: ["Insurance coverage error", "Mathematical Error"],
+  issues: [
+    {
+      category: "Pricing inflation",
+      priority: "High",
+      summary: "Tylenol 500mg medication charge exceeds reasonable pricing standards",
+      evidence: ["Line Item: Emergency Room Visit Level 4, 99284, 05/12/2025, $2,850"],
+      potentialSavings: "$1,500",
+    },
+  ],
   overBilled: "$5590",
   adjustedCharges: "$2500",
 };

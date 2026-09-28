@@ -33,7 +33,7 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
   // everything else gated on Phase 2 in this codebase.
   const { data: caseRow } = await supabase
     .from("cases")
-    .select("id, errors_detected")
+    .select("id, errors_detected, appeal_letter_text, provider_email, letter_sent_at")
     .eq("bill_id", bill.id)
     .maybeSingle();
 
@@ -64,5 +64,22 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
     { label: "Statement date", value: bill.statement_date ?? "2026-07-14" },
   ];
 
-  return <DocumentAnalysisClient analysis={analysis} headerInfo={headerInfo} doc={doc} locked={locked} />;
+  const appealLetter = caseRow
+    ? {
+        caseId: caseRow.id,
+        text: caseRow.appeal_letter_text,
+        providerEmail: caseRow.provider_email,
+        sentAt: caseRow.letter_sent_at,
+      }
+    : null;
+
+  return (
+    <DocumentAnalysisClient
+      analysis={analysis}
+      headerInfo={headerInfo}
+      doc={doc}
+      locked={locked}
+      appealLetter={appealLetter}
+    />
+  );
 }

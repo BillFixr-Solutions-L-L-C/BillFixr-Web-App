@@ -110,6 +110,36 @@ describe("mapBillAnalysis", () => {
     expect(result.lineItems[0].status).toBeNull();
   });
 
+  it("maps each AI issue to a card: priority from severity, savings from the same category", () => {
+    const { issues } = mapBillAnalysis(EXTRACTION, ANALYSIS);
+    expect(issues).toEqual([
+      {
+        category: "Duplicate Balance Suspected",
+        priority: "Medium",
+        summary: "Two identical line items found.",
+        evidence: [],
+        potentialSavings: "$300.00",
+      },
+      {
+        category: "Missing Adjustments",
+        priority: "High",
+        summary: "No adjustments applied despite insurance payment.",
+        evidence: [],
+        potentialSavings: "$150.00",
+      },
+    ]);
+  });
+
+  it("leaves potentialSavings null when no savings opportunity shares the issue's category", () => {
+    const noMatch: AiCaseAnalysis = {
+      ...ANALYSIS,
+      issues: [{ category: "unrelated", severity: "info", summary: "s", evidence: ["e"] }],
+    };
+    const [issue] = mapBillAnalysis(EXTRACTION, noMatch).issues!;
+    expect(issue.potentialSavings).toBeNull();
+    expect(issue.priority).toBe("Low");
+  });
+
   it("never lets adjusted charges go negative when savings exceed the balance", () => {
     const bigSavings: AiCaseAnalysis = {
       ...ANALYSIS,
