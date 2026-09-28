@@ -85,7 +85,10 @@ export default function Sidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col bg-white px-5 py-8 transition-transform duration-200 md:static md:translate-x-0 ${
+        // Desktop: sticky + full viewport height so the nav stays put while
+        // the page scrolls. Its own contents scroll if they ever outgrow the
+        // viewport. Mobile keeps the slide-in drawer.
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col overflow-y-auto bg-white px-5 py-8 transition-transform duration-200 md:sticky md:top-0 md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >

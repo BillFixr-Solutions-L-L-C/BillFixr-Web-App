@@ -119,7 +119,7 @@ export default function AdminSidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-60 shrink-0 flex-col justify-between border-r border-gray-100 bg-white px-5 py-8 transition-transform duration-200 md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-60 shrink-0 flex-col justify-between overflow-y-auto border-r border-gray-100 bg-white px-5 py-8 transition-transform duration-200 md:sticky md:top-0 md:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
