@@ -60,10 +60,15 @@ export default function UploadsTable({
                       <td className="py-3 pr-4 text-gray-800">{u.customer}</td>
                       <td className="py-3 pr-4 text-gray-500">{u.filename}</td>
                       <td className="py-3 pr-4 capitalize text-gray-500">{u.status}</td>
-                      <td className="py-3 pr-4 text-gray-500">
+                      {/* Deliberately differs between server and client: these
+                          format in the runtime's own timezone, so the server
+                          (UTC) and the admin's browser disagree. The browser's
+                          local time is the one we want to show, so the
+                          mismatch is suppressed rather than pinned to UTC. */}
+                      <td className="py-3 pr-4 text-gray-500" suppressHydrationWarning>
                         {uploaded.toLocaleDateString("en-US", { day: "2-digit", month: "long" })}
                       </td>
-                      <td className="py-3 text-gray-500">
+                      <td className="py-3 text-gray-500" suppressHydrationWarning>
                         {uploaded.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                       </td>
                     </tr>

@@ -66,8 +66,8 @@ async function mergeImagesToPdf(images: Blob[]): Promise<Blob> {
  * (and merges multi-page selections into one PDF) before it ever reaches
  * upload. Throws a user-facing message on anything invalid.
  */
-export async function prepareBillFile(fileList: FileList): Promise<File> {
-  const files = Array.from(fileList);
+export async function prepareBillFile(selection: File[] | FileList): Promise<File> {
+  const files = Array.from(selection);
   if (files.length === 0) throw new Error("No file selected.");
 
   for (const file of files) {

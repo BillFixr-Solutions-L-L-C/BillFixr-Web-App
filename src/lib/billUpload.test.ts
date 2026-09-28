@@ -55,6 +55,15 @@ afterEach(() => {
 });
 
 describe("prepareBillFile", () => {
+  // The page snapshots the picker's files into an array before clearing the
+  // input (clearing empties the live FileList), so an array is the shape
+  // this actually receives in production.
+  it("accepts a plain array of files, not just a FileList", async () => {
+    const pdf = fixtureFile("bill.pdf", "application/pdf", "");
+    const result = await prepareBillFile([pdf]);
+    expect(result.name).toBe("bill.pdf");
+  });
+
   it("rejects an unsupported file type", async () => {
     const file = fixtureFile("resume.docx", "application/msword", "");
     await expect(prepareBillFile(fileList([file]))).rejects.toThrow(/supported file type/);

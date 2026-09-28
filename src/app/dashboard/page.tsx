@@ -410,9 +410,13 @@ export default function DashboardHome() {
                   multiple
                   className="hidden"
                   onChange={async (e) => {
-                    const files = e.target.files;
+                    // Copy the files out BEFORE clearing the input: the
+                    // FileList is live, so resetting value empties the very
+                    // list we just grabbed and the upload silently no-ops.
+                    // (Clearing it is what lets the same file be picked again.)
+                    const files = Array.from(e.target.files ?? []);
                     e.target.value = "";
-                    if (!files || files.length === 0) return;
+                    if (files.length === 0) return;
 
                     setUploadError(null);
                     setPreparingFile(true);
