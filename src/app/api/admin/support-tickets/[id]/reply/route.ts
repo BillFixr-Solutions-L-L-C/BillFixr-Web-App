@@ -33,6 +33,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!hasFullDomainAccess(await getDomainAccess(supabase, "client_data"))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
+  // Sending mail from BillFixr's domain to a real customer needs its own
+  // permission, not just ticket access (see roles.can_email_customers).
+  const { data: canEmail } = await supabase.rpc("can_email_customers");
+  if (!canEmail) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
 
   const { data: ticket } = await supabase
     .from("support_tickets")
@@ -70,6 +76,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     console.error("Support reply email failed for ticket", id, err);
     return NextResponse.json({ error: "We couldn't send that reply. Please try again." }, { status: 502 });
   }
+
+  await supabase.from("admin_activity_log").insert({
+    actor_id: user.id,
+    actor_name: caller.name ?? "Admin",
+    action: "emailed_customer",
+    target_id: id,
+    target_name: profile.name ?? profile.email,
+  });
 
   return NextResponse.json({ ok: true });
 }

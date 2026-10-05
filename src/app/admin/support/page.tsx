@@ -36,6 +36,7 @@ export default function AdminSupportPage() {
   const [loading, setLoading] = useState(true);
   const [restricted, setRestricted] = useState(false);
   const [canWrite, setCanWrite] = useState(false);
+  const [canEmail, setCanEmail] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [active, setActive] = useState<Ticket | null>(null);
   const [search, setSearch] = useState("");
@@ -106,6 +107,10 @@ export default function AdminSupportPage() {
         return;
       }
       setCanWrite(hasFullDomainAccess(level));
+      // Emailing a customer is its own permission, separate from being able
+      // to work the ticket.
+      const { data: emailAllowed } = await supabase.rpc("can_email_customers");
+      setCanEmail(Boolean(emailAllowed));
       await fetchTickets(supabase);
       setLoading(false);
     }
@@ -345,18 +350,20 @@ export default function AdminSupportPage() {
                     placeholder="e.g. We've corrected the billing error and updated your account."
                     className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none"
                   />
-                  <div className="mt-2 flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={sendReplyEmail}
-                      disabled={emailing || !resolveNote.trim()}
-                      className="rounded-full border border-primary-600 px-5 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50 disabled:opacity-60"
-                    >
-                      {emailing ? "Sending…" : "✉ Send as email"}
-                    </button>
-                    {replyNote && <p className="text-sm text-primary-600">{replyNote}</p>}
-                    {replyError && <p className="text-sm text-danger">{replyError}</p>}
-                  </div>
+                  {canEmail && (
+                    <div className="mt-2 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={sendReplyEmail}
+                        disabled={emailing || !resolveNote.trim()}
+                        className="rounded-full border border-primary-600 px-5 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50 disabled:opacity-60"
+                      >
+                        {emailing ? "Sending…" : "✉ Send as email"}
+                      </button>
+                      {replyNote && <p className="text-sm text-primary-600">{replyNote}</p>}
+                      {replyError && <p className="text-sm text-danger">{replyError}</p>}
+                    </div>
+                  )}
                 </>
               )}
               <div className="mt-4 flex justify-center gap-4">

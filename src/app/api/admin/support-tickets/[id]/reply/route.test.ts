@@ -16,10 +16,14 @@ const TICKET = { id: "ticket-1", subject: "Payment issue", profiles: { name: "Ja
 function req(body: unknown) {
   return new Request("http://localhost/x", { method: "POST", body: JSON.stringify(body) });
 }
-function allowAdmin() {
+// getDomainAccess and can_email_customers both go through rpc(), in that
+// order, so the mock answers them by call sequence.
+function allowAdmin({ canEmail = true } = {}) {
   serverMock.getUser.mockResolvedValue({ data: { user: ADMIN } });
   serverMock.queueResult("profiles", { data: { role: "admin", name: "Agent" }, error: null });
-  serverMock.rpc.mockResolvedValue({ data: "full", error: null });
+  serverMock.rpc
+    .mockResolvedValueOnce({ data: "full", error: null })
+    .mockResolvedValueOnce({ data: canEmail, error: null });
 }
 
 beforeEach(() => {
@@ -50,6 +54,13 @@ describe("POST /api/admin/support-tickets/[id]/reply", () => {
     serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
     serverMock.rpc.mockResolvedValue({ data: "read_only", error: null });
     expect((await POST(req({ message: "hi" }), { params })).status).toBe(403);
+  });
+
+  it("returns 403 for an admin without permission to email customers", async () => {
+    allowAdmin({ canEmail: false });
+    const res = await POST(req({ message: "hi" }), { params });
+    expect(res.status).toBe(403);
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
   it("returns 404 when the ticket doesn't exist", async () => {
