@@ -45,6 +45,33 @@ export default function AdminSupportPage() {
   const [chatSending, setChatSending] = useState(false);
   const [resolveNote, setResolveNote] = useState("");
   const [resolving, setResolving] = useState(false);
+  const [emailing, setEmailing] = useState(false);
+  const [replyNote, setReplyNote] = useState<string | null>(null);
+  const [replyError, setReplyError] = useState<string | null>(null);
+
+  // Emails the reply straight away, leaving the ticket open — for answering
+  // a question without closing it.
+  async function sendReplyEmail() {
+    if (!active || !resolveNote.trim()) return;
+    setEmailing(true);
+    setReplyNote(null);
+    setReplyError(null);
+
+    const res = await fetch(`/api/admin/support-tickets/${active.id}/reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: resolveNote }),
+    }).catch(() => null);
+    setEmailing(false);
+
+    if (!res?.ok) {
+      const body = await res?.json().catch(() => null);
+      setReplyError(body?.error ?? "We couldn't send that reply. Please try again.");
+      return;
+    }
+    setResolveNote("");
+    setReplyNote("Reply emailed to the customer.");
+  }
   // Same race guard as the customer widget: an in-flight poll that
   // started before a reply landed can otherwise overwrite the optimistic
   // append with an older, reply-less snapshot.
@@ -304,17 +331,32 @@ export default function AdminSupportPage() {
             <div className="mt-8">
               {active.status !== "resolved" && (
                 <>
-                  <label className="text-sm text-gray-600">
+                  <label htmlFor="ticket-reply" className="text-sm text-gray-600">
                     Reply to customer{" "}
-                    <span className="text-gray-400">(optional — included in the resolved email)</span>
+                    <span className="text-gray-400">
+                      (email it now, or leave it to be included in the resolved email)
+                    </span>
                   </label>
                   <textarea
+                    id="ticket-reply"
                     rows={3}
                     value={resolveNote}
                     onChange={(e) => setResolveNote(e.target.value)}
                     placeholder="e.g. We've corrected the billing error and updated your account."
                     className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none"
                   />
+                  <div className="mt-2 flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={sendReplyEmail}
+                      disabled={emailing || !resolveNote.trim()}
+                      className="rounded-full border border-primary-600 px-5 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50 disabled:opacity-60"
+                    >
+                      {emailing ? "Sending…" : "✉ Send as email"}
+                    </button>
+                    {replyNote && <p className="text-sm text-primary-600">{replyNote}</p>}
+                    {replyError && <p className="text-sm text-danger">{replyError}</p>}
+                  </div>
                 </>
               )}
               <div className="mt-4 flex justify-center gap-4">

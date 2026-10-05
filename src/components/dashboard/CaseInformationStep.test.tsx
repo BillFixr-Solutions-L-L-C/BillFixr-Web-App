@@ -71,7 +71,7 @@ describe("CaseInformationStep", () => {
     renderStep();
     expect(screen.getByText("Personal Information")).toBeInTheDocument();
     expect(screen.getByText("Hospital Information")).toBeInTheDocument();
-    for (const label of ["Client Name", "Email", "Client Hospital Number", "Hospital Name", "Billing Manager Email", "Support Email", "Billing Phone Number"]) {
+    for (const label of ["Client Name", "Email", "Client Hospital Number", "Hospital Name", "Billing Department Email", "Support Email", "Billing Phone Number"]) {
       expect(screen.getByLabelText(new RegExp(`^${label}`))).toBeInTheDocument();
     }
     expect(screen.queryByLabelText(/NextGen/)).not.toBeInTheDocument();
@@ -104,7 +104,7 @@ describe("CaseInformationStep", () => {
     renderStep();
 
     await waitFor(() => expect(screen.getByLabelText(/^Hospital Name/)).toHaveValue("Riverside General"));
-    expect(screen.getByLabelText(/^Billing Manager Email/)).toHaveValue("");
+    expect(screen.getByLabelText(/^Billing Department Email/)).toHaveValue("");
     expect(screen.getByLabelText(/^Support Email/)).toHaveValue("");
   });
 
@@ -124,7 +124,7 @@ describe("CaseInformationStep", () => {
 
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
-    await waitFor(() => expect(screen.getByLabelText(/^Billing Manager Email/)).toHaveValue("billing@riverside.com"));
+    await waitFor(() => expect(screen.getByLabelText(/^Billing Department Email/)).toHaveValue("billing@riverside.com"));
     expect(screen.getByText(/Found — check it's right/i)).toBeInTheDocument();
     const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.map(([u]) => String(u));
     expect(calls.some((u) => u.endsWith("/find-contact"))).toBe(true);
@@ -162,7 +162,7 @@ describe("CaseInformationStep", () => {
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
     expect(await screen.findByText(/Automatic search isn't available right now/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Billing Manager Email/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Billing Department Email/)).toBeInTheDocument();
   });
 
   it("blocks continuing while fields are blank, and says how many are left", async () => {

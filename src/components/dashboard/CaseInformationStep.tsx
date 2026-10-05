@@ -59,7 +59,7 @@ const PERSONAL: Field[] = [
 
 const HOSPITAL: Field[] = [
   { key: "hospitalName", label: "Hospital Name", required: true },
-  { key: "billingManagerEmail", label: "Billing Manager Email", required: true, searchable: true },
+  { key: "billingManagerEmail", label: "Billing Department Email", required: true, searchable: true },
   { key: "hospitalAddress", label: "Address", wide: true, required: true },
   { key: "supportEmail", label: "Support Email", required: true, searchable: true },
   { key: "billingPhone", label: "Billing Phone Number", required: true },

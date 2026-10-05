@@ -22,7 +22,7 @@ export const REQUIRED_LABELS: Record<keyof RequiredInformation, string> = {
   address: "Address",
   clientHospitalNumber: "Client Hospital Number",
   hospitalName: "Hospital Name",
-  billingManagerEmail: "Billing Manager Email",
+  billingManagerEmail: "Billing Department Email",
   hospitalAddress: "Hospital Address",
   supportEmail: "Support Email",
   billingPhone: "Billing Phone Number",
