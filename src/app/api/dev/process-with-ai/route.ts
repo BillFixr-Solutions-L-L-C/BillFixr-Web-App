@@ -24,10 +24,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid request" }, { status: 400 });
   }
 
-  if (!getAiServiceConfig()) {
-    return NextResponse.json({ error: "AI service is not configured." }, { status: 503 });
-  }
-
   const supabase = await createClient();
   const {
     data: { user },
@@ -66,6 +62,13 @@ export async function POST(request: Request) {
       { error: "You've already re-scanned this bill. Contact support if it still looks wrong." },
       { status: 409 },
     );
+  }
+
+  // Checked after the case itself: "you've already re-scanned" is the more
+  // specific answer, and shouldn't be masked by a configuration problem on
+  // our side.
+  if (!getAiServiceConfig()) {
+    return NextResponse.json({ error: "AI service is not configured." }, { status: 503 });
   }
 
   // The information step already had the AI read this document to fill in

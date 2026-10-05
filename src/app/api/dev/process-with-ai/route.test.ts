@@ -106,8 +106,14 @@ describe("POST /api/dev/process-with-ai", () => {
   });
 
   it("returns 503 when the AI service isn't configured", async () => {
+    // Checked after the case is loaded, so a more specific refusal (e.g.
+    // an already-spent re-scan) isn't masked by our own misconfiguration.
     getAiServiceConfig.mockReturnValue(null);
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    queueCaseRow();
+
     const res = await POST(makeRequest({ caseId: "case-1" }));
+
     expect(res.status).toBe(503);
   });
 
