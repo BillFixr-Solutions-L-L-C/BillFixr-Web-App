@@ -17,8 +17,10 @@ import type { AiCaseProcessingResponse } from "@/types/ai";
 // frontend already reads these with a mock fallback, so no page changes
 // are needed once real data lands here.
 export async function POST(request: Request) {
-  const { caseId } = await request.json();
-  if (typeof caseId !== "string") {
+  // `force` backs the Re-scan button: read the bill again and replace the
+  // analysis, rather than returning the one already stored.
+  const { caseId, force } = await request.json();
+  if (typeof caseId !== "string" || (force !== undefined && typeof force !== "boolean")) {
     return NextResponse.json({ error: "invalid request" }, { status: 400 });
   }
 
@@ -52,8 +54,8 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
 
   // Idempotent: already analyzed, don't re-call the AI service or
-  // overwrite an existing result.
-  if (bill.analysis_result) {
+  // overwrite an existing result — unless this is an explicit re-scan.
+  if (bill.analysis_result && !force) {
     return NextResponse.json({ ok: true, alreadyProcessed: true });
   }
 
@@ -61,11 +63,15 @@ export async function POST(request: Request) {
   // the hospital details; that whole response was parked in
   // bill_extractions. Reuse it rather than paying for a second reading —
   // this is where the parts held back until payment get written out.
-  const { data: cached } = await admin
-    .from("bill_extractions")
-    .select("result")
-    .eq("bill_id", bill.id)
-    .maybeSingle();
+  // A re-scan has to actually re-read the document, so the stored reading
+  // is dropped rather than reused.
+  if (force) {
+    await admin.from("bill_extractions").delete().eq("bill_id", bill.id);
+  }
+
+  const { data: cached } = force
+    ? { data: null }
+    : await admin.from("bill_extractions").select("result").eq("bill_id", bill.id).maybeSingle();
 
   let result = cached?.result as AiCaseProcessingResponse | undefined;
 

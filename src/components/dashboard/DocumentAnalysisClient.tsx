@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { BillAnalysis, BillIssue } from "@/lib/billAnalysis";
 import type { BillDocument } from "@/lib/billDocuments";
 import AppealLetterCard, { type AppealLetterData } from "@/components/dashboard/AppealLetterCard";
@@ -52,6 +53,7 @@ export default function DocumentAnalysisClient({
   appealLetter = null,
   headerEditBillId = null,
   watermark = false,
+  caseId = null,
 }: {
   analysis: BillAnalysis;
   headerInfo: HeaderField[];
@@ -60,8 +62,34 @@ export default function DocumentAnalysisClient({
   appealLetter?: AppealLetterData | null;
   headerEditBillId?: string | null;
   watermark?: boolean;
+  // Re-scan and Proceed only mean anything once the bill has a case.
+  caseId?: string | null;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [rescanning, setRescanning] = useState(false);
+  const [rescanError, setRescanError] = useState<string | null>(null);
+  const router = useRouter();
+
+  // Reads the bill again and replaces the analysis, for when the result
+  // looks wrong. The customer has already paid the commitment fee, so this
+  // costs them nothing.
+  async function rescan() {
+    if (!caseId) return;
+    setRescanning(true);
+    setRescanError(null);
+    const res = await fetch("/api/dev/process-with-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId, force: true }),
+    }).catch(() => null);
+    setRescanning(false);
+    if (!res?.ok) {
+      const body = await res?.json().catch(() => null);
+      setRescanError(body?.error ?? "We couldn't re-scan this bill. Please try again.");
+      return;
+    }
+    router.refresh();
+  }
 
   return (
     <div>
@@ -223,10 +251,29 @@ export default function DocumentAnalysisClient({
           </div>
         </div>
 
-        <span className="rounded-full bg-primary-600 px-8 py-3 text-sm font-semibold text-white">
-          Completed
-        </span>
+        {caseId ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={rescan}
+              disabled={rescanning}
+              className="rounded-full border border-[#0f7545] px-8 py-3 text-sm font-semibold text-[#0f7545] hover:bg-primary-50 disabled:opacity-60"
+            >
+              {rescanning ? "Re-scanning…" : "Re-scan"}
+            </button>
+            <Link
+              href="/dashboard/case"
+              className="rounded-full bg-[#0f7545] px-8 py-3 text-sm font-semibold text-white hover:bg-primary-700"
+            >
+              Proceed
+            </Link>
+          </div>
+        ) : (
+          <span className="rounded-full bg-primary-600 px-8 py-3 text-sm font-semibold text-white">Completed</span>
+        )}
       </div>
+
+      {rescanError && <p className="mt-3 text-right text-sm text-danger">{rescanError}</p>}
 
       {previewOpen && doc.previewUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

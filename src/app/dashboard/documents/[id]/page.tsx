@@ -94,6 +94,7 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
       appealLetter={appealLetter}
       headerEditBillId={analyzed ? bill.id : null}
       watermark={inProgress}
+      caseId={caseRow?.id ?? null}
     />
   );
 }

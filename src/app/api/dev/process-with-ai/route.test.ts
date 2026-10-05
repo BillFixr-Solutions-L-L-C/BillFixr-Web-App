@@ -170,6 +170,27 @@ describe("POST /api/dev/process-with-ai", () => {
     expect(res.status).toBe(502);
   });
 
+  it("re-scans on force: drops the stored reading and calls the AI again", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    queueCaseRow({ analysis_result: { already: "there" } });
+    adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf bytes"]), error: null });
+    processCase.mockResolvedValue(AI_RESPONSE);
+    adminMock.queueResult("bills", { data: null, error: null });
+    adminMock.queueResult("cases", { data: null, error: null });
+
+    const res = await POST(makeRequest({ caseId: "case-1", force: true }));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).not.toMatchObject({ alreadyProcessed: true });
+    expect(processCase).toHaveBeenCalled();
+    expect(adminMock.from).toHaveBeenCalledWith("bill_extractions");
+  });
+
+  it("rejects a non-boolean force", async () => {
+    const res = await POST(makeRequest({ caseId: "case-1", force: "yes" }));
+    expect(res.status).toBe(400);
+  });
+
   it("processes the bill and writes real analysis to bills and cases", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: USER } });
     queueCaseRow();
