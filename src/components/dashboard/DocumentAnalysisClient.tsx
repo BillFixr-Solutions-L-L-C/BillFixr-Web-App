@@ -54,6 +54,7 @@ export default function DocumentAnalysisClient({
   headerEditBillId = null,
   watermark = false,
   caseId = null,
+  canRescan = true,
 }: {
   analysis: BillAnalysis;
   headerInfo: HeaderField[];
@@ -64,6 +65,8 @@ export default function DocumentAnalysisClient({
   watermark?: boolean;
   // Re-scan and Proceed only mean anything once the bill has a case.
   caseId?: string | null;
+  // One re-scan per case; false once it's been used.
+  canRescan?: boolean;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [rescanning, setRescanning] = useState(false);
@@ -256,10 +259,11 @@ export default function DocumentAnalysisClient({
             <button
               type="button"
               onClick={rescan}
-              disabled={rescanning}
-              className="rounded-full border border-[#0f7545] px-8 py-3 text-sm font-semibold text-[#0f7545] hover:bg-primary-50 disabled:opacity-60"
+              disabled={rescanning || !canRescan}
+              title={canRescan ? undefined : "You've already used your one re-scan for this bill."}
+              className="rounded-full border border-[#0f7545] px-8 py-3 text-sm font-semibold text-[#0f7545] hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {rescanning ? "Re-scanning…" : "Re-scan"}
+              {rescanning ? "Re-scanning…" : canRescan ? "Re-scan" : "Re-scan used"}
             </button>
             <Link
               href="/dashboard/case"

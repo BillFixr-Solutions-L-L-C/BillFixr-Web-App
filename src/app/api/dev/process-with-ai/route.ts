@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   const { data: caseRow } = await supabase
     .from("cases")
     .select(
-      "id, user_id, bill_id, bills(id, filename, storage_url, analysis_result, provider_name, provider_email, provider_phone, provider_address)",
+      "id, user_id, bill_id, rescanned_at, bills(id, filename, storage_url, analysis_result, provider_name, provider_email, provider_phone, provider_address)",
     )
     .eq("id", caseId)
     .single();
@@ -57,6 +57,15 @@ export async function POST(request: Request) {
   // overwrite an existing result — unless this is an explicit re-scan.
   if (bill.analysis_result && !force) {
     return NextResponse.json({ ok: true, alreadyProcessed: true });
+  }
+
+  // One re-scan per case: it's a free second AI read, meant as a one-off
+  // correction when the first result looks wrong.
+  if (force && caseRow.rescanned_at) {
+    return NextResponse.json(
+      { error: "You've already re-scanned this bill. Contact support if it still looks wrong." },
+      { status: 409 },
+    );
   }
 
   // The information step already had the AI read this document to fill in
@@ -128,6 +137,8 @@ export async function POST(request: Request) {
       appeal_letter_text: appealLetterText,
       ai_summary_text: aiSummaryText,
       admin_analysis: adminAnalysis,
+      // Spends the single re-scan, so a second one is refused.
+      ...(force ? { rescanned_at: new Date().toISOString() } : {}),
     })
     .eq("id", caseId);
   if (caseUpdateError) {

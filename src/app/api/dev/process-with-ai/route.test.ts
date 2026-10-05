@@ -186,6 +186,32 @@ describe("POST /api/dev/process-with-ai", () => {
     expect(adminMock.from).toHaveBeenCalledWith("bill_extractions");
   });
 
+  it("refuses a second re-scan", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    queueCaseRow({ analysis_result: { already: "there" } }, { rescanned_at: "2026-10-05T00:00:00Z" });
+
+    const res = await POST(makeRequest({ caseId: "case-1", force: true }));
+
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/already re-scanned/i);
+    expect(processCase).not.toHaveBeenCalled();
+  });
+
+  it("records the re-scan so the next one is refused", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    queueCaseRow({ analysis_result: { already: "there" } });
+    adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf"]), error: null });
+    processCase.mockResolvedValue(AI_RESPONSE);
+    adminMock.queueResult("bills", { data: null, error: null });
+    adminMock.queueResult("cases", { data: null, error: null });
+
+    await POST(makeRequest({ caseId: "case-1", force: true }));
+
+    const i = adminMock.from.mock.calls.findIndex(([t]) => t === "cases");
+    const update = adminMock.from.mock.results[i].value.update as ReturnType<typeof vi.fn>;
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ rescanned_at: expect.any(String) }));
+  });
+
   it("rejects a non-boolean force", async () => {
     const res = await POST(makeRequest({ caseId: "case-1", force: "yes" }));
     expect(res.status).toBe(400);

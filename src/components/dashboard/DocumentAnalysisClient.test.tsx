@@ -49,6 +49,17 @@ describe("DocumentAnalysisClient", () => {
     expect(screen.getByRole("link", { name: "Proceed" })).toHaveAttribute("href", "/dashboard/case");
   });
 
+  it("disables Re-scan once the one re-scan has been used", () => {
+    render(
+      <DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" canRescan={false} />,
+    );
+    const button = screen.getByRole("button", { name: /Re-scan/ });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("title", expect.stringContaining("already used"));
+    // Proceed still works
+    expect(screen.getByRole("link", { name: "Proceed" })).toBeInTheDocument();
+  });
+
   it("hides them when there is no case yet", () => {
     render(<DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} />);
     expect(screen.queryByRole("button", { name: "Re-scan" })).not.toBeInTheDocument();

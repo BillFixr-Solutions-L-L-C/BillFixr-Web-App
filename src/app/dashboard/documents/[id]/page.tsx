@@ -35,7 +35,7 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
   // everything else gated on Phase 2 in this codebase.
   const { data: caseRow } = await supabase
     .from("cases")
-    .select("id, status, errors_detected, appeal_letter_text, provider_email, letter_sent_at")
+    .select("id, status, errors_detected, appeal_letter_text, provider_email, letter_sent_at, rescanned_at")
     .eq("bill_id", bill.id)
     .maybeSingle();
 
@@ -95,6 +95,7 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
       headerEditBillId={analyzed ? bill.id : null}
       watermark={inProgress}
       caseId={caseRow?.id ?? null}
+      canRescan={Boolean(caseRow) && !caseRow!.rescanned_at}
     />
   );
 }
