@@ -58,7 +58,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(adminMock.from).toHaveBeenCalledTimes(1); // only the stripe_events insert
   });
 
-  it("logs and returns ok when no matching payment_records row exists", async () => {
+  it("asks Stripe to retry when no matching payment_records row exists yet", async () => {
     queueDedupeOk();
     const event = makeEvent("payment_intent.succeeded", { id: "pi_missing" });
     constructEvent.mockReturnValue(event);
@@ -66,20 +66,47 @@ describe("POST /api/webhooks/stripe", () => {
 
     const res = await POST(makeRequest("{}"));
 
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    // The row may simply not have committed yet — accepting the event here
+    // would lose a payment permanently, so retry instead.
+    expect(res.status).toBe(500);
   });
 
-  it("does nothing when the record is already marked paid", async () => {
+  it("does not re-write the payment when it is already marked paid", async () => {
     queueDedupeOk();
     const event = makeEvent("payment_intent.succeeded", { id: "pi_1" });
     constructEvent.mockReturnValue(event);
     adminMock.queueResult("payment_records", { data: { id: "rec-1", type: "commitment_fee", bill_id: "bill-1", status: "paid" }, error: null });
+    adminMock.queueResult("cases", { data: { id: "case-1" }, error: null }); // case already exists
 
     const res = await POST(makeRequest("{}"));
 
     expect(await res.json()).toEqual({ ok: true });
-    expect(adminMock.from).toHaveBeenCalledTimes(2); // stripe_events insert + the lookup, no update
+    // stripe_events insert + the lookup + the existing-case check. The
+    // payment_records update is skipped, but the case reconciliation still
+    // runs — that is what lets a retry finish a half-done run.
+    expect(adminMock.from).toHaveBeenCalledTimes(3);
+  });
+
+  it("still creates the case when a retry finds the payment already paid", async () => {
+    queueDedupeOk();
+    const event = makeEvent("payment_intent.succeeded", { id: "pi_1" });
+    constructEvent.mockReturnValue(event);
+    // Exactly the state left behind by a run that died after marking the
+    // payment paid but before creating the case.
+    adminMock.queueResult("payment_records", { data: { id: "rec-1", type: "commitment_fee", bill_id: "bill-1", status: "paid" }, error: null });
+    adminMock.queueResult("cases", { data: null, error: null }); // no case yet
+    adminMock.queueResult("bills", { data: { user_id: "user-1" }, error: null });
+    adminMock.queueResult("cases", { data: { id: "case-9" }, error: null }); // insert
+    adminMock.queueResult("payment_records", { data: null, error: null }); // link case_id
+
+    const res = await POST(makeRequest("{}"));
+
+    expect(res.status).toBe(200);
+    // Calls in order: stripe_events, payment_records(lookup, already paid
+    // so no update), cases(check existing), bills(get user),
+    // cases(insert) <- index 4
+    const caseInsert = adminMock.from.mock.results[4].value.insert as ReturnType<typeof vi.fn>;
+    expect(caseInsert).toHaveBeenCalledWith({ bill_id: "bill-1", user_id: "user-1", status: "scanning" });
   });
 
   it("marks the record paid and creates a case for a commitment_fee success", async () => {
@@ -230,7 +257,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(adminMock.from).toHaveBeenCalledTimes(2); // stripe_events, payment_records lookup only
   });
 
-  it("still returns 200 when the handler throws internally", async () => {
+  it("releases the claim and asks Stripe to retry when the handler throws", async () => {
     queueDedupeOk();
     const event = makeEvent("payment_intent.succeeded", { id: "pi_err" });
     constructEvent.mockReturnValue(event);
@@ -246,6 +273,13 @@ describe("POST /api/webhooks/stripe", () => {
     });
 
     const res = await POST(makeRequest("{}"));
-    expect(res.status).toBe(200);
+
+    // 500 so Stripe retries, and the claim is released so the retry is not
+    // swallowed by the dedupe check.
+    expect(res.status).toBe(500);
+    // Call 1 claimed the event, call 2 threw; call 3 is the catch removing
+    // the claim so the retry isn't swallowed by the dedupe check.
+    const claimDelete = adminMock.from.mock.results[2].value.delete as ReturnType<typeof vi.fn>;
+    expect(claimDelete).toHaveBeenCalled();
   });
 });
