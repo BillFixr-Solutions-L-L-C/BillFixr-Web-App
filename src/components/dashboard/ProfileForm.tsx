@@ -63,7 +63,29 @@ type Profile = {
   avatarUrl: string | null;
 };
 
-export default function ProfileForm({ profile }: { profile: Profile }) {
+// Mirrors the completeness check the proxy enforces (see proxy.ts) — if
+// any of these is missing, saving leaves the customer on Settings rather
+// than sending them to a dashboard that would just bounce them back.
+function isProfileComplete(form: Profile, avatarUrl: string | null) {
+  return Boolean(
+    form.name.trim() &&
+      form.address.trim() &&
+      form.city.trim() &&
+      form.postalCode.trim() &&
+      form.country.trim() &&
+      avatarUrl,
+  );
+}
+
+export default function ProfileForm({
+  profile,
+  completingProfile = false,
+}: {
+  profile: Profile;
+  // True when the customer was sent here to finish setting up, so a
+  // successful save should carry them on to the dashboard.
+  completingProfile?: boolean;
+}) {
   const router = useRouter();
   const [form, setForm] = useState(profile);
   const [saving, setSaving] = useState(false);
@@ -101,6 +123,14 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
     // and so never clears on its own. Replacing to the bare path fixes
     // both — it drops the param (clearing the banner) and forces a fresh
     // server render (clearing the layout's stale check).
+    //
+    // A new customer sent here to finish setting up goes straight on to the
+    // dashboard instead, but only once nothing is missing — otherwise the
+    // proxy would turn them round and send them back here.
+    if (completingProfile && isProfileComplete(form, form.avatarUrl)) {
+      router.replace("/dashboard");
+      return;
+    }
     router.replace("/dashboard/settings");
   }
 

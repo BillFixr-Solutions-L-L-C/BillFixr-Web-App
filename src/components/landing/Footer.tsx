@@ -1,5 +1,6 @@
 import Logo from "@/components/Logo";
 import NewsletterForm from "./NewsletterForm";
+import { SOCIAL_LINKS } from "@/components/socialLinks";
 
 const linkColumns = [
   { label: "Terms of Use", href: "/terms" },
@@ -7,62 +8,6 @@ const linkColumns = [
   { label: "Govt. Compliance", href: "/compliance" },
   { label: "Service Policies", href: "/policies" },
   { label: "Contact Support", href: "mailto:support@billfixr.com" },
-];
-
-function FacebookIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M13 3h3v4h-3c-.6 0-1 .6-1 1.3V10h4l-.6 4H12v7H8v-7H5v-4h3V8c0-2.5 1.5-5 5-5Z"
-        fill="var(--color-primary-600)"
-      />
-    </svg>
-  );
-}
-
-function InstagramIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4Zm5 4.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Zm5.3-.8a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-        stroke="var(--color-primary-600)"
-        strokeWidth="1.7"
-      />
-    </svg>
-  );
-}
-
-function LinkedInIcon() {
-  return (
-    <span className="text-sm font-bold leading-none text-primary-600">in</span>
-  );
-}
-
-function XIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="m3 3 18 18M21 3 3 21" stroke="var(--color-primary-600)" strokeWidth="2.4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function TikTokIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M14 3h3a5 5 0 0 0 5 5v3a8 8 0 0 1-5-1.7V15a6 6 0 1 1-6-6c.3 0 .7 0 1 .1V12a3 3 0 1 0 2 2.8V3Z"
-        fill="var(--color-primary-600)"
-      />
-    </svg>
-  );
-}
-
-const socials = [
-  { label: "Facebook", href: "https://www.facebook.com/BillFixrSolutions", icon: <FacebookIcon /> },
-  { label: "Instagram", href: "https://www.instagram.com/billfixrsolutions", icon: <InstagramIcon /> },
-  { label: "LinkedIn", href: "https://www.linkedin.com/company/billfixr-solutions-llc/", icon: <LinkedInIcon /> },
-  { label: "X", href: null, icon: <XIcon /> },
-  { label: "TikTok", href: "https://www.tiktok.com/@billfixr", icon: <TikTokIcon /> },
 ];
 
 const wordmarkTextClass =
@@ -106,7 +51,7 @@ export default function Footer() {
 
           <div className="flex gap-20">
             <div className="flex flex-col items-center gap-4">
-              {socials.map((s) =>
+              {SOCIAL_LINKS.map((s) =>
                 s.href ? (
                   <a
                     key={s.label}
@@ -114,7 +59,7 @@ export default function Footer() {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={s.label}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white transition hover:bg-white/80"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-primary-600 transition hover:bg-white/80"
                   >
                     {s.icon}
                   </a>
@@ -122,7 +67,7 @@ export default function Footer() {
                   <span
                     key={s.label}
                     aria-label={s.label}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-primary-600"
                   >
                     {s.icon}
                   </span>

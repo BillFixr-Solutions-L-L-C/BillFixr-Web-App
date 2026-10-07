@@ -51,7 +51,7 @@ export default function SettingsClient({
       </div>
 
       {tab === "profile" ? (
-        <ProfileForm profile={profile} />
+        <ProfileForm profile={profile} completingProfile={showCompletionNotice} />
       ) : (
         <div className="flex flex-wrap items-start gap-16">
           <ChangePasswordForm email={profile.email} />

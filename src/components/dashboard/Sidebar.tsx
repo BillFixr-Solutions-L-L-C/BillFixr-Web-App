@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "@/components/Logo";
 import NavIcon, { type NavIconName } from "@/components/dashboard/NavIcon";
+import { SOCIAL_LINKS } from "@/components/socialLinks";
 
 type Link = { label: string; href: string; icon: NavIconName };
 
@@ -120,7 +121,23 @@ export default function Sidebar({
           ))}
         </nav>
 
-        <div className="mt-6 rounded-2xl border border-gray-100 p-4 shadow-sm">
+        <div className="mt-6 flex items-center justify-center gap-2">
+          {SOCIAL_LINKS.filter((s) => s.href).map((s) => (
+            <a
+              key={s.label}
+              href={s.href!}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={s.label}
+              title={s.label}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-50 text-[#0f7545] transition hover:bg-primary-100"
+            >
+              {s.icon}
+            </a>
+          ))}
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-gray-100 p-4 shadow-sm">
           {user.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={user.avatarUrl} alt="" className="block h-11 w-11 shrink-0 rounded-full object-cover" />

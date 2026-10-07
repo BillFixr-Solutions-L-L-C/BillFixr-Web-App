@@ -1,0 +1,62 @@
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import ProfileForm from "./ProfileForm";
+
+const replace = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, refresh: vi.fn() }) }));
+vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({}) }));
+
+const COMPLETE = {
+  name: "Jane Doe",
+  email: "jane@example.com",
+  address: "1 Main St",
+  city: "Springfield",
+  postalCode: "11111",
+  country: "USA",
+  avatarUrl: "https://example.com/a.png",
+};
+
+const originalFetch = global.fetch;
+beforeEach(() => {
+  vi.clearAllMocks();
+  global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+});
+afterEach(() => {
+  global.fetch = originalFetch;
+});
+
+async function save() {
+  await userEvent.setup().click(screen.getByRole("button", { name: /Save/ }));
+}
+
+describe("ProfileForm", () => {
+  it("takes a new customer to the dashboard once their profile is complete", async () => {
+    render(<ProfileForm profile={COMPLETE} completingProfile />);
+    await save();
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/dashboard"));
+  });
+
+  it("keeps them on settings if something required is still missing", async () => {
+    render(<ProfileForm profile={{ ...COMPLETE, avatarUrl: null }} completingProfile />);
+    await save();
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/dashboard/settings"));
+  });
+
+  it("stays on settings for an ordinary edit, not a first-time setup", async () => {
+    render(<ProfileForm profile={COMPLETE} />);
+    await save();
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/dashboard/settings"));
+  });
+
+  it("does not navigate when saving fails", async () => {
+    global.fetch = vi.fn(
+      async () => new Response(JSON.stringify({ error: "Address is required." }), { status: 400 }),
+    );
+    render(<ProfileForm profile={COMPLETE} completingProfile />);
+    await save();
+
+    expect(await screen.findByText("Address is required.")).toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
+  });
+});
