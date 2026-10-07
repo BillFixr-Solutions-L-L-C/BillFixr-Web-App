@@ -1,5 +1,12 @@
 import { vi } from "vitest";
 
+type StorageEntry = { name: string; id: string | null };
+
+type StorageList = (
+  prefix?: string,
+  options?: Record<string, unknown>,
+) => Promise<{ data: StorageEntry[] | null; error: { message: string } | null }>;
+
 type QueryResult = { data?: unknown; error?: { message: string; code?: string } | null; count?: number | null };
 
 const CHAIN_METHODS = [
@@ -78,6 +85,10 @@ export function createSupabaseMock() {
   const storageCreateSignedUrl = vi.fn();
   const storageRemove = vi.fn();
   const storageUpload = vi.fn();
+  // Defaults to an empty listing so a cascade that sweeps storage doesn't
+  // blow up in suites that don't care about it. Typed with the prefix
+  // argument so a test can vary its answer per folder.
+  const storageList = vi.fn<StorageList>(async () => ({ data: [], error: null }));
 
   const client = {
     auth: {
@@ -93,6 +104,7 @@ export function createSupabaseMock() {
         createSignedUrl: storageCreateSignedUrl,
         remove: storageRemove,
         upload: storageUpload,
+        list: storageList,
       })),
     },
   };
@@ -112,6 +124,7 @@ export function createSupabaseMock() {
     storageCreateSignedUrl,
     storageRemove,
     storageUpload,
+    storageList,
     from,
   };
 }

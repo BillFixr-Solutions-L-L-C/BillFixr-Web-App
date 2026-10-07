@@ -17,6 +17,17 @@ export async function deleteAccountCascade(admin: SupabaseClient, userId: string
   const { data: tickets } = await admin.from("support_tickets").select("id").eq("user_id", userId);
   const ticketIds = (tickets ?? []).map((t) => t.id);
 
+  // Stored files, collected before the rows that point at them are gone.
+  // Deleting the rows never removed the objects, so every medical bill,
+  // generated letter and avatar survived deletion indefinitely — directly
+  // contradicting the confirmation email below, which tells the customer
+  // their bills have been permanently deleted.
+  const { data: billRows } = await admin.from("bills").select("storage_url").eq("user_id", userId);
+  const { data: docRows } = await admin.from("case_documents").select("storage_url").eq("user_id", userId);
+  const billPaths = [...(billRows ?? []), ...(docRows ?? [])]
+    .map((r) => r.storage_url)
+    .filter((path): path is string => Boolean(path));
+
   if (ticketIds.length) {
     await admin.from("chat_messages").delete().in("ticket_id", ticketIds);
   }
@@ -32,10 +43,20 @@ export async function deleteAccountCascade(admin: SupabaseClient, userId: string
   // that should block deleting an admin who ever changed a setting — null
   // it out rather than leaving a dangling reference that fails deleteUser().
   await admin.from("app_settings").update({ updated_by: null }).eq("updated_by", userId);
+  // Same treatment, same reason, for the two other audit-trail pointers at
+  // a profile. These have no on-delete rule, and nothing cleared them, so
+  // deleting an admin who had ever manually reviewed a case or uploaded a
+  // case document failed outright with "Database error deleting user" —
+  // the case and the document belong to a customer who is still here, so
+  // they must survive; only the pointer goes.
+  await admin.from("cases").update({ manual_review_by: null }).eq("manual_review_by", userId);
+  await admin.from("case_documents").update({ created_by: null }).eq("created_by", userId);
   if (caseIds.length) {
     await admin.from("cases").delete().eq("user_id", userId);
   }
   await admin.from("bills").delete().eq("user_id", userId);
+
+  await removeStoredFiles(admin, userId, billPaths);
 
   const result = await admin.auth.admin.deleteUser(userId);
 
@@ -54,6 +75,46 @@ export async function deleteAccountCascade(admin: SupabaseClient, userId: string
   }
 
   return { ...result, profileName: profile?.name ?? null };
+}
+
+
+// Everything a customer stores is keyed by their user id: bills at
+// `<userId>/<file>`, generated case documents at
+// `<userId>/case-documents/<caseId>/<file>`, and avatars in their own
+// bucket. The known paths come from the rows; the listing sweep catches
+// files whose row never got written (a failed insert after a successful
+// upload), which would otherwise be invisible orphans.
+async function removeStoredFiles(admin: SupabaseClient, userId: string, knownPaths: string[]) {
+  const strays = await listFilesRecursively(admin, "bills", userId);
+  const billPaths = Array.from(new Set([...knownPaths, ...strays]));
+  if (billPaths.length) {
+    const { error } = await admin.storage.from("bills").remove(billPaths);
+    if (error) console.error("Failed to remove stored bills for", userId, error);
+  }
+
+  const avatarPaths = await listFilesRecursively(admin, "avatars", userId);
+  if (avatarPaths.length) {
+    const { error } = await admin.storage.from("avatars").remove(avatarPaths);
+    if (error) console.error("Failed to remove stored avatars for", userId, error);
+  }
+}
+
+// Supabase Storage's list() is one level deep, so walk it. Folders come
+// back with a null id; files have one.
+async function listFilesRecursively(admin: SupabaseClient, bucket: string, prefix: string): Promise<string[]> {
+  const { data, error } = await admin.storage.from(bucket).list(prefix, { limit: 1000 });
+  if (error || !data) return [];
+
+  const files: string[] = [];
+  for (const entry of data) {
+    const path = `${prefix}/${entry.name}`;
+    if (entry.id === null) {
+      files.push(...(await listFilesRecursively(admin, bucket, path)));
+    } else {
+      files.push(path);
+    }
+  }
+  return files;
 }
 
 function deletionEmailHtml({ name }: { name: string }) {
