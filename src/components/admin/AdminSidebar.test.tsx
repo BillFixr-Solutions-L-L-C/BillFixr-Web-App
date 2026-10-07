@@ -40,4 +40,50 @@ describe("AdminSidebar", () => {
       expect(link).toHaveAttribute("href", "/admin");
     }
   });
+
+  it("has the Completed Case and Case Detail items from the design", () => {
+    mockPathname = "/admin";
+    render(<AdminSidebar />);
+    expect(screen.getByRole("link", { name: /Completed Case/ })).toHaveAttribute("href", "/admin/completed");
+    expect(screen.getByRole("link", { name: /Case Detail/ })).toHaveAttribute("href", "/admin/cases");
+  });
+
+  it("keeps Case Detail highlighted inside a case's detail page", () => {
+    mockPathname = "/admin/cases/abc-123";
+    render(<AdminSidebar />);
+    expect(screen.getByRole("link", { name: /Case Detail/ })).toHaveClass("text-gray-900");
+    expect(screen.getByRole("link", { name: /Dashboard/ })).not.toHaveClass("text-gray-900");
+  });
+
+  it("does not confuse Completed Case with Case Detail", () => {
+    mockPathname = "/admin/completed";
+    render(<AdminSidebar />);
+    expect(screen.getByRole("link", { name: /Completed Case/ })).toHaveClass("text-gray-900");
+    expect(screen.getByRole("link", { name: /Case Detail/ })).not.toHaveClass("text-gray-900");
+  });
+
+  it("orders the nav the way the design does", () => {
+    mockPathname = "/admin";
+    render(<AdminSidebar />);
+    const labels = screen
+      .getAllByRole("link")
+      .map((l) => l.textContent?.trim())
+      .filter((t): t is string => Boolean(t));
+    const order = [
+      "Dashboard",
+      "Users",
+      "Careers",
+      "Testimonials",
+      "Completed Case",
+      "Payments",
+      "Uploads",
+      "Case Detail",
+      "User Management",
+      "Automation Monitoring",
+      "Support",
+    ];
+    const seen = order.map((o) => labels.findIndex((l) => l.startsWith(o)));
+    expect(seen.every((i) => i >= 0)).toBe(true);
+    expect([...seen]).toEqual([...seen].sort((a, b) => a - b));
+  });
 });

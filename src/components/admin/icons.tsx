@@ -126,3 +126,32 @@ export function ChevronIcon({ open }: { open?: boolean }) {
     </svg>
   );
 }
+
+// Case Detail and Completed Case are both briefcases in the admin design,
+// matching how the same two items are drawn in the customer sidebar (see
+// components/dashboard/NavIcon.tsx) — the completed one carries a tick.
+export function CaseIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="7.5" width="18" height="12.5" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M9 7.5V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M3 12h18" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+export function CompletedCaseIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="7.5" width="18" height="12.5" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M9 7.5V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path
+        d="M9.5 13.8l2 2 3.5-3.6"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
