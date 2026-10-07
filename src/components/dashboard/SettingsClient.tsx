@@ -5,6 +5,7 @@ import PageHeading from "@/components/dashboard/PageHeading";
 import ProfileForm from "@/components/dashboard/ProfileForm";
 import ChangePasswordForm from "@/components/dashboard/ChangePasswordForm";
 import DeleteMyAccount from "@/components/dashboard/DeleteMyAccount";
+import { missingProfileFields, describeMissingProfile } from "@/lib/requiredProfile";
 
 type Profile = {
   name: string;
@@ -24,14 +25,19 @@ export default function SettingsClient({
   showCompletionNotice: boolean;
 }) {
   const [tab, setTab] = useState<"profile" | "security">("profile");
+  // What is missing according to the saved profile. The form keeps its own
+  // live list as they type; this one re-renders from the server after a
+  // save, so the two stay in step without talking to each other.
+  const missingOnArrival = missingProfileFields(profile);
 
   return (
     <div>
       <PageHeading title="Settings" />
 
-      {showCompletionNotice && (
+      {showCompletionNotice && missingOnArrival.length > 0 && (
         <div className="mb-6 rounded-xl border border-accent-300 bg-accent-300/10 px-4 py-3 text-sm text-accent-600">
-          Please complete your profile (name, mailing address, and a profile photo) to continue using the dashboard.
+          Complete your profile to continue using the dashboard.{" "}
+          {describeMissingProfile(missingOnArrival)}
         </div>
       )}
 

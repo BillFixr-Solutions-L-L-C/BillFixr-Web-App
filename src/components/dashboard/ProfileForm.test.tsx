@@ -90,4 +90,23 @@ describe("ProfileForm", () => {
     expect(replace).not.toHaveBeenCalled();
     expect(assign).not.toHaveBeenCalled();
   });
+
+  it("names what is still missing instead of just claiming success", async () => {
+    render(<ProfileForm profile={{ ...COMPLETE, avatarUrl: null }} completingProfile />);
+    await save();
+
+    // The text fields really did save, so say so — but the photo is
+    // required and uploads separately, which is why nothing happens next.
+    expect(await screen.findByText(/Still to add: Profile photo\./)).toBeInTheDocument();
+    expect(screen.getByText(/Your details were saved\./)).toBeInTheDocument();
+    expect(screen.queryByText("Profile saved.")).not.toBeInTheDocument();
+  });
+
+  it("says plainly that it saved when nothing is missing", async () => {
+    render(<ProfileForm profile={COMPLETE} />);
+    await save();
+
+    expect(await screen.findByText("Profile saved.")).toBeInTheDocument();
+    expect(screen.queryByText(/Still to add/)).not.toBeInTheDocument();
+  });
 });

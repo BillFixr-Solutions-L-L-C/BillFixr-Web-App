@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { missingProfileFields, describeMissingProfile } from "@/lib/requiredProfile";
 
 function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   // The label sits above the input rather than wrapping it, so it needs an
@@ -74,15 +75,15 @@ type Profile = {
 // Mirrors the completeness check the proxy enforces (see proxy.ts) — if
 // any of these is missing, saving leaves the customer on Settings rather
 // than sending them to a dashboard that would just bounce them back.
-function isProfileComplete(form: Profile, avatarUrl: string | null) {
-  return Boolean(
-    form.name.trim() &&
-      form.address.trim() &&
-      form.city.trim() &&
-      form.postalCode.trim() &&
-      form.country.trim() &&
-      avatarUrl,
-  );
+function stillMissing(form: Profile) {
+  return missingProfileFields({
+    name: form.name,
+    address: form.address,
+    city: form.city,
+    postalCode: form.postalCode,
+    country: form.country,
+    avatarUrl: form.avatarUrl,
+  });
 }
 
 export default function ProfileForm({
@@ -99,6 +100,9 @@ export default function ProfileForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  // Named rather than counted, so someone who filled in four of six knows
+  // exactly which two are left.
+  const [missing, setMissing] = useState<string[]>([]);
   const [avatarError, setAvatarError] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,8 +139,11 @@ export default function ProfileForm({
     // A new customer sent here to finish setting up goes straight on to the
     // dashboard instead, but only once nothing is missing — otherwise the
     // proxy would turn them round and send them back here.
+    const missing = stillMissing(form);
+    setMissing(missing);
+
     if (completingProfile) {
-      if (isProfileComplete(form, form.avatarUrl)) {
+      if (missing.length === 0) {
         // A full page load, deliberately, not router.replace(): the client
         // router is holding a prefetched copy of /dashboard from while the
         // profile was still incomplete (the sidebar links there), and that
@@ -221,6 +228,7 @@ export default function ProfileForm({
       return;
     }
     setForm((f) => ({ ...f, avatarUrl: publicUrl }));
+    setMissing((m) => m.filter((label) => label !== "Profile photo"));
   }
 
   return (
@@ -292,7 +300,19 @@ export default function ProfileForm({
         />
 
         {error && <p className="sm:col-span-2 text-sm text-danger">{error}</p>}
-        {saved && <p className="sm:col-span-2 text-sm text-primary-600">Profile saved.</p>}
+        {saved && missing.length === 0 && (
+          <p className="sm:col-span-2 text-sm text-primary-600">Profile saved.</p>
+        )}
+        {missing.length > 0 && (
+          // Saying only "Profile saved." here was actively misleading: the
+          // text fields really had saved, but the customer stayed put with
+          // no idea why, since the photo is required and uploads
+          // separately from this form.
+          <p className="sm:col-span-2 text-sm text-accent-600">
+            {saved ? "Your details were saved. " : ""}
+            {describeMissingProfile(missing)}
+          </p>
+        )}
 
         <div className="sm:col-span-2">
           <button
