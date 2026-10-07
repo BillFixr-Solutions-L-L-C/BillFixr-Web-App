@@ -49,6 +49,18 @@ describe("ProfileForm", () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/dashboard/settings"));
   });
 
+  it("attaches every label to its own input", () => {
+    render(<ProfileForm profile={COMPLETE} />);
+    for (const label of ["Your Name", "Email", "Address", "City", "Postal Code", "Country"]) {
+      expect(screen.getByLabelText(label).tagName).toBe("INPUT");
+    }
+    // Each field gets its own id, so no label points at another's input.
+    const ids = ["Your Name", "Address", "City", "Postal Code", "Country"].map(
+      (l) => screen.getByLabelText(l).id,
+    );
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
   it("does not navigate when saving fails", async () => {
     global.fetch = vi.fn(
       async () => new Response(JSON.stringify({ error: "Address is required." }), { status: 400 }),

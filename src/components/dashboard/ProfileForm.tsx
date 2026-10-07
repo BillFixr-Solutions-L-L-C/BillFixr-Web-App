@@ -1,14 +1,22 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  // The label sits above the input rather than wrapping it, so it needs an
+  // explicit id to be attached to — without this, clicking the label does
+  // nothing and the field is announced with no name.
+  const id = useId();
+
   return (
     <div>
-      <label className="text-sm text-gray-600">{label}</label>
+      <label htmlFor={id} className="text-sm text-gray-600">
+        {label}
+      </label>
       <input
+        id={id}
         {...props}
         className="mt-1 w-full rounded-lg border border-primary-200 px-4 py-2.5 text-sm text-primary-700 focus:border-primary-400 focus:outline-none"
       />
