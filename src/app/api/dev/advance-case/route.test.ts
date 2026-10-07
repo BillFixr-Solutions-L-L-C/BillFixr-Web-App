@@ -35,27 +35,27 @@ describe("POST /api/dev/advance-case", () => {
   });
 
   it("rejects a non-string caseId", async () => {
-    const res = await POST(makeRequest({ caseId: 123, toStatus: "paid" }));
+    const res = await POST(makeRequest({ caseId: 123, toStatus: "awaiting_response" }));
     expect(res.status).toBe(400);
   });
 
   it("returns 401 when there is no authenticated user", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: null } });
-    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "paid" }));
+    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "awaiting_response" }));
     expect(res.status).toBe(401);
   });
 
   it("returns 404 when the case doesn't belong to the caller", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: USER } });
     serverMock.queueResult("cases", { data: { id: "case-1", user_id: "someone-else" }, error: null });
-    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "paid" }));
+    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "awaiting_response" }));
     expect(res.status).toBe(404);
   });
 
   it("returns 404 when the case doesn't exist at all", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: USER } });
     serverMock.queueResult("cases", { data: null, error: null });
-    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "paid" }));
+    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "awaiting_response" }));
     expect(res.status).toBe(404);
   });
 
@@ -64,7 +64,7 @@ describe("POST /api/dev/advance-case", () => {
     serverMock.queueResult("cases", { data: { id: "case-1", user_id: USER.id }, error: null });
     adminMock.queueResult("cases", { data: null, error: null });
 
-    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "paid" }));
+    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "awaiting_response" }));
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
@@ -76,7 +76,7 @@ describe("POST /api/dev/advance-case", () => {
     serverMock.queueResult("cases", { data: { id: "case-1", user_id: USER.id }, error: null });
     adminMock.queueResult("cases", { data: null, error: { message: "db exploded" } });
 
-    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "paid" }));
+    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "awaiting_response" }));
 
     expect(res.status).toBe(500);
   });
@@ -100,9 +100,21 @@ describe("POST /api/dev/advance-case", () => {
     serverMock.queueResult("profiles", { data: { name: "Jane", email: "jane@example.com" }, error: null });
     sendEmail.mockRejectedValue(new Error("resend down"));
 
-    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "paid" }));
+    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "awaiting_response" }));
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
+  });
+
+  it("refuses to mark a case paid — that is the payment webhook's job", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    serverMock.queueResult("cases", { data: { id: "case-1", user_id: USER.id }, error: null });
+
+    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "paid" }));
+
+    expect(res.status).toBe(400);
+    // The owner check passes here, so a 400 proves the status itself was
+    // rejected — and nothing was written.
+    expect(adminMock.from).not.toHaveBeenCalled();
   });
 });

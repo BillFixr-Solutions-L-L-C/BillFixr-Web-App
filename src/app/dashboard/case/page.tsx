@@ -148,7 +148,7 @@ export default function ActiveCasePage() {
     setPaymentError(null);
   }
 
-  async function advanceCase(toStatus: "response_received" | "paid") {
+  async function advanceCase(toStatus: "response_received") {
     if (!selectedCaseId) return;
     const res = await fetch("/api/dev/advance-case", {
       method: "POST",

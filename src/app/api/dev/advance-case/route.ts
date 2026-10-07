@@ -15,7 +15,16 @@ import { escapeHtml } from "@/lib/html";
 // then performs the write with the service role. Whatever eventually
 // replaces this route with a real trigger should keep the same
 // case-status-change email below.
-const ALLOWED_STATUSES = new Set(["awaiting_response", "response_received", "paid"]);
+//
+// "paid" is deliberately NOT on this list: it is the one status that
+// represents money having changed hands, so letting the case's own owner
+// set it here was a straight payment bypass — anyone could skip the fee
+// from dev tools. It is written in exactly two places, both server-side
+// and both behind a real Stripe result: the webhook's handleSucceeded,
+// and create-intent's zero-fee branch (where the amount owed is under
+// Stripe's minimum charge, so no PaymentIntent exists to fire a webhook).
+// Nothing in the UI ever requested it through this route.
+const ALLOWED_STATUSES = new Set(["awaiting_response", "response_received"]);
 
 const STATUS_EMAIL_CONTENT: Record<string, { subject: string; heading: string; body: string }> = {
   awaiting_response: {
@@ -27,11 +36,6 @@ const STATUS_EMAIL_CONTENT: Record<string, { subject: string; heading: string; b
     subject: "Your provider responded",
     heading: "Your provider responded",
     body: "Good news - your provider has responded to your case. Review the details and next steps from your dashboard.",
-  },
-  paid: {
-    subject: "Payment received",
-    heading: "Payment received",
-    body: "We've received your payment for this case. Thanks for using BillFixr.",
   },
 };
 
