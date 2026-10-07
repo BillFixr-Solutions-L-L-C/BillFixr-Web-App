@@ -135,8 +135,24 @@ export default function ProfileForm({
     // A new customer sent here to finish setting up goes straight on to the
     // dashboard instead, but only once nothing is missing — otherwise the
     // proxy would turn them round and send them back here.
-    if (completingProfile && isProfileComplete(form, form.avatarUrl)) {
-      router.replace("/dashboard");
+    if (completingProfile) {
+      if (isProfileComplete(form, form.avatarUrl)) {
+        // A full page load, deliberately, not router.replace(): the client
+        // router is holding a prefetched copy of /dashboard from while the
+        // profile was still incomplete (the sidebar links there), and that
+        // copy is the proxy's redirect back to this very page. A soft
+        // navigation serves it from cache and silently lands us exactly
+        // where we started — no request, no URL change. A real navigation
+        // makes the proxy re-check the now-complete profile.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- the router navigation this rule recommends is the exact thing that silently fails here; see above.
+        window.location.assign("/dashboard");
+        return;
+      }
+      // Still missing something. Stay on the current URL so the
+      // ?complete_profile=1 signal (and the notice it drives) survives —
+      // dropping it here would leave the next save, the one that actually
+      // completes the profile, with no idea it should carry them onward.
+      router.refresh();
       return;
     }
     router.replace("/dashboard/settings");
