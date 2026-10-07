@@ -2,7 +2,8 @@
 // dashboard sidebar so there's one place to update a handle.
 //
 // Icons are drawn in currentColor, so each surface sets its own colour.
-// An account with no href yet renders as a non-link (X isn't set up).
+// An account with no href yet renders as a non-link in the footer and is
+// left out of the sidebar entirely.
 
 export function FacebookIcon() {
   return (
@@ -56,6 +57,6 @@ export const SOCIAL_LINKS: SocialLink[] = [
   { label: "Facebook", href: "https://www.facebook.com/BillFixrSolutions", icon: <FacebookIcon /> },
   { label: "Instagram", href: "https://www.instagram.com/billfixrsolutions", icon: <InstagramIcon /> },
   { label: "LinkedIn", href: "https://www.linkedin.com/company/billfixr-solutions-llc/", icon: <LinkedInIcon /> },
-  { label: "X", href: null, icon: <XIcon /> },
+  { label: "X", href: "https://x.com/BillFixr_LLC", icon: <XIcon /> },
   { label: "TikTok", href: "https://www.tiktok.com/@billfixr", icon: <TikTokIcon /> },
 ];

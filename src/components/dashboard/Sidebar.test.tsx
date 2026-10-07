@@ -56,13 +56,11 @@ describe("Sidebar", () => {
   it("shows the app's social links", () => {
     pathname = "/dashboard";
     render(<Sidebar user={USER} />);
-    for (const label of ["Facebook", "Instagram", "LinkedIn", "TikTok"]) {
+    for (const label of ["Facebook", "Instagram", "LinkedIn", "X", "TikTok"]) {
       const link = screen.getByRole("link", { name: label });
       expect(link).toHaveAttribute("target", "_blank");
       expect(link.getAttribute("href")).toMatch(/^https:\/\//);
     }
-    // X has no account set up yet, so it isn't shown here
-    expect(screen.queryByRole("link", { name: "X" })).not.toBeInTheDocument();
   });
 
   it("does not confuse Active Case with Completed Case", () => {
