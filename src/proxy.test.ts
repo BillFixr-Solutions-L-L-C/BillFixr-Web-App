@@ -19,6 +19,9 @@ const CUSTOMER_USER = { id: "customer-1" };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Queued results outlive clearAllMocks, so without this a test can
+  // consume a row queued by an earlier one.
+  serverMock.reset();
 });
 
 describe("proxy (middleware route protection)", () => {
@@ -181,6 +184,61 @@ describe("proxy (middleware route protection)", () => {
       error: null,
     });
     const res = await proxy(makeRequest("/dashboard/logout"));
+    expect(res.status).toBe(200);
+  });
+
+  // Suspension used to be cosmetic — the status was set and displayed, but
+  // nothing enforced it anywhere.
+  const SUSPENDED = { role: "customer", status: "suspended", profile_completion_exempt: true };
+  const SUSPENDED_ADMIN = { role: "admin", status: "suspended", profile_completion_exempt: true };
+
+  it("sends a suspended customer to the notice instead of the dashboard", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: CUSTOMER_USER } });
+    serverMock.queueResult("profiles", { data: SUSPENDED, error: null });
+    const res = await proxy(makeRequest("/dashboard"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/suspended");
+  });
+
+  it("refuses a suspended account's API call with 403, not a redirect", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: CUSTOMER_USER } });
+    serverMock.queueResult("profiles", { data: SUSPENDED, error: null });
+    const res = await proxy(makeRequest("/api/account/profile"));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "Your account is suspended." });
+  });
+
+  it("locks a suspended admin out of /admin", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: ADMIN_USER } });
+    serverMock.queueResult("profiles", { data: SUSPENDED_ADMIN, error: null });
+    const res = await proxy(makeRequest("/admin"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/suspended");
+  });
+
+  it("lets a suspended account reach the notice itself", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: CUSTOMER_USER } });
+    const res = await proxy(makeRequest("/suspended"));
+    expect(res.status).toBe(200);
+  });
+
+  it("lets a suspended account still reach the logout page", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: CUSTOMER_USER } });
+    const res = await proxy(makeRequest("/dashboard/logout"));
+    expect(res.status).toBe(200);
+  });
+
+  it("does not bounce a suspended account from /login back into the app", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: CUSTOMER_USER } });
+    serverMock.queueResult("profiles", { data: SUSPENDED, error: null });
+    const res = await proxy(makeRequest("/login"));
+    expect(res.status).toBe(200);
+  });
+
+  it("leaves an active customer's API calls alone", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: CUSTOMER_USER } });
+    serverMock.queueResult("profiles", { data: { role: "customer", status: "active" }, error: null });
+    const res = await proxy(makeRequest("/api/account/profile"));
     expect(res.status).toBe(200);
   });
 });
