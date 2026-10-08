@@ -4,6 +4,14 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { COMMITMENT_FEE_CENTS } from "@/lib/stripe";
+import {
+  BUSINESS_NAME,
+  BUSINESS_ADDRESS_LINES,
+  BUSINESS_PHONE,
+  BUSINESS_PHONE_HREF,
+  SUPPORT_EMAIL,
+  SUPPORT_EMAIL_HREF,
+} from "@/lib/businessContact";
 
 export const metadata: Metadata = {
   title: "BillFixr - Pricing",
@@ -137,6 +145,31 @@ export default async function PricingPage() {
               By card, processed by Stripe. We never see or store your card details.
             </p>
           </div>
+        </section>
+
+        <section className="mt-10 rounded-3xl bg-white p-8">
+          <h2 className="text-xl font-semibold text-[#003322]">Questions about a charge?</h2>
+          <p className="mt-3 text-sm leading-relaxed text-primary-900/70">
+            Talk to a person before or after you pay — we would rather answer a question than
+            take a payment someone did not understand.
+          </p>
+          <address className="mt-5 not-italic text-sm leading-relaxed text-primary-900/70">
+            <span className="font-semibold text-[#003322]">{BUSINESS_NAME}</span>
+            <br />
+            {BUSINESS_ADDRESS_LINES.map((line) => (
+              <span key={line}>
+                {line}
+                <br />
+              </span>
+            ))}
+            <a href={BUSINESS_PHONE_HREF} className="mt-2 inline-block font-medium text-[#0f7545] hover:underline">
+              {BUSINESS_PHONE}
+            </a>
+            <br />
+            <a href={SUPPORT_EMAIL_HREF} className="font-medium text-[#0f7545] hover:underline">
+              {SUPPORT_EMAIL}
+            </a>
+          </address>
         </section>
 
         <div className="mt-12 flex flex-wrap items-center justify-center gap-4">

@@ -1,6 +1,14 @@
 import Logo from "@/components/Logo";
 import NewsletterForm from "./NewsletterForm";
 import { SOCIAL_LINKS } from "@/components/socialLinks";
+import {
+  BUSINESS_NAME,
+  BUSINESS_ADDRESS_LINES,
+  BUSINESS_PHONE,
+  BUSINESS_PHONE_HREF,
+  SUPPORT_EMAIL,
+  SUPPORT_EMAIL_HREF,
+} from "@/lib/businessContact";
 
 const linkColumns = [
   { label: "Pricing", href: "/pricing" },
@@ -48,6 +56,27 @@ export default function Footer() {
             <Logo inverted size={56} className="text-4xl sm:text-5xl" />
             <p className="mt-6 text-sm text-white/80">Join Our Mailing List</p>
             <NewsletterForm />
+
+            {/* Findable without a form: card processors check the site for
+                a real address and a contactable number before approving
+                live payments. */}
+            <address className="mt-8 not-italic text-sm leading-relaxed text-white/80">
+              <span className="font-semibold text-white">{BUSINESS_NAME}</span>
+              <br />
+              {BUSINESS_ADDRESS_LINES.map((line) => (
+                <span key={line}>
+                  {line}
+                  <br />
+                </span>
+              ))}
+              <a href={BUSINESS_PHONE_HREF} className="mt-2 inline-block hover:text-white">
+                {BUSINESS_PHONE}
+              </a>
+              <br />
+              <a href={SUPPORT_EMAIL_HREF} className="hover:text-white">
+                {SUPPORT_EMAIL}
+              </a>
+            </address>
           </div>
 
           <div className="flex gap-20">
