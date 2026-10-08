@@ -64,7 +64,7 @@ describe("buildCaseDocumentRows", () => {
     expect(newBill.date).toBeNull();
   });
 
-  it("signs uploaded provider documents and shows their size and received date", async () => {
+  it("serves uploaded provider documents through our own route, so they can be watermarked", async () => {
     const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), {
       ...BASE,
       stored: [
@@ -81,8 +81,10 @@ describe("buildCaseDocumentRows", () => {
     });
     const row = rows.find((r) => r.label === "Provider Responses")!;
     expect(row.available).toBe(true);
-    expect(row.previewUrl).toContain("u/case-documents/c1/response.pdf");
-    expect(row.downloadUrl).toContain("?dl");
+    // Not a signed storage URL any more: the bytes have to pass through
+    // us to carry a watermark while the case is in progress.
+    expect(row.previewUrl).toBe("/api/dashboard/case-documents/doc-1");
+    expect(row.downloadUrl).toBe("/api/dashboard/case-documents/doc-1?download=1");
     expect(row.sizeLabel).toBe("205kb");
     expect(row.date).toBe("2026-08-02");
   });

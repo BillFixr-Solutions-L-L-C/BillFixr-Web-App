@@ -141,15 +141,19 @@ export async function buildCaseDocumentRows(
       });
       continue;
     }
-    const signed = await sign(supabase, stored.storage_url, stored.filename);
+    // Served by /api/dashboard/case-documents/[id] rather than a signed
+    // storage URL: the bytes have to pass through us to be watermarked
+    // while the case is still in progress. The uploaded bill above keeps
+    // its signed URL — it is the customer's own document.
     rows.push({
       id: stored.id,
       label: CASE_DOCUMENT_LABELS[type],
       status: "Sent",
       date: stored.received_on ?? stored.created_at,
       sizeLabel: formatFileSize(stored.size_bytes),
-      ...signed,
-      available: Boolean(signed.previewUrl),
+      previewUrl: `/api/dashboard/case-documents/${stored.id}`,
+      downloadUrl: `/api/dashboard/case-documents/${stored.id}?download=1`,
+      available: true,
     });
   }
 
