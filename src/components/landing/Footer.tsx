@@ -3,6 +3,7 @@ import NewsletterForm from "./NewsletterForm";
 import { SOCIAL_LINKS } from "@/components/socialLinks";
 
 const linkColumns = [
+  { label: "Pricing", href: "/pricing" },
   { label: "Terms of Use", href: "/terms" },
   { label: "Privacy Policy", href: "/privacy" },
   { label: "Govt. Compliance", href: "/compliance" },
