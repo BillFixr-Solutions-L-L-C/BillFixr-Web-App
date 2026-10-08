@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { COMMITMENT_FEE_CENTS } from "@/lib/stripe";
 
 export const metadata: Metadata = {
@@ -20,8 +20,13 @@ export const metadata: Metadata = {
 // app_settings (an admin can change it in /admin/payments and this page
 // follows).
 export default async function PricingPage() {
-  const supabase = await createClient();
-  const { data: settings } = await supabase
+  // Service role, deliberately, and selecting nothing but the percentage:
+  // app_settings is not readable under RLS by a signed-out visitor, so the
+  // user-scoped client got zero rows here and the page quietly advertised
+  // the 30% fallback while the account was configured for 12%. Widening
+  // RLS instead would expose the row's updated_by.
+  const admin = createAdminClient();
+  const { data: settings } = await admin
     .from("app_settings")
     .select("success_fee_percentage")
     .eq("id", 1)

@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock } from "@/test/supabaseMock";
 
 const serverMock = createSupabaseMock();
-vi.mock("@/lib/supabase/server", () => ({ createClient: async () => serverMock.client }));
+// The page reads with the service role: app_settings is not visible to a
+// signed-out visitor under RLS.
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => serverMock.client }));
 
 const PricingPage = (await import("./page")).default;
 
