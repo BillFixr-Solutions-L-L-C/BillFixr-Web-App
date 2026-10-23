@@ -44,6 +44,10 @@ The repository includes an isolated Python AI service at
 draft generation. See `AI-SERVICE-INTEGRATION.md` for the frontend handoff
 and integration path.
 
+The audit rules and the negotiation autopilot (follow-ups, replies, settlement, the
+revised bill, and the completion fee) are in `services/automation-engine/`. See
+`services/automation-engine/INTEGRATION.md` for how the web app connects to it.
+
 ## How BillFixr is paid
 
 A small commitment fee is charged when a bill is submitted for analysis.

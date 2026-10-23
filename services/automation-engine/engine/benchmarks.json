@@ -1,0 +1,17 @@
+{
+  "_note": "Fair-price benchmarks used by services/audit_engine.py. Rates carried over from the old in-code table and NOT yet checked against CMS. Set verified to true only after checking the source and year for the locality. Findings that rely on an unverified rate are marked needs_review.",
+  "procedures": {
+    "99285": {"description": "ER visit, level 5", "rate": 242.00, "source": "Carried over from prior code (unverified)", "year": null, "verified": false},
+    "99284": {"description": "ER visit, level 4", "rate": 158.00, "source": "Carried over from prior code (unverified)", "year": null, "verified": false},
+    "99283": {"description": "ER visit, level 3", "rate": 89.00, "source": "Carried over from prior code (unverified)", "year": null, "verified": false},
+    "99282": {"description": "ER visit, level 2", "rate": 52.00, "source": "Carried over from prior code (unverified)", "year": null, "verified": false},
+    "85025": {"description": "Complete CBC", "rate": 11.50, "source": "Carried over from prior code (unverified)", "year": null, "verified": false},
+    "73610": {"description": "Ankle X-ray, 3 views", "rate": 46.20, "source": "Carried over from prior code (unverified)", "year": null, "verified": false},
+    "96374": {"description": "IV push, initial", "rate": 62.00, "source": "Carried over from prior code (unverified)", "year": null, "verified": false},
+    "12001": {"description": "Simple wound repair, up to 2.5 cm", "rate": 142.00, "source": "Carried over from prior code (unverified)", "year": null, "verified": false},
+    "29881": {"description": "Knee arthroscopy with meniscectomy", "rate": 1240.00, "source": "Carried over from prior code (unverified)", "year": null, "verified": false},
+    "01402": {"description": "Knee anesthesia", "rate": 365.00, "source": "Carried over from prior code (unverified)", "year": null, "verified": false},
+    "J0131": {"description": "Injection, acetaminophen (HCPCS)", "rate": 4.50, "source": "Carried over from prior code (unverified)", "year": null, "verified": false},
+    "C1713": {"description": "Anchor/screw fixation device (HCPCS)", "rate": 480.00, "source": "Carried over from prior code (unverified)", "year": null, "verified": false}
+  }
+}
