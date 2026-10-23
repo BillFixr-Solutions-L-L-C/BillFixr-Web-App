@@ -10,6 +10,7 @@ The engine is a separate service. The web app talks to it through `src/lib/autom
 - Reading the revised bill (email text and PDF) and checking the agreed amount
 - The completion fee calculation and the revised bill paywall
 - Client notices
+- Hospital contact lookup from a sourced directory (fills the `findProviderContact` stub in `src/lib/ai-service.ts`)
 - A typed client with tests: `src/lib/automation-engine.ts`, `src/types/automation-engine.ts`
 
 ## 2. What the web app still has to do
@@ -31,7 +32,8 @@ The engine is a separate service. The web app talks to it through `src/lib/autom
 5. **Authorise every call.** The engine trusts anyone holding the API key. Check that the signed-in user owns the case before calling it, including the PDF route.
 6. **Show client notices.** Messages with `direction: "SYSTEM"` are notices for the client. Map them to the `notifications` table.
 7. **Replace the demo storage** (see section 4).
-8. **Decide the overlap with `services/ai-service`** (see section 5).
+8. **Switch the contact lookup to the engine** (see section 4b).
+9. **Decide the overlap with `services/ai-service`** (see section 5).
 
 ## 3. Mapping to the existing Supabase tables
 
@@ -66,6 +68,7 @@ Revised bill PDFs are written to `ENGINE_DATA_DIR/revised_bills/`. Swap `engine/
 | `GET /api/health` | Health. Open without the API key. |
 | `GET /api/fees` | Default commitment fee and completion fee rate |
 | `POST /api/audit` | Audit extracted bill data |
+| `POST /api/providers/contact` | Look up a hospital's billing contacts. Body: `provider_name`, optional `address` |
 | `POST /api/negotiations/start` | Start a case. Needs `commitment_paid: true` |
 | `GET /api/negotiations/{id}` | Case state, messages, and notices |
 | `POST /api/negotiations/{id}/accept` | Accept an offer manually |
@@ -76,12 +79,36 @@ Revised bill PDFs are written to `ENGINE_DATA_DIR/revised_bills/`. Swap `engine/
 
 Status flow after a settlement: `HOSPITAL_ACCEPTED` → `SETTLEMENT_AGREED` → `AWAITING_COMPLETION_FEE` → `COMPLETED`. `HELD_FOR_REVIEW` means autopilot is waiting for a person (only when `AUTOPILOT_HOLD_FOR_REVIEW=1`).
 
+## 4b. Hospital contact lookup
+
+`src/lib/ai-service.ts` has a `findProviderContact` stub that calls an `ai-service` endpoint that does not exist yet. The engine now answers that question, and `src/lib/automation-engine.ts` exports a function with the same name and call shape. To switch, in `src/app/api/dashboard/bills/[id]/find-contact/route.ts` (and its test) import from the engine client instead:
+
+```ts
+import { findProviderContact, getAutomationEngineConfig } from "@/lib/automation-engine";
+// ...
+if (!getAutomationEngineConfig()) { /* same 503 response as before */ }
+```
+
+What to expect:
+
+- **Most hospitals publish no billing email.** The lookup returns `billing_email: null` for them, plus a phone number, a billing page, and a `notes` string. Show the notes to the customer so they know to type the address in. The route's existing "please type it in" path already covers `null`.
+- **It never guesses.** A hospital that is not in the directory comes back empty with `verification_status: "unverified"`.
+- **Matching is strict.** It needs a whole-phrase match on the hospital's name, and when the customer gave an address, the hospital's state has to appear in it. A hospital with a similar name in another state does not match.
+
+The directory is `engine/provider_directory.json`: 16 systems, 3 with a billing email. Each entry was traced to the hospital's own pages and carries its source URLs and the date it was checked (`checked_on`). Rules for growing it:
+
+- Add an entry only with a source URL for every contact. Use `null` for anything the hospital does not publish. Never fill in a likely-looking address.
+- Use `verification_status: "verified"` when the hospital's official page lists the contact, and `"listed"` when it comes from a brochure or a secondary source.
+- Use multi-word keywords and set `states`, so a similar name elsewhere does not match.
+- `tests/test_contact_finder.py` checks every entry for sources, valid emails and keyword rules.
+- Hospitals change their contacts. Re-check entries on a schedule before relying on them, or replace the file with a maintained data source. A short list of large systems cannot cover most bills.
+
 ## 5. Overlap with `services/ai-service`
 
 `services/ai-service` also has negotiation code (`app/negotiation/`: cadence, dispatcher, reply classifier) and pricing code (`app/pricing/`). These were not compared line by line. The simplest split is:
 
-- `ai-service`: document ingestion, OCR, extraction, provider contact lookup.
-- `automation-engine`: audit rules, the negotiation, the revised bill, and fees.
+- `ai-service`: document ingestion, OCR, and extraction.
+- `automation-engine`: audit rules, the negotiation, the revised bill, fees, and the hospital contact lookup.
 
 If you would rather have one service, port the pieces of the engine you want into `ai-service`. They are separate modules in `engine/`.
 
@@ -105,4 +132,5 @@ If you would rather have one service, port the pieces of the engine you want int
 - The inbox check logs in to the mailbox on every poll. Fine for a demo, heavy for production. A push notification (inbound webhook at `/api/webhooks/inbound-email`) is the better route.
 - A revised bill that arrives as plain email text, with no PDF, is not checked for the agreed amount.
 - Scanned PDFs are read by the vision model. That path has not been tested against real scans.
+- The contact directory is small (16 systems) and was checked on one date. See section 4b.
 - The Dockerfile was written but not built in the environment this was prepared in.

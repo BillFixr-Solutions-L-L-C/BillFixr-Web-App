@@ -4,6 +4,7 @@ import type {
   AutomationEngineFees,
   AutomationEngineHealth,
   AutomationNegotiation,
+  AutomationProviderContact,
   StartNegotiationInput,
 } from "@/types/automation-engine";
 
@@ -71,6 +72,21 @@ export async function getEngineHealth(): Promise<AutomationEngineHealth> {
 // The engine's default fees. The completion rate can be overridden per case in startNegotiation.
 export async function getEngineFees(): Promise<AutomationEngineFees> {
   return readJson(await automationEngineFetch("/api/fees"), "fee lookup");
+}
+
+// POST /api/providers/contact — looks the hospital up in the engine's sourced directory. Same name and
+// call shape as findProviderContact in ai-service.ts, and the result carries the same three fields plus
+// sources and notes, so it can replace that stub. Most hospitals publish no billing email, so
+// billing_email is often null. Show `notes` to the customer when it is.
+export async function findProviderContact(provider: {
+  name: string;
+  address?: string | null;
+}): Promise<AutomationProviderContact> {
+  const response = await automationEngineFetch(
+    "/api/providers/contact",
+    jsonRequest("POST", { provider_name: provider.name, address: provider.address ?? null }),
+  );
+  return readJson(response, "provider contact lookup");
 }
 
 // POST /api/audit — runs the audit rules over extracted bill data. Every finding carries a source,

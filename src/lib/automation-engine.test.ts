@@ -3,6 +3,7 @@ import {
   automationEngineFetch,
   confirmCompletionPayment,
   fetchRevisedBillPdf,
+  findProviderContact,
   getAutomationEngineConfig,
   getNegotiation,
   startNegotiation,
@@ -90,6 +91,23 @@ describe("automation engine client", () => {
     const { url, init } = lastCall();
     expect(url).toBe("https://engine.example.com/api/negotiations/neg-1/pay/completion");
     expect(JSON.parse(init.body as string)).toEqual({ payment_reference: "pi_done" });
+  });
+
+  it("looks a hospital up with the name and address", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ billing_email: null, phone: "800-000-0000", notes: "No billing email." }));
+    const contact = await findProviderContact({ name: "Mayo Clinic", address: "Rochester, MN" });
+
+    expect(contact.billing_email).toBeNull();
+    expect(contact.phone).toBe("800-000-0000");
+    const { url, init } = lastCall();
+    expect(url).toBe("https://engine.example.com/api/providers/contact");
+    expect(JSON.parse(init.body as string)).toEqual({ provider_name: "Mayo Clinic", address: "Rochester, MN" });
+  });
+
+  it("sends a null address when none is given", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}));
+    await findProviderContact({ name: "Mayo Clinic" });
+    expect(JSON.parse(lastCall().init.body as string).address).toBeNull();
   });
 
   it("passes the paywall response through when the bill is still locked", async () => {

@@ -30,16 +30,9 @@ from engine.email_dispatcher import email_dispatcher
 from engine.inbound_poller import inbound_poller
 from engine.demo_data import DEMO_BILLS, get_demo_bill
 from database import NegotiationRepository, get_connection
-import sys
+from engine.contact_finder import ProviderContactFinder
 
-# The provider contact finder lives in the sibling services/ai-service. It is optional here: without it,
-# /api/providers/contact returns 501 and the web app can keep using the AI service's own endpoint.
-try:
-    sys.path.insert(0, os.getenv("AI_SERVICE_DIR") or os.path.join(os.path.dirname(__file__), "..", "ai-service"))
-    from app.ai.contact_finder import ProviderContactFinder
-    contact_finder = ProviderContactFinder()
-except Exception:
-    contact_finder = None
+contact_finder = ProviderContactFinder()
 
 load_dotenv()
 
@@ -273,8 +266,6 @@ def _hospital_billing_email(email: Optional[str]) -> str:
 @app.post("/api/providers/contact")
 async def find_provider_contact(payload: ProviderContactSearchRequest):
     try:
-        if contact_finder is None:
-            raise HTTPException(status_code=501, detail="Provider contact lookup is not available in this deployment.")
         res = contact_finder.find_contact(payload.provider_name, payload.address)
         return res.model_dump()
     except Exception as e:

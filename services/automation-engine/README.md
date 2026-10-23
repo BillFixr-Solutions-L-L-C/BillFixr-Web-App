@@ -50,6 +50,7 @@ The tests use a throwaway database, never send email, and make no network calls.
 | `engine/negotiator.py` | Autopilot: replies, settlement, revised bill, notices |
 | `engine/revised_bill.py` | Reads the revised bill (text and PDF) and checks the amount |
 | `engine/payments.py` | Fee rules |
+| `engine/contact_finder.py`, `engine/provider_directory.json` | Hospital billing contact lookup from a sourced directory. It never guesses |
 | `engine/email_dispatcher.py`, `engine/inbound_poller.py` | Sending email and reading replies |
 | `database.py` | SQLite store. Replace it with the web app's storage (see INTEGRATION.md) |
 | `static/`, `demo_assets/`, `engine/demo_data.py` | Demo only. Do not ship |

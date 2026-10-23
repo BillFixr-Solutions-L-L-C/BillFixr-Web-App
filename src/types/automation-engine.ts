@@ -18,6 +18,19 @@ export type AutomationEngineFees = {
 
 // A finding from the audit. `confidence` is "high" for structural, fully sourced rules and
 // "needs_review" for keyword rules, estimates, or unverified benchmark rates.
+// A hospital's billing contacts. Every field except the notes can be null: the engine never guesses, and
+// most hospitals publish no billing email. The first three fields match AiProviderContact in ai-service.ts.
+export type AutomationProviderContact = {
+  billing_email: string | null;
+  support_email: string | null;
+  phone: string | null;
+  provider_name: string | null;
+  billing_url: string | null;
+  sources: string[];
+  verification_status: "verified" | "listed" | "unverified";
+  notes: string;
+};
+
 export type AutomationFinding = {
   id: string;
   type: string;

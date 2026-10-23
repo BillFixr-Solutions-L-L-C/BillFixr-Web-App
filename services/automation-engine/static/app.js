@@ -478,7 +478,8 @@ async function triggerContactSearch() {
       sourcesList.innerHTML = (data.sources || []).map(s => `<div>• ${s}</div>`).join("");
       document.getElementById("profileVerifyTag").innerText = "Contacts Verified";
     } else {
-      alert("No verified email directory entry found. Per non-hallucination policy, fields remain blank. Please enter contacts manually or click 'Fill Connected Testing Emails'.");
+      if (data.phone) document.getElementById("profilePhone").value = data.phone;
+      alert((data.notes || "No confirmed billing contact was found.") + " Please enter the hospital billing email yourself.");
     }
   } catch (err) {
     alert("Error searching provider contact: " + err.message);
