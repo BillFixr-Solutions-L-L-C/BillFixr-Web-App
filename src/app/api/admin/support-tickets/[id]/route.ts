@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import { sendEmail } from "@/lib/email";
+import { SUPPORT_EMAIL } from "@/lib/businessContact";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { escapeHtml } from "@/lib/html";
 
@@ -74,6 +75,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       await sendEmail({
         to: profile.email,
         subject: content.subject,
+        // These carry an agent's note, so they invite a response — without
+        // this, hitting Reply mails notifications@, not support.
+        replyTo: SUPPORT_EMAIL,
         html: ticketStatusEmailHtml({
           name: profile.name ?? "there",
           heading: content.heading,

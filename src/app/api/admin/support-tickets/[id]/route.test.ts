@@ -77,7 +77,11 @@ describe("PATCH /api/admin/support-tickets/[id]", () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
-    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: "jane@example.com" }));
+    expect(sendEmail).toHaveBeenCalledWith(
+      // Repliable: these carry an agent's note, and the From address is
+      // notifications@, which is not where a reply should land.
+      expect.objectContaining({ to: "jane@example.com", replyTo: "support@billfixr.com" }),
+    );
   });
 
   it("uses the admin's custom note as the resolution email body when provided", async () => {

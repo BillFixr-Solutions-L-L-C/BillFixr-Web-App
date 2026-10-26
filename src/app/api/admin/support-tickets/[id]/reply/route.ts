@@ -4,9 +4,9 @@ import { getDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import { sendEmail } from "@/lib/email";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { escapeHtml } from "@/lib/html";
+import { SUPPORT_EMAIL } from "@/lib/businessContact";
 
 const MAX_LENGTH = 5000;
-const SUPPORT_INBOX = "support@billfixr.com";
 
 // Lets an agent answer a ticket by email without having to resolve it
 // first. Replies land in the customer's inbox and come back to the support
@@ -61,7 +61,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     await sendEmail({
       to: profile.email,
       subject: `Re: ${ticket.subject}`,
-      replyTo: SUPPORT_INBOX,
+      replyTo: SUPPORT_EMAIL,
       html: renderEmailCard({
         title: "A reply from BillFixr Support",
         heading: "A reply from BillFixr Support",
