@@ -12,7 +12,8 @@ vi.mock("next/navigation", () => ({
 const signUp = vi.fn();
 // The form also looks the email's domain up in blocked_email_domains
 // before signing up, so the client needs from() too.
-const blockedDomain = vi.fn(async () => ({ data: null, error: null }));
+type BlockedLookup = { data: { domain: string } | null; error: { message: string } | null };
+const blockedDomain = vi.fn<() => Promise<BlockedLookup>>(async () => ({ data: null, error: null }));
 vi.mock("@/lib/supabase/authEmailClient", () => ({
   createAuthEmailClient: () => ({
     auth: { signUp: (...args: unknown[]) => signUp(...args) },
