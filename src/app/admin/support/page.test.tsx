@@ -319,14 +319,43 @@ describe("AdminSupportPage", () => {
     );
   });
 
-  it("doesn't show the reply box for an already-resolved ticket, but still allows reopening", async () => {
+  it("still lets support reply to an already-resolved ticket", async () => {
     const user = userEvent.setup();
     render(<AdminSupportPage />);
 
     await waitFor(() => expect(screen.getByText("Refund request")).toBeInTheDocument());
     await user.click(screen.getByText("Refund request"));
 
-    expect(screen.queryByPlaceholderText(/We've corrected the billing error/)).not.toBeInTheDocument();
+    // Customers often write back after a ticket is resolved. Hiding the
+    // box left support with no way to answer without first reopening.
+    expect(screen.getByPlaceholderText(/We've corrected the billing error/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "✉ Send as email" })).toBeInTheDocument();
+    expect(screen.getByText(/this ticket is resolved/i)).toBeInTheDocument();
+    // Reopening is still available, it is just no longer the only route.
     expect(screen.getByRole("button", { name: "Mark in-progress ⏱" })).toBeInTheDocument();
+  });
+
+  it("emails a reply on a resolved ticket without reopening it", async () => {
+    global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const user = userEvent.setup();
+    render(<AdminSupportPage />);
+
+    await waitFor(() => expect(screen.getByText("Refund request")).toBeInTheDocument());
+    await user.click(screen.getByText("Refund request"));
+
+    await user.type(screen.getByPlaceholderText(/We've corrected the billing error/), "Following up.");
+    await user.click(screen.getByRole("button", { name: "✉ Send as email" }));
+
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/admin/support-tickets/t-3/reply",
+        expect.objectContaining({ method: "POST", body: JSON.stringify({ message: "Following up." }) }),
+      ),
+    );
+    // The ticket stays resolved — replying is not a status change.
+    expect(global.fetch).not.toHaveBeenCalledWith(
+      "/api/admin/support-tickets/t-3",
+      expect.objectContaining({ method: "PATCH" }),
+    );
   });
 });

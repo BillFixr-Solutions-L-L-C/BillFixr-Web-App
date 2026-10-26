@@ -334,37 +334,39 @@ export default function AdminSupportPage() {
 
           {canWrite && (
             <div className="mt-8">
-              {active.status !== "resolved" && (
-                <>
-                  <label htmlFor="ticket-reply" className="text-sm text-gray-600">
-                    Reply to customer{" "}
-                    <span className="text-gray-400">
-                      (email it now, or leave it to be included in the resolved email)
-                    </span>
-                  </label>
-                  <textarea
-                    id="ticket-reply"
-                    rows={3}
-                    value={resolveNote}
-                    onChange={(e) => setResolveNote(e.target.value)}
-                    placeholder="e.g. We've corrected the billing error and updated your account."
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none"
-                  />
-                  {canEmail && (
-                    <div className="mt-2 flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={sendReplyEmail}
-                        disabled={emailing || !resolveNote.trim()}
-                        className="rounded-full border border-primary-600 px-5 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50 disabled:opacity-60"
-                      >
-                        {emailing ? "Sending…" : "✉ Send as email"}
-                      </button>
-                      {replyNote && <p className="text-sm text-primary-600">{replyNote}</p>}
-                      {replyError && <p className="text-sm text-danger">{replyError}</p>}
-                    </div>
-                  )}
-                </>
+              {/* Replying is deliberately NOT limited to open tickets: a
+                  customer often writes back after a ticket is resolved, and
+                  hiding the box left support with no way to answer from
+                  here. The route never restricted it — only this did. */}
+              <label htmlFor="ticket-reply" className="text-sm text-gray-600">
+                Reply to customer{" "}
+                <span className="text-gray-400">
+                  {active.status === "resolved"
+                    ? "(this ticket is resolved — emailing a reply leaves it resolved)"
+                    : "(email it now, or leave it to be included in the resolved email)"}
+                </span>
+              </label>
+              <textarea
+                id="ticket-reply"
+                rows={3}
+                value={resolveNote}
+                onChange={(e) => setResolveNote(e.target.value)}
+                placeholder="e.g. We've corrected the billing error and updated your account."
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none"
+              />
+              {canEmail && (
+                <div className="mt-2 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={sendReplyEmail}
+                    disabled={emailing || !resolveNote.trim()}
+                    className="rounded-full border border-primary-600 px-5 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50 disabled:opacity-60"
+                  >
+                    {emailing ? "Sending…" : "✉ Send as email"}
+                  </button>
+                  {replyNote && <p className="text-sm text-primary-600">{replyNote}</p>}
+                  {replyError && <p className="text-sm text-danger">{replyError}</p>}
+                </div>
               )}
               <div className="mt-4 flex justify-center gap-4">
                 <button
