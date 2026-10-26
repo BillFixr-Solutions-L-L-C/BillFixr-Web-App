@@ -10,8 +10,14 @@ vi.mock("next/navigation", () => ({
 }));
 
 const signUp = vi.fn();
+// The form also looks the email's domain up in blocked_email_domains
+// before signing up, so the client needs from() too.
+const blockedDomain = vi.fn(async () => ({ data: null, error: null }));
 vi.mock("@/lib/supabase/authEmailClient", () => ({
-  createAuthEmailClient: () => ({ auth: { signUp: (...args: unknown[]) => signUp(...args) } }),
+  createAuthEmailClient: () => ({
+    auth: { signUp: (...args: unknown[]) => signUp(...args) },
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: blockedDomain }) }) }),
+  }),
 }));
 
 vi.mock("@/components/auth/CheckYourEmail", () => ({
@@ -28,6 +34,7 @@ async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>, overrides
 
 beforeEach(() => {
   vi.clearAllMocks();
+  blockedDomain.mockResolvedValue({ data: null, error: null });
 });
 
 describe("SignUpForm", () => {
@@ -76,5 +83,31 @@ describe("SignUpForm", () => {
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"));
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it("refuses a throwaway address before it reaches signUp", async () => {
+    blockedDomain.mockResolvedValue({ data: { domain: "mailinator.com" }, error: null });
+    const user = userEvent.setup();
+    render(<SignUpForm />);
+    await fillAndSubmit(user, { email: "jane@mailinator.com" });
+
+    expect(await screen.findByText(/temporary email address/i)).toBeInTheDocument();
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
+  it("explains a rejection that only the database catches", async () => {
+    // The lookup fails, so the pre-check lets it through and the trigger
+    // rejects it — Supabase reports that as a bare database error.
+    blockedDomain
+      .mockResolvedValueOnce({ data: null, error: { message: "offline" } })
+      .mockResolvedValueOnce({ data: { domain: "mailinator.com" }, error: null });
+    signUp.mockResolvedValue({ data: {}, error: { message: "Database error creating new user" } });
+
+    const user = userEvent.setup();
+    render(<SignUpForm />);
+    await fillAndSubmit(user, { email: "jane@mailinator.com" });
+
+    expect(await screen.findByText(/temporary email address/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Database error/i)).not.toBeInTheDocument();
   });
 });

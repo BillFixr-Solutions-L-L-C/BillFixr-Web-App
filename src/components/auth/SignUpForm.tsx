@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createAuthEmailClient } from "@/lib/supabase/authEmailClient";
-import { friendlyAuthError } from "@/lib/authErrors";
+import { friendlyAuthError, DISPOSABLE_EMAIL_MESSAGE } from "@/lib/authErrors";
+import { isBlockedEmailDomain } from "@/lib/emailDomain";
 import PasswordInput from "@/components/auth/PasswordInput";
 import CheckYourEmail from "@/components/auth/CheckYourEmail";
 
@@ -31,6 +32,15 @@ export default function SignUpForm() {
     setLoading(true);
 
     const supabase = createAuthEmailClient();
+
+    // Checked here only so the message is clear and immediate; the
+    // auth.users trigger is what actually enforces it.
+    if (await isBlockedEmailDomain(supabase, email)) {
+      setError(DISPOSABLE_EMAIL_MESSAGE);
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -38,7 +48,12 @@ export default function SignUpForm() {
     });
 
     if (error) {
-      setError(friendlyAuthError(error.message));
+      // The pre-check above deliberately lets a failed lookup through, so
+      // the trigger can still be what rejects this. Supabase reports that
+      // as a bare "Database error creating new user", so confirm the
+      // cause rather than guessing from the wording.
+      const blocked = await isBlockedEmailDomain(supabase, email);
+      setError(blocked ? DISPOSABLE_EMAIL_MESSAGE : friendlyAuthError(error.message));
       setLoading(false);
       return;
     }
