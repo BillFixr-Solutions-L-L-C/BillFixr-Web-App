@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import LegalPage from "@/components/legal/LegalPage";
 import { LegalSection, LegalSubheading, LegalList, LegalJumpNav } from "@/components/legal/LegalSection";
+import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, BUSINESS_PHONE, BUSINESS_PHONE_HREF } from "@/lib/businessContact";
 
 export const metadata: Metadata = {
   title: "BillFixr - Service Policies",
@@ -73,9 +74,20 @@ export default function PoliciesPage() {
 
         <LegalSubheading>Refunds for Paid Services</LegalSubheading>
         <p>
-          If you purchased a paid service and believe there was an error, contact us within 7
-          days. We review all refund requests fairly and quickly.
+          If you were charged and believe there was an error, contact us within 7 days at{" "}
+          <a href={SUPPORT_EMAIL_HREF} className="text-primary-600 hover:underline">
+            {SUPPORT_EMAIL}
+          </a>{" "}
+          or{" "}
+          <a href={BUSINESS_PHONE_HREF} className="text-primary-600 hover:underline">
+            {BUSINESS_PHONE}
+          </a>
+          . A member of our team reviews every request and, where a refund is due, returns it to
+          the card you paid with. Refunds can be full or partial depending on what was charged.
         </p>
+
+        <LegalSubheading>Currency</LegalSubheading>
+        <p>All charges are in US dollars (USD).</p>
       </LegalSection>
 
       <LegalSection id="cookies" title="Cookie Policy">
