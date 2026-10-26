@@ -20,11 +20,11 @@ export type RequiredInformation = {
 export const REQUIRED_LABELS: Record<keyof RequiredInformation, string> = {
   clientName: "Client Name",
   address: "Address",
-  clientHospitalNumber: "Client Hospital Number",
+  clientHospitalNumber: "Client Hospital Account Number",
   hospitalName: "Hospital Name",
-  billingManagerEmail: "Billing Department Email",
+  billingManagerEmail: "Billing Manager Email",
   hospitalAddress: "Hospital Address",
-  supportEmail: "Support Email",
+  supportEmail: "Hospital Support Email",
   billingPhone: "Billing Phone Number",
 };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { describeMissing, missingRequiredInformation } from "@/lib/requiredInformation";
+import { describeMissing, missingRequiredInformation, REQUIRED_LABELS } from "@/lib/requiredInformation";
 
 // Fields the AI can read straight off the uploaded bill. The two email
 // addresses are deliberately absent — they aren't printed on a bill and
@@ -50,19 +50,22 @@ type Field = {
 
 // Everything is required except Email, which comes from the account and
 // can't be edited here.
+// Labels come from REQUIRED_LABELS rather than being repeated here: they
+// were duplicated, so a rename could land on the form and not in the
+// message that tells someone which field is still missing.
 const PERSONAL: Field[] = [
-  { key: "clientName", label: "Client Name", required: true },
+  { key: "clientName", label: REQUIRED_LABELS.clientName, required: true },
   { key: "email", label: "Email", readOnly: true },
-  { key: "address", label: "Address", wide: true, required: true },
-  { key: "clientHospitalNumber", label: "Client Hospital Number", required: true },
+  { key: "address", label: REQUIRED_LABELS.address, wide: true, required: true },
+  { key: "clientHospitalNumber", label: REQUIRED_LABELS.clientHospitalNumber, required: true },
 ];
 
 const HOSPITAL: Field[] = [
-  { key: "hospitalName", label: "Hospital Name", required: true },
-  { key: "billingManagerEmail", label: "Billing Department Email", required: true, searchable: true },
-  { key: "hospitalAddress", label: "Address", wide: true, required: true },
-  { key: "supportEmail", label: "Support Email", required: true, searchable: true },
-  { key: "billingPhone", label: "Billing Phone Number", required: true },
+  { key: "hospitalName", label: REQUIRED_LABELS.hospitalName, required: true },
+  { key: "billingManagerEmail", label: REQUIRED_LABELS.billingManagerEmail, required: true, searchable: true },
+  { key: "hospitalAddress", label: REQUIRED_LABELS.hospitalAddress, wide: true, required: true },
+  { key: "supportEmail", label: REQUIRED_LABELS.supportEmail, required: true, searchable: true },
+  { key: "billingPhone", label: REQUIRED_LABELS.billingPhone, required: true },
 ];
 
 function Section({

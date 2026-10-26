@@ -34,8 +34,8 @@ describe("describeMissing", () => {
   it("names them while the list is short", () => {
     expect(describeMissing([])).toBe("");
     expect(describeMissing(["Hospital Name"])).toBe("Add Hospital Name before scanning this bill.");
-    expect(describeMissing(["Hospital Name", "Support Email"])).toBe(
-      "Add Hospital Name and Support Email before scanning this bill.",
+    expect(describeMissing(["Hospital Name", "Hospital Support Email"])).toBe(
+      "Add Hospital Name and Hospital Support Email before scanning this bill.",
     );
   });
 
