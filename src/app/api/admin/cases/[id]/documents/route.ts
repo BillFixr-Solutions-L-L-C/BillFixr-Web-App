@@ -44,6 +44,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const type = form.get("type");
   const file = form.get("file");
   const receivedOn = form.get("receivedOn");
+  const adjustedTotal = form.get("adjustedTotal");
 
   if (!isCaseDocumentType(type)) {
     return NextResponse.json({ error: "invalid request" }, { status: 400 });
@@ -75,6 +76,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .upload(path, file, { contentType: file.type, upsert: false });
   if (uploadError) {
     return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  }
+
+  // The corrected total arrives with the provider's new bill, so it is
+  // captured here rather than in a separate step — the Active Case
+  // comparison screen has nothing to show without it.
+  if (type === "new_bill" && typeof adjustedTotal === "string" && adjustedTotal.trim()) {
+    const amount = Number(adjustedTotal);
+    if (!Number.isFinite(amount) || amount < 0) {
+      return NextResponse.json({ error: "Adjusted total must be a positive amount." }, { status: 400 });
+    }
+    const { error: totalError } = await admin.from("cases").update({ adjusted_total: amount }).eq("id", id);
+    if (totalError) {
+      return NextResponse.json({ error: totalError.message }, { status: 500 });
+    }
   }
 
   const { data: inserted, error: insertError } = await admin

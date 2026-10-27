@@ -23,6 +23,7 @@ type CaseRow = {
   appeal_letter_text: string | null;
   ai_summary_text: string | null;
   letter_sent_at: string | null;
+  adjusted_total: number | null;
 };
 
 // Phase 2 (AI) fields — errors_detected/savings_found/appeal_letter_text/
@@ -91,7 +92,7 @@ export default function ActiveCasePage() {
         supabase
           .from("cases")
           .select(
-            "id, status, bills(filename, storage_url, uploaded_at, provider_name), errors_detected, savings_found, appeal_letter_text, ai_summary_text, letter_sent_at",
+            "id, status, bills(filename, storage_url, uploaded_at, provider_name), errors_detected, savings_found, appeal_letter_text, ai_summary_text, letter_sent_at, adjusted_total",
           )
           .eq("user_id", user.id)
           // Completed cases live on their own page (/dashboard/completed).
@@ -174,6 +175,9 @@ export default function ActiveCasePage() {
       cancelled = true;
     };
   }, [selectedCase]);
+
+  // Figma labels this "ADJUSTED BILL"; the stored type is new_bill.
+  const adjustedBillDoc = docRows.find((d) => d.label === "New Bill" && d.available) ?? null;
 
   // The only way back to the case list from any non-list view — none of
   // them had one before, including mid-payment, so a user who clicked
@@ -357,7 +361,7 @@ export default function ActiveCasePage() {
     return (
       <div>
         <BackToCasesButton onClick={backToList} />
-        <PageHeading title="Savings & Payment" />
+        <PageHeading title="Active Case" />
         <div className="grid gap-6 sm:grid-cols-2">
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
@@ -388,26 +392,62 @@ export default function ActiveCasePage() {
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold uppercase tracking-wide text-primary-700">Adjusted Bill</p>
-              <button
-                type="button"
-                disabled
-                title="Available once your appeal negotiation produces an adjusted bill"
-                className="cursor-not-allowed rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-400"
-              >
-                ⬇ Download as PDF
-              </button>
+              {adjustedBillDoc?.downloadUrl ? (
+                <a
+                  href={adjustedBillDoc.downloadUrl}
+                  className="rounded-full border border-primary-600 px-4 py-2 text-xs font-semibold text-primary-700"
+                >
+                  ⬇ Download as PDF
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title="Available once your appeal negotiation produces an adjusted bill"
+                  className="cursor-not-allowed rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-400"
+                >
+                  ⬇ Download as PDF
+                </button>
+              )}
             </div>
             <div className="relative mt-4 overflow-hidden">
-              <BillPreview />
+              {/* The provider's actual adjusted bill once it exists — the
+                  placeholder used to stand in for it even when a real one
+                  had been uploaded. */}
+              {adjustedBillDoc?.previewUrl ? (
+                <iframe
+                  src={adjustedBillDoc.previewUrl}
+                  title="Adjusted bill"
+                  className="h-[320px] w-full rounded-lg border border-gray-100"
+                />
+              ) : (
+                <BillPreview />
+              )}
               <WatermarkOverlay />
             </div>
           </div>
         </div>
 
+        {/* Figma 817:4651 shows the overcharge beside the corrected total,
+            not the corrected total alone. */}
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white p-6 shadow-sm">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Adjusted Charges</p>
-            <p className="mt-2 text-2xl font-bold text-primary-600">$2500</p>
+          <div className="flex flex-wrap gap-4">
+            <div className="rounded-xl border border-[#ebebeb] px-5 py-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-[#a6b1bb]">Over Billed</p>
+              <p className="mt-1 text-2xl font-bold text-[#d90000]">
+                {selectedCase?.savings_found != null
+                  ? `$${Number(selectedCase.savings_found).toLocaleString()}`
+                  : "—"}
+              </p>
+            </div>
+            <div className="rounded-xl border border-[#ebebeb] px-5 py-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-[#a6b1bb]">Adjusted Charges</p>
+              <p className="mt-1 text-2xl font-bold text-[#009966]">
+                {selectedCase?.adjusted_total != null
+                  ? `$${Number(selectedCase.adjusted_total).toLocaleString()}`
+                  : "—"}
+              </p>
+            </div>
           </div>
           <div className="text-right">
             <p className="text-xs text-gray-400">

@@ -19,6 +19,7 @@ export default function CaseDocumentsPanel({
 }) {
   const router = useRouter();
   const [type, setType] = useState<CaseDocumentType>("new_bill");
+  const [adjustedTotal, setAdjustedTotal] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +30,7 @@ export default function CaseDocumentsPanel({
     setError(null);
     const body = new FormData();
     body.append("type", type);
+    if (type === "new_bill" && adjustedTotal.trim()) body.append("adjustedTotal", adjustedTotal.trim());
     body.append("file", file);
 
     const res = await fetch(`/api/admin/cases/${caseId}/documents`, { method: "POST", body });
@@ -68,6 +70,26 @@ export default function CaseDocumentsPanel({
 
       {canWrite && (
         <div className="space-y-2 border-t border-gray-50 pt-3">
+          {type === "new_bill" && (
+            <div className="mb-3">
+              <label htmlFor="case-adjusted-total" className="text-xs text-gray-500">
+                Adjusted total (optional)
+              </label>
+              <input
+                id="case-adjusted-total"
+                type="number"
+                min="0"
+                step="0.01"
+                value={adjustedTotal}
+                onChange={(e) => setAdjustedTotal(e.target.value)}
+                placeholder="e.g. 2500"
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary-400 focus:outline-none"
+              />
+              <p className="mt-1 text-xs text-gray-400">
+                The corrected balance. Shown to the customer beside the overcharge.
+              </p>
+            </div>
+          )}
           <label htmlFor="case-doc-type" className="text-xs text-gray-500">
             Document type
           </label>
