@@ -9,6 +9,7 @@ import WatermarkOverlay from "@/components/dashboard/WatermarkOverlay";
 import { createClient } from "@/lib/supabase/client";
 import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
 import { getBillDocuments, type BillDocument } from "@/lib/billDocuments";
+import { buildCaseDocumentRows, type CaseDocumentRow } from "@/lib/caseDocuments";
 import { COMPLETED_STATUSES } from "@/lib/caseStatus";
 
 type View = "list" | "pending" | "received" | "letter" | "summary" | "savings" | "payment" | "paid";
@@ -16,11 +17,12 @@ type View = "list" | "pending" | "received" | "letter" | "summary" | "savings" |
 type CaseRow = {
   id: string;
   status: string;
-  bills: { filename: string; storage_url: string | null; uploaded_at: string } | null;
+  bills: { filename: string; storage_url: string | null; uploaded_at: string; provider_name: string | null } | null;
   errors_detected: number | null;
   savings_found: number | null;
   appeal_letter_text: string | null;
   ai_summary_text: string | null;
+  letter_sent_at: string | null;
 };
 
 // Phase 2 (AI) fields — errors_detected/savings_found/appeal_letter_text/
@@ -89,7 +91,7 @@ export default function ActiveCasePage() {
         supabase
           .from("cases")
           .select(
-            "id, status, bills(filename, storage_url, uploaded_at), errors_detected, savings_found, appeal_letter_text, ai_summary_text",
+            "id, status, bills(filename, storage_url, uploaded_at, provider_name), errors_detected, savings_found, appeal_letter_text, ai_summary_text, letter_sent_at",
           )
           .eq("user_id", user.id)
           // Completed cases live on their own page (/dashboard/completed).
@@ -132,6 +134,46 @@ export default function ActiveCasePage() {
   // doesn't briefly show the previous case's file while the new fetch is
   // still in flight.
   const activeBillDoc = billDoc?.id === selectedCase?.id ? billDoc : null;
+
+  // Figma's Active Case lists the appeal letter, acknowledgement letter and
+  // analysis alongside the bill — not the bill alone. These are the same
+  // rows Completed Case and My Document build, so the three screens cannot
+  // describe one case differently.
+  const [docRows, setDocRows] = useState<CaseDocumentRow[]>([]);
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+    (async () => {
+      // Cleared inside the async path, not synchronously in the effect
+      // body — react-hooks/set-state-in-effect.
+      if (!selectedCase) {
+        if (!cancelled) setDocRows([]);
+        return;
+      }
+      const { data: stored } = await supabase
+        .from("case_documents")
+        .select("id, type, filename, storage_url, size_bytes, received_on, created_at")
+        .eq("case_id", selectedCase.id);
+      const rows = await buildCaseDocumentRows(supabase, {
+        bill: selectedCase.bills
+          ? {
+              filename: selectedCase.bills.filename,
+              storage_url: selectedCase.bills.storage_url,
+              uploaded_at: selectedCase.bills.uploaded_at,
+            }
+          : null,
+        appealLetterText: selectedCase.appeal_letter_text,
+        letterSentAt: selectedCase.letter_sent_at,
+        hasAnalysis: selectedCase.savings_found != null,
+        analysisDate: selectedCase.bills?.uploaded_at ?? null,
+        stored: stored ?? [],
+      });
+      if (!cancelled) setDocRows(rows);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCase]);
 
   // The only way back to the case list from any non-list view — none of
   // them had one before, including mid-payment, so a user who clicked
@@ -253,7 +295,7 @@ export default function ActiveCasePage() {
                   <th className="px-4 py-3">Upload Date</th>
                   <th className="px-4 py-3">Appeal Letter</th>
                   <th className="px-4 py-3">Provider Response</th>
-                  <th className="px-4 py-3">Savings</th>
+                  <th className="px-4 py-3">Proposed Savings</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -273,7 +315,7 @@ export default function ActiveCasePage() {
                         <span className="text-accent-500">📄</span>
                         {row.bills?.filename ?? "Bill"}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">Crown health...</td>
+                      <td className="px-4 py-3 text-gray-600">{row.bills?.provider_name ?? "—"}</td>
                       <td className="px-4 py-3 text-gray-600">
                         {row.bills?.uploaded_at
                           ? new Date(row.bills.uploaded_at).toLocaleDateString("en-US", {
@@ -283,12 +325,21 @@ export default function ActiveCasePage() {
                             })
                           : "—"}
                       </td>
-                      <td className="px-4 py-3 font-medium text-primary-600">Sent</td>
+                      <td
+                        className={`px-4 py-3 font-medium ${row.letter_sent_at ? "text-primary-600" : "text-gray-400"}`}
+                      >
+                        {row.letter_sent_at ? "Sent" : "Not sent"}
+                      </td>
                       <td className={`px-4 py-3 font-medium ${responseLabel === "Received" ? "text-primary-600" : "text-accent-600"}`}>
                         {responseLabel}
                       </td>
+                      {/* The real figure. This used to print a flat
+                          $2,345 for every case with a response, which was
+                          indistinguishable from a measurement. */}
                       <td className="px-4 py-3 text-gray-800">
-                        {responseLabel === "Received" ? "$2,345" : "..........."}
+                        {row.savings_found != null
+                          ? `$${Number(row.savings_found).toLocaleString()}`
+                          : "..........."}
                       </td>
                       <td className="px-4 py-3 text-gray-400">⋮</td>
                     </tr>
@@ -432,31 +483,48 @@ export default function ActiveCasePage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_auto]">
         <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between border-b border-gray-50 py-3 last:border-0">
-            <div className="flex items-center gap-3">
-              <span className="text-accent-500">📄</span>
-              <div>
-                <p className="text-sm font-medium text-gray-800">
-                  {selectedCase?.bills?.filename ?? "Original bill"}
-                </p>
-                {activeBillDoc?.previewUrl && <p className="text-xs text-primary-600">✓ Uploaded</p>}
+          {docRows.map((doc) => (
+            <div
+              key={doc.id}
+              className="flex items-center justify-between border-b border-gray-50 py-3 last:border-0"
+            >
+              <div className="flex items-center gap-3">
+                <span className={doc.available ? "text-accent-500" : "text-gray-300"}>📄</span>
+                <div>
+                  <p className={`text-sm font-medium ${doc.available ? "text-gray-800" : "text-gray-400"}`}>
+                    {doc.label}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {doc.available ? doc.status : "Not yet available"}
+                    {doc.sizeLabel ? ` · ${doc.sizeLabel}` : ""}
+                    {doc.date
+                      ? ` · ${new Date(doc.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                      : ""}
+                  </p>
+                </div>
               </div>
-            </div>
-            {activeBillDoc?.previewUrl ? (
-              <div className="flex shrink-0 items-center gap-4">
-                <a href={activeBillDoc.previewUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary-600">
-                  👁 View
-                </a>
-                {activeBillDoc.downloadUrl && (
-                  <a href={activeBillDoc.downloadUrl} className="text-sm font-medium text-primary-600">
-                    ⬇ Download
+              {doc.previewUrl ? (
+                <div className="flex shrink-0 items-center gap-4">
+                  <a
+                    href={doc.previewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-primary-600"
+                  >
+                    👁 View
                   </a>
-                )}
-              </div>
-            ) : (
-              <span className="text-sm text-gray-400">Unavailable</span>
-            )}
-          </div>
+                  {doc.downloadUrl && (
+                    <a href={doc.downloadUrl} className="text-sm font-medium text-primary-600">
+                      ⬇ Download
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <span className="text-sm text-gray-400">{doc.available ? "—" : "Pending"}</span>
+              )}
+            </div>
+          ))}
+          {docRows.length === 0 && <p className="py-3 text-sm text-gray-400">No documents yet.</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
