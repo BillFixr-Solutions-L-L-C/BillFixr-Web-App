@@ -571,12 +571,12 @@ export default function ActiveCasePage() {
           {[
             { label: "Bill Analyzed", value: "1" },
             {
-              label: "Errors Detected",
-              value: selectedCase?.errors_detected != null ? String(selectedCase.errors_detected) : MOCK_ERRORS_DETECTED,
-            },
-            {
               label: "Savings Found",
               value: selectedCase?.savings_found != null ? `$${selectedCase.savings_found}` : MOCK_SAVINGS_FOUND,
+            },
+            {
+              label: "Errors Detected",
+              value: selectedCase?.errors_detected != null ? String(selectedCase.errors_detected) : MOCK_ERRORS_DETECTED,
             },
             { label: "Appeal Generated", value: "1" },
           ].map((stat) => (
@@ -668,13 +668,21 @@ export default function ActiveCasePage() {
               <div className="flex gap-4">
                 <div className="rounded-xl border border-gray-100 px-5 py-3">
                   <p className="text-xs uppercase tracking-wide text-gray-400">Over Billed</p>
-                  <p className="mt-1 text-lg font-bold text-red-500">$5590</p>
+                  <p className="mt-1 text-lg font-bold text-red-500">
+                    {selectedCase?.savings_found != null
+                      ? `$${Number(selectedCase.savings_found).toLocaleString()}`
+                      : "—"}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-gray-100 px-5 py-3">
                   <p className="text-xs uppercase tracking-wide text-gray-400">
                     Adjusted Charges
                   </p>
-                  <p className="mt-1 text-lg font-bold text-primary-600">$2500</p>
+                  <p className="mt-1 text-lg font-bold text-primary-600">
+                    {selectedCase?.adjusted_total != null
+                      ? `$${Number(selectedCase.adjusted_total).toLocaleString()}`
+                      : "—"}
+                  </p>
                 </div>
               </div>
 
@@ -694,6 +702,25 @@ export default function ActiveCasePage() {
           </>
         )}
       </div>
+
+      {/* Figma 817:4455 puts this directly under Provider Response once the
+          provider's adjusted bill has arrived. "Check and proceed" is what
+          takes the customer to the bill comparison. */}
+      {adjustedBillDoc && (
+        <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">New Bill</p>
+            <span className="text-sm font-medium text-primary-600">Received</span>
+            <button
+              type="button"
+              onClick={() => setView("savings")}
+              className="rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+            >
+              Check and Proceed
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
