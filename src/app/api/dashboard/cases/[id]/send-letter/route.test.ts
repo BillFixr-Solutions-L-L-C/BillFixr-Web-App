@@ -38,7 +38,10 @@ function happyPath({ status = "awaiting_response", claimed = [{ id: "case-1" }] 
   serverMock.queueResult("payment_records", { data: { id: "pay-1" }, error: null });
   serverMock.queueResult("profiles", { data: { name: "Jane", email: "jane@example.com" }, error: null });
   adminMock.queueResult("cases", { data: claimed, error: null });
-  sendEmail.mockResolvedValue({});
+  // What Resend actually returns. It used to be `{}` here, which quietly
+  // skipped the letter_message_id write — the one thing that lets the
+  // tracking webhook match an event back to this case.
+  sendEmail.mockResolvedValue({ id: "email_abc" });
 }
 
 beforeEach(() => {
@@ -101,20 +104,50 @@ describe("POST /api/dashboard/cases/[id]/send-letter", () => {
     expect(call.html).toContain("<strong>bold</strong>");
   });
 
-  it("leaves a case that is already awaiting a response at that status (one write: the claim)", async () => {
-    happyPath({ status: "awaiting_response" });
+  it("stores the Resend message id so a tracking event can be matched to the case", async () => {
+    happyPath();
+    adminMock.queueResult("cases", { data: null, error: null });
+
     const res = await POST(makeRequest({ providerEmail: "billing@hospital.com" }), { params });
+
+    expect(res.status).toBe(200);
+    // Without this the open count on Active Case can never be anything but
+    // zero, because the webhook has nothing to join on.
+    const idWrite = adminMock.from.mock.results[1].value.update;
+    expect(idWrite).toHaveBeenCalledWith({ letter_message_id: "email_abc" });
+  });
+
+  it("still reports the letter as sent if Resend returns no id", async () => {
+    happyPath();
+    sendEmail.mockResolvedValue({});
+
+    const res = await POST(makeRequest({ providerEmail: "billing@hospital.com" }), { params });
+
+    // The letter did go out; losing tracking is not worth failing on.
     expect(res.status).toBe(200);
     expect(adminMock.from).toHaveBeenCalledTimes(1);
   });
 
-  it("moves a scanning case to awaiting_response as a second write, after the email", async () => {
-    happyPath({ status: "scanning" });
+  it("leaves a case that is already awaiting a response at that status", async () => {
+    happyPath({ status: "awaiting_response" });
     adminMock.queueResult("cases", { data: null, error: null });
     const res = await POST(makeRequest({ providerEmail: "billing@hospital.com" }), { params });
     expect(res.status).toBe(200);
+    // The claim and the message id, and no status change.
     expect(adminMock.from).toHaveBeenCalledTimes(2);
-    expect(sendEmail.mock.invocationCallOrder[0]).toBeLessThan(adminMock.from.mock.invocationCallOrder[1]);
+  });
+
+  it("moves a scanning case to awaiting_response only after the email has gone out", async () => {
+    happyPath({ status: "scanning" });
+    adminMock.queueResult("cases", { data: null, error: null });
+    adminMock.queueResult("cases", { data: null, error: null });
+    const res = await POST(makeRequest({ providerEmail: "billing@hospital.com" }), { params });
+    expect(res.status).toBe(200);
+    // Claim, message id, status.
+    expect(adminMock.from).toHaveBeenCalledTimes(3);
+    const statusWrite = adminMock.from.mock.invocationCallOrder[2];
+    expect(sendEmail.mock.invocationCallOrder[0]).toBeLessThan(statusWrite);
+    expect(adminMock.from.mock.results[2].value.update).toHaveBeenCalledWith({ status: "awaiting_response" });
   });
 
   it("rolls the claim back and returns 502 when the email fails", async () => {

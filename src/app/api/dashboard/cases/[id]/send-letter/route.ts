@@ -106,7 +106,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // back to this case, so it has to be kept — the open count on the Active
   // Case screen is derived from events matched on it.
   if (sent?.id) {
-    await admin.from("cases").update({ letter_message_id: sent.id }).eq("id", id);
+    const { error: idError } = await admin.from("cases").update({ letter_message_id: sent.id }).eq("id", id);
+    if (idError) {
+      // The letter is already out, so this can't fail the request. It does
+      // mean tracking is dead for this case, which is worth a line in the
+      // logs rather than a permanently-zero open count nobody can explain.
+      console.error("Could not store the Resend message id for case", id, idError);
+    }
   }
 
   // Only once the email has actually gone out: a case still at
