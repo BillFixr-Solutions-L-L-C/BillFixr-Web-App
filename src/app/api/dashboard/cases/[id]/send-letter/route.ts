@@ -82,8 +82,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const senderName = profile?.name ?? "a BillFixr customer";
+  let sent: { id?: string } | null = null;
   try {
-    await sendEmail({
+    sent = await sendEmail({
       to: email,
       subject: `Billing review request from ${senderName}`,
       replyTo: profile?.email ?? undefined,
@@ -99,6 +100,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     await admin.from("cases").update({ letter_sent_at: null, provider_email: null }).eq("id", id);
     console.error("Appeal letter email failed for", id, err);
     return NextResponse.json({ error: "We couldn't send the letter. Please try again." }, { status: 502 });
+  }
+
+  // Resend's message id is the only thing that ties its webhook events
+  // back to this case, so it has to be kept — the open count on the Active
+  // Case screen is derived from events matched on it.
+  if (sent?.id) {
+    await admin.from("cases").update({ letter_message_id: sent.id }).eq("id", id);
   }
 
   // Only once the email has actually gone out: a case still at

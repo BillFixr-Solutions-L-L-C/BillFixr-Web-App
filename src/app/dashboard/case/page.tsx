@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
 import { getBillDocuments, type BillDocument } from "@/lib/billDocuments";
 import { buildCaseDocumentRows, CASE_DOCUMENT_LABELS, type CaseDocumentRow } from "@/lib/caseDocuments";
+import { summarizeLetterEvents, describeLetterTracking, type LetterEvent } from "@/lib/letterTracking";
 import { COMPLETED_STATUSES } from "@/lib/caseStatus";
 
 type View = "list" | "pending" | "received" | "letter" | "summary" | "savings" | "payment" | "paid";
@@ -141,6 +142,7 @@ export default function ActiveCasePage() {
   // rows Completed Case and My Document build, so the three screens cannot
   // describe one case differently.
   const [docRows, setDocRows] = useState<CaseDocumentRow[]>([]);
+  const [letterEvents, setLetterEvents] = useState<LetterEvent[]>([]);
   useEffect(() => {
     const supabase = createClient();
     let cancelled = false;
@@ -151,6 +153,12 @@ export default function ActiveCasePage() {
         if (!cancelled) setDocRows([]);
         return;
       }
+      const { data: events } = await supabase
+        .from("letter_events")
+        .select("type, occurred_at")
+        .eq("case_id", selectedCase.id);
+      if (!cancelled) setLetterEvents((events ?? []) as LetterEvent[]);
+
       const { data: stored } = await supabase
         .from("case_documents")
         .select("id, type, filename, storage_url, size_bytes, received_on, created_at")
@@ -179,6 +187,10 @@ export default function ActiveCasePage() {
       cancelled = true;
     };
   }, [selectedCase]);
+
+  // Whether the provider actually opened the appeal letter (Figma
+  // 815:3326) — derived from Resend's webhook events.
+  const letterTracking = summarizeLetterEvents(letterEvents, selectedCase?.letter_sent_at ?? null);
 
   // Figma labels this "ADJUSTED BILL"; the stored type is new_bill.
   const adjustedBillDoc = docRows.find((d) => d.label === "New Bill" && d.available) ?? null;
@@ -545,6 +557,22 @@ export default function ActiveCasePage() {
                       ? ` · ${new Date(doc.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
                       : ""}
                   </p>
+                  {doc.id === "appeal-letter" && letterTracking.sent && (
+                    <p
+                      className={`text-xs ${
+                        letterTracking.bounced
+                          ? "text-danger"
+                          : letterTracking.opened
+                            ? "text-primary-600"
+                            : "text-accent-600"
+                      }`}
+                    >
+                      {describeLetterTracking(letterTracking)}
+                      {letterTracking.lastOpenedAt
+                        ? ` · last opened ${new Date(letterTracking.lastOpenedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
+                        : ""}
+                    </p>
+                  )}
                 </div>
               </div>
               {doc.previewUrl ? (
