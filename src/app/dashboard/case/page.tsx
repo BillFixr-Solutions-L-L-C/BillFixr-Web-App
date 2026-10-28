@@ -9,7 +9,7 @@ import WatermarkOverlay from "@/components/dashboard/WatermarkOverlay";
 import { createClient } from "@/lib/supabase/client";
 import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
 import { getBillDocuments, type BillDocument } from "@/lib/billDocuments";
-import { buildCaseDocumentRows, type CaseDocumentRow } from "@/lib/caseDocuments";
+import { buildCaseDocumentRows, CASE_DOCUMENT_LABELS, type CaseDocumentRow } from "@/lib/caseDocuments";
 import { COMPLETED_STATUSES } from "@/lib/caseStatus";
 
 type View = "list" | "pending" | "received" | "letter" | "summary" | "savings" | "payment" | "paid";
@@ -169,7 +169,11 @@ export default function ActiveCasePage() {
         analysisDate: selectedCase.bills?.uploaded_at ?? null,
         stored: stored ?? [],
       });
-      if (!cancelled) setDocRows(rows);
+      // This screen already has a dedicated Provider Response card with
+      // its own status and View Response action, so listing it again as a
+      // document row showed the same thing twice. Completed Case and My
+      // Document keep the row — they have no such card.
+      if (!cancelled) setDocRows(rows.filter((r) => r.label !== CASE_DOCUMENT_LABELS.provider_response));
     })();
     return () => {
       cancelled = true;

@@ -21,12 +21,15 @@ export const CASE_DOCUMENT_LABELS: Record<CaseDocumentType, string> = {
   follow_up_letter: "Follow Up Letter",
 };
 
-// Order the rows appear in, matching the Figma frame.
+// The order these actually happen in: we acknowledge, the provider
+// responds, we follow up if needed, and the corrected bill is the last
+// thing to arrive. New Bill used to sort first, which read as though it
+// turned up before the letters that produce it.
 const TYPE_ORDER: CaseDocumentType[] = [
-  "new_bill",
   "acknowledgement_letter",
   "provider_response",
   "follow_up_letter",
+  "new_bill",
 ];
 
 export type CaseDocumentRow = {
