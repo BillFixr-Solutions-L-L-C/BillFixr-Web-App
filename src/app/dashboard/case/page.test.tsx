@@ -39,12 +39,14 @@ describe("ActiveCasePage back navigation", () => {
     render(<ActiveCasePage />);
 
     await user.click(await screen.findByText("bill.pdf"));
-    await screen.findByRole("button", { name: "View Response" });
+    // The response now opens straight onto the letter — "View Response" is
+    // gone, since Provider Response lives in the document list.
+    await screen.findByRole("button", { name: "Summarize Reply" });
 
     await user.click(screen.getByRole("button", { name: "← Back to cases" }));
 
     expect(await screen.findByText("bill.pdf")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "View Response" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Summarize Reply" })).not.toBeInTheDocument();
   });
 
   it("has a way back from the summary view, reached deeper in the flow", async () => {
@@ -52,7 +54,6 @@ describe("ActiveCasePage back navigation", () => {
     render(<ActiveCasePage />);
 
     await user.click(await screen.findByText("bill.pdf"));
-    await user.click(await screen.findByRole("button", { name: "View Response" }));
     await user.click(await screen.findByRole("button", { name: "Summarize Reply" }));
     await screen.findByRole("button", { name: "Pay with Card" });
 

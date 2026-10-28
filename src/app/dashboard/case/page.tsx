@@ -9,7 +9,7 @@ import WatermarkOverlay from "@/components/dashboard/WatermarkOverlay";
 import { createClient } from "@/lib/supabase/client";
 import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
 import { getBillDocuments, type BillDocument } from "@/lib/billDocuments";
-import { buildCaseDocumentRows, CASE_DOCUMENT_LABELS, type CaseDocumentRow } from "@/lib/caseDocuments";
+import { buildCaseDocumentRows, type CaseDocumentRow } from "@/lib/caseDocuments";
 import { summarizeLetterEvents, describeLetterTracking, type LetterEvent } from "@/lib/letterTracking";
 import { COMPLETED_STATUSES } from "@/lib/caseStatus";
 
@@ -177,11 +177,7 @@ export default function ActiveCasePage() {
         analysisDate: selectedCase.bills?.uploaded_at ?? null,
         stored: stored ?? [],
       });
-      // This screen already has a dedicated Provider Response card with
-      // its own status and View Response action, so listing it again as a
-      // document row showed the same thing twice. Completed Case and My
-      // Document keep the row — they have no such card.
-      if (!cancelled) setDocRows(rows.filter((r) => r.label !== CASE_DOCUMENT_LABELS.provider_response));
+      if (!cancelled) setDocRows(rows);
     })();
     return () => {
       cancelled = true;
@@ -623,44 +619,6 @@ export default function ActiveCasePage() {
       </div>
 
       <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">
-              Provider Response
-            </p>
-            {view === "letter" && (
-              <p className="mt-1 text-sm text-gray-400">
-                Generate your letter to negotiate on the errors found
-              </p>
-            )}
-          </div>
-
-          {view === "pending" && (
-            <span className="text-sm font-medium text-accent-600">Still Pending</span>
-          )}
-          {view === "received" && (
-            <>
-              <span className="text-sm font-medium text-primary-600">Received</span>
-              <button
-                type="button"
-                onClick={() => setView("letter")}
-                className="rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-              >
-                View Response
-              </button>
-            </>
-          )}
-          {view === "letter" && (
-            <button
-              type="button"
-              onClick={() => setView("summary")}
-              className="rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-            >
-              Summarize Reply
-            </button>
-          )}
-        </div>
-
         {view === "pending" && (
           <button
             type="button"
@@ -671,10 +629,10 @@ export default function ActiveCasePage() {
           </button>
         )}
 
-        {view === "letter" && (
-          <div className="mt-4 rounded-xl border border-gray-100 p-6 text-sm leading-relaxed text-gray-700">
+        {(view === "letter" || view === "received") && (
+          <div className="rounded-xl border border-gray-100 p-6 text-sm leading-relaxed text-gray-700">
             <p className="whitespace-pre-line">{selectedCase?.appeal_letter_text ?? MOCK_APPEAL_LETTER}</p>
-            <div className="mt-8 flex justify-end">
+            <div className="mt-8 flex flex-wrap justify-end gap-3">
               <button
                 type="button"
                 disabled
@@ -682,6 +640,13 @@ export default function ActiveCasePage() {
                 className="cursor-not-allowed rounded-full border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-400"
               >
                 ⬇ Download as PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("summary")}
+                className="rounded-full bg-primary-600 px-6 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+              >
+                Summarize Reply
               </button>
             </div>
           </div>

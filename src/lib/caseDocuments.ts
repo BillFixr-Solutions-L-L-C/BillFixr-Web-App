@@ -21,13 +21,12 @@ export const CASE_DOCUMENT_LABELS: Record<CaseDocumentType, string> = {
   follow_up_letter: "Follow Up Letter",
 };
 
-// The order these actually happen in: we acknowledge, the provider
-// responds, we follow up if needed, and the corrected bill is the last
-// thing to arrive. New Bill used to sort first, which read as though it
-// turned up before the letters that produce it.
+// The order these actually happen in: the analysis produces the appeal
+// letter, the provider responds to it, we acknowledge and follow up if
+// needed, and the corrected bill is the last thing to arrive.
 const TYPE_ORDER: CaseDocumentType[] = [
-  "acknowledgement_letter",
   "provider_response",
+  "acknowledgement_letter",
   "follow_up_letter",
   "new_bill",
 ];
@@ -108,17 +107,6 @@ export async function buildCaseDocumentRows(
   }
 
   rows.push({
-    id: "appeal-letter",
-    label: "Appeal Letter",
-    status: "Sent",
-    date: source.letterSentAt,
-    sizeLabel: null,
-    previewUrl: null,
-    downloadUrl: null,
-    available: Boolean(source.appealLetterText),
-  });
-
-  rows.push({
     id: "analysis",
     label: "Analysis Generated",
     status: "Generated",
@@ -127,6 +115,17 @@ export async function buildCaseDocumentRows(
     previewUrl: null,
     downloadUrl: null,
     available: source.hasAnalysis,
+  });
+
+  rows.push({
+    id: "appeal-letter",
+    label: "Appeal Letter",
+    status: "Sent",
+    date: source.letterSentAt,
+    sizeLabel: null,
+    previewUrl: null,
+    downloadUrl: null,
+    available: Boolean(source.appealLetterText),
   });
 
   for (const type of TYPE_ORDER) {

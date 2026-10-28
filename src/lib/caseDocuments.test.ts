@@ -45,14 +45,14 @@ describe("formatFileSize", () => {
 describe("buildCaseDocumentRows", () => {
   it("lists every row from the design, in order", async () => {
     const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), BASE);
-    // Chronological: the corrected bill is the last thing to arrive, after
-    // the letters that produce it.
+    // Chronological: the analysis produces the letter, the provider
+    // responds to it, and the corrected bill arrives last.
     expect(rows.map((r) => r.label)).toEqual([
       "bill.pdf",
-      "Appeal Letter",
       "Analysis Generated",
-      "Acknowledgement Letter",
+      "Appeal Letter",
       "Provider Responses",
+      "Acknowledgement Letter",
       "Follow Up Letter",
       "New Bill",
     ]);
@@ -103,6 +103,7 @@ describe("buildCaseDocumentRows", () => {
 
   it("omits the bill row entirely when the case has no bill", async () => {
     const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), { ...BASE, bill: null });
-    expect(rows[0].label).toBe("Appeal Letter");
+    expect(rows.some((r) => r.label === "bill.pdf")).toBe(false);
+    expect(rows[0].label).toBe("Analysis Generated");
   });
 });
