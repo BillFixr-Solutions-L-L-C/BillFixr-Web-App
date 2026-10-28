@@ -31,7 +31,10 @@ export default function CaseDocumentList({ documents }: { documents: CaseDocumen
               </p>
             </div>
             <p className="w-32 shrink-0 text-sm text-gray-500">{formatDate(doc.date)}</p>
-            <div className="w-16 shrink-0 text-right">
+            {/* Only Completed Case renders this list, and a completed case
+                is paid for — so everything is downloadable here, unlike
+                Active Case, where the documents are view-only. */}
+            <div className="flex w-36 shrink-0 items-center justify-end gap-3">
               {doc.previewUrl ? (
                 <a
                   href={doc.previewUrl}
@@ -43,6 +46,16 @@ export default function CaseDocumentList({ documents }: { documents: CaseDocumen
                 </a>
               ) : (
                 <span className="text-sm text-gray-300">👁 View</span>
+              )}
+              {doc.downloadUrl ? (
+                <a
+                  href={doc.downloadUrl}
+                  className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                >
+                  ⬇ Download
+                </a>
+              ) : (
+                <span className="text-sm text-gray-300">⬇ Download</span>
               )}
             </div>
           </li>

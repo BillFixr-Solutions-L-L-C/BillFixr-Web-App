@@ -38,4 +38,17 @@ describe("CaseDocumentList", () => {
     expect(screen.getByText("Not available yet")).toBeInTheDocument();
     expect(screen.getByText("Follow Up Letter")).toBeInTheDocument();
   });
+
+  it("offers a download for every available document", () => {
+    // A completed case has been paid for, so the documents are no longer
+    // view-only the way they are on Active Case.
+    render(<CaseDocumentList documents={[AVAILABLE]} />);
+    const download = screen.getByRole("link", { name: /Download/ });
+    expect(download).toHaveAttribute("href", AVAILABLE.downloadUrl!);
+  });
+
+  it("shows download as inert for a document that does not exist yet", () => {
+    render(<CaseDocumentList documents={[PENDING]} />);
+    expect(screen.queryByRole("link", { name: /Download/ })).not.toBeInTheDocument();
+  });
 });

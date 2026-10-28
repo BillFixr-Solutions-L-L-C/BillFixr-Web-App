@@ -13,7 +13,9 @@ import { buildCaseDocumentRows, type CaseDocumentRow } from "@/lib/caseDocuments
 import { summarizeLetterEvents, describeLetterTracking, type LetterEvent } from "@/lib/letterTracking";
 import { COMPLETED_STATUSES } from "@/lib/caseStatus";
 
-type View = "list" | "pending" | "received" | "letter" | "summary" | "savings" | "payment" | "paid";
+// "letter"/"summary" are gone: the provider's reply is a row in the
+// document list now, and the route to payment is Check and Proceed.
+type View = "list" | "pending" | "received" | "savings" | "payment" | "paid";
 
 type CaseRow = {
   id: string;
@@ -32,20 +34,6 @@ type CaseRow = {
 // workstream populates them. These are the exact values shown until then.
 const MOCK_ERRORS_DETECTED = "2";
 const MOCK_SAVINGS_FOUND = "$2590";
-const MOCK_APPEAL_LETTER = `Dave J. Collins
-Crown Med Hospital Center
-July 14, 2026
-
-The Billing Manager,
-
-I am writing regarding the itemized bill from Crown Med Hospital Center dated July 14, 2026. Our review identified 2 billing discrepancies, including a mathematical error and an insurance coverage error, resulting in an overcharge of $5,590. We request a corrected statement reflecting an adjusted balance of $2,500.
-
-We look forward to your response.
-
-Yours faithfully,
-Dave J. Collins`;
-const MOCK_AI_SUMMARY =
-  "The provider has acknowledged the mathematical error and insurance coverage discrepancy identified in your bill. They have agreed to adjust the total charge from $5,590 to $2,500, reflecting a correction of the duplicate lab fee and the misclassified insurance rate.";
 
 function BackToCasesButton({ onClick }: { onClick: () => void }) {
   return (
@@ -404,37 +392,37 @@ export default function ActiveCasePage() {
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold uppercase tracking-wide text-primary-700">Adjusted Bill</p>
-              {adjustedBillDoc?.downloadUrl ? (
-                <a
-                  href={adjustedBillDoc.downloadUrl}
-                  className="rounded-full border border-primary-600 px-4 py-2 text-xs font-semibold text-primary-700"
-                >
-                  ⬇ Download as PDF
-                </a>
-              ) : (
-                <button
-                  type="button"
-                  disabled
-                  title="Available once your appeal negotiation produces an adjusted bill"
-                  className="cursor-not-allowed rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-400"
-                >
-                  ⬇ Download as PDF
-                </button>
-              )}
+              <button
+                type="button"
+                disabled
+                title="Available from Completed Case once payment is complete"
+                className="cursor-not-allowed rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-400"
+              >
+                ⬇ Download as PDF
+              </button>
             </div>
+            {/* Blurred until the fee is paid: the adjusted bill is the
+                thing being bought, so it is shown enough to see it exists
+                and not enough to use. The blur is on the preview itself,
+                and there is no download link beside it. */}
             <div className="relative mt-4 overflow-hidden">
-              {/* The provider's actual adjusted bill once it exists — the
-                  placeholder used to stand in for it even when a real one
-                  had been uploaded. */}
-              {adjustedBillDoc?.previewUrl ? (
-                <iframe
-                  src={adjustedBillDoc.previewUrl}
-                  title="Adjusted bill"
-                  className="h-[320px] w-full rounded-lg border border-gray-100"
-                />
-              ) : (
-                <BillPreview />
-              )}
+              <div className="blur-sm" aria-hidden="true">
+                {adjustedBillDoc?.previewUrl ? (
+                  <iframe
+                    src={adjustedBillDoc.previewUrl}
+                    title=""
+                    tabIndex={-1}
+                    className="pointer-events-none h-[320px] w-full rounded-lg border border-gray-100"
+                  />
+                ) : (
+                  <BillPreview />
+                )}
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <p className="rounded-full bg-white/90 px-4 py-2 text-xs font-semibold text-gray-600 shadow-sm">
+                  Unlocked once payment is complete
+                </p>
+              </div>
               <WatermarkOverlay />
             </div>
           </div>
@@ -581,7 +569,11 @@ export default function ActiveCasePage() {
                   >
                     👁 View
                   </a>
-                  {doc.downloadUrl && (
+                  {/* While a case is active everything is view-only — the
+                      documents become downloadable once it completes. The
+                      exception is the customer's own medical bill, which
+                      they uploaded and already hold a copy of. */}
+                  {doc.id === "original-bill" && doc.downloadUrl && (
                     <a href={doc.downloadUrl} className="text-sm font-medium text-primary-600">
                       ⬇ Download
                     </a>
@@ -618,87 +610,18 @@ export default function ActiveCasePage() {
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
-        {view === "pending" && (
-          <button
-            type="button"
-            onClick={handleSimulateProviderResponse}
-            className="mt-4 text-xs text-gray-300 hover:text-gray-400"
-          >
-            (dev) simulate provider response
-          </button>
-        )}
-
-        {(view === "letter" || view === "received") && (
-          <div className="rounded-xl border border-gray-100 p-6 text-sm leading-relaxed text-gray-700">
-            <p className="whitespace-pre-line">{selectedCase?.appeal_letter_text ?? MOCK_APPEAL_LETTER}</p>
-            <div className="mt-8 flex flex-wrap justify-end gap-3">
-              <button
-                type="button"
-                disabled
-                title="Available once your appeal letter is generated"
-                className="cursor-not-allowed rounded-full border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-400"
-              >
-                ⬇ Download as PDF
-              </button>
-              <button
-                type="button"
-                onClick={() => setView("summary")}
-                className="rounded-full bg-primary-600 px-6 py-2 text-sm font-semibold text-white hover:bg-primary-700"
-              >
-                Summarize Reply
-              </button>
-            </div>
-          </div>
-        )}
-
-        {view === "summary" && (
-          <>
-            <div className="mt-6">
-              <p className="text-sm font-semibold text-primary-700">AI Summary of Response</p>
-              <p className="mt-3 text-sm text-gray-500">
-                {selectedCase?.ai_summary_text ?? MOCK_AI_SUMMARY}
-              </p>
-            </div>
-
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex gap-4">
-                <div className="rounded-xl border border-gray-100 px-5 py-3">
-                  <p className="text-xs uppercase tracking-wide text-gray-400">Over Billed</p>
-                  <p className="mt-1 text-lg font-bold text-red-500">
-                    {selectedCase?.savings_found != null
-                      ? `$${Number(selectedCase.savings_found).toLocaleString()}`
-                      : "—"}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-gray-100 px-5 py-3">
-                  <p className="text-xs uppercase tracking-wide text-gray-400">
-                    Adjusted Charges
-                  </p>
-                  <p className="mt-1 text-lg font-bold text-primary-600">
-                    {selectedCase?.adjusted_total != null
-                      ? `$${Number(selectedCase.adjusted_total).toLocaleString()}`
-                      : "—"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="text-right">
-                <p className="text-xs text-gray-400">
-                  Please note {successFeeLabel}% of the adjusted bill will be charged for services
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setView("savings")}
-                  className="mt-2 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
-                >
-                  Pay with Card
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+      {/* The provider's reply is a row in the document list above, not a
+          panel repeated underneath it. The route out of this screen is
+          "Check and proceed" on the New Bill. */}
+      {view === "pending" && (
+        <button
+          type="button"
+          onClick={handleSimulateProviderResponse}
+          className="mt-6 text-xs text-gray-300 hover:text-gray-400"
+        >
+          (dev) simulate provider response
+        </button>
+      )}
 
       {/* Figma 817:4455 puts this directly under Provider Response once the
           provider's adjusted bill has arrived. "Check and proceed" is what

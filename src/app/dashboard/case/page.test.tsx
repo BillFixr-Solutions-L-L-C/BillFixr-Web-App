@@ -29,37 +29,55 @@ beforeEach(() => {
   mock.queueResult("app_settings", { data: { success_fee_percentage: 30 }, error: null });
 });
 
-// Every non-list view (received/letter/summary, savings, payment, paid)
-// shares the exact same BackToCasesButton component and backToList
-// handler, not bespoke per-view logic — these two states are enough to
-// prove the fix works generically for all of them.
+// Every non-list view (received, savings, payment, paid) shares the exact
+// same BackToCasesButton component and backToList handler, not bespoke
+// per-view logic — these two states are enough to prove the fix works
+// generically for all of them.
 describe("ActiveCasePage back navigation", () => {
   it("returns to the case list from a detail view", async () => {
     const user = userEvent.setup();
     render(<ActiveCasePage />);
 
     await user.click(await screen.findByText("bill.pdf"));
-    // The response now opens straight onto the letter — "View Response" is
-    // gone, since Provider Response lives in the document list.
-    await screen.findByRole("button", { name: "Summarize Reply" });
+    // The detail view: stats the list doesn't show.
+    await screen.findByText("Bill Analyzed");
 
     await user.click(screen.getByRole("button", { name: "← Back to cases" }));
 
     expect(await screen.findByText("bill.pdf")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Summarize Reply" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Bill Analyzed")).not.toBeInTheDocument();
   });
 
-  it("has a way back from the summary view, reached deeper in the flow", async () => {
+  it("has a way back from the comparison view, reached deeper in the flow", async () => {
     const user = userEvent.setup();
     render(<ActiveCasePage />);
 
+    // An adjusted bill has arrived, which is what puts "Check and
+    // Proceed" on screen — without it this never reaches the comparison
+    // view and the assertion below would pass for the wrong reason.
+    mock.queueResult("letter_events", { data: [], error: null });
+    mock.queueResult("case_documents", {
+      data: [
+        {
+          id: "doc-1",
+          type: "new_bill",
+          filename: "adjusted.pdf",
+          storage_url: "u/adjusted.pdf",
+          size_bytes: 1024,
+          received_on: null,
+          created_at: "2026-02-01T00:00:00Z",
+        },
+      ],
+      error: null,
+    });
+
     await user.click(await screen.findByText("bill.pdf"));
-    await user.click(await screen.findByRole("button", { name: "Summarize Reply" }));
-    await screen.findByRole("button", { name: "Pay with Card" });
+    await user.click(await screen.findByRole("button", { name: "Check and Proceed" }));
+    await screen.findByText("Over Billed");
 
     await user.click(screen.getByRole("button", { name: "← Back to cases" }));
 
     expect(await screen.findByText("bill.pdf")).toBeInTheDocument();
-    expect(screen.queryByText("AI Summary of Response")).not.toBeInTheDocument();
+    expect(screen.queryByText("Over Billed")).not.toBeInTheDocument();
   });
 });
