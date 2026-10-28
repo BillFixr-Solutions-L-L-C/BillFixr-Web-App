@@ -543,12 +543,17 @@ export default function ActiveCasePage() {
                   </p>
                   {doc.id === "appeal-letter" && letterTracking.sent && (
                     <p
+                      // Amber was for "delivered, not opened yet", which
+                      // read as something needing attention. Delivery is
+                      // just a fact, and since opens stay off it would sit
+                      // amber for ever — so only a real failure is coloured
+                      // as one, and an open as good news.
                       className={`text-xs ${
                         letterTracking.bounced
                           ? "text-danger"
                           : letterTracking.opened
                             ? "text-primary-600"
-                            : "text-accent-600"
+                            : "text-gray-500"
                       }`}
                     >
                       {describeLetterTracking(letterTracking)}
