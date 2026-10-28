@@ -203,19 +203,28 @@ describe("POST /api/payments/create-intent", () => {
       expect(insertCall).toHaveBeenCalledWith(expect.objectContaining({ status: "paid", processor_ref: null, amount: 0 }));
     });
 
-    it("defaults to 30% when app_settings has no row somehow", async () => {
+    it("charges nothing when the configured percentage can't be read", async () => {
+      // It used to fall back to 30% here. With the account configured at
+      // 20 that is half again over the published price, applied silently
+      // to a real card. Charging nothing is recoverable; overcharging is
+      // not.
       serverMock.queueResult("cases", { data: { id: "case-1", user_id: USER.id, errors_detected: 2, savings_found: 100 }, error: null });
       adminMock.queueResult("app_settings", { data: null, error: null });
-      adminMock.queueResult("payment_records", { data: null, error: null }); // no commitment fee paid
-      adminMock.queueResult("payment_records", { data: null, error: null }); // existing: none
-      paymentIntentsCreate.mockResolvedValue({ id: "pi_default", client_secret: "secret_default" });
-      adminMock.queueResult("payment_records", { data: null, error: null });
 
       const res = await POST(makeRequest({ type: "success_fee", caseId: "case-1" }));
-      const body = await res.json();
 
-      // 100 * 30% = 30, no commitment fee paid to net off
-      expect(body.amount).toBe(30);
+      expect(res.status).toBe(503);
+      expect(paymentIntentsCreate).not.toHaveBeenCalled();
+    });
+
+    it("charges nothing when the configured percentage is nonsense", async () => {
+      serverMock.queueResult("cases", { data: { id: "case-1", user_id: USER.id, errors_detected: 2, savings_found: 100 }, error: null });
+      adminMock.queueResult("app_settings", { data: { success_fee_percentage: null }, error: null });
+
+      const res = await POST(makeRequest({ type: "success_fee", caseId: "case-1" }));
+
+      expect(res.status).toBe(503);
+      expect(paymentIntentsCreate).not.toHaveBeenCalled();
     });
   });
 });

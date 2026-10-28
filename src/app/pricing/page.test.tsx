@@ -55,10 +55,17 @@ describe("Pricing page", () => {
     expect(screen.getByText(/No reduction means no\s+success fee/)).toBeInTheDocument();
   });
 
-  it("falls back to the same default as checkout when the setting is missing", async () => {
-    await renderAt(null);
-    // create-intent falls back to 30, so the page must not claim something
-    // cheaper than the customer would be charged.
-    expect(screen.getByText("30%")).toBeInTheDocument();
+  it("refuses to publish a price it cannot read", async () => {
+    // It used to fall back to 30%, which is how it once advertised 30
+    // while the account was configured otherwise — silently, because a
+    // plausible number looks exactly like a correct one. Failing is
+    // visible and gets fixed; a wrong published price does not.
+    serverMock.queueResult("app_settings", { data: null, error: null });
+    await expect(PricingPage()).rejects.toThrow(/success_fee_percentage/);
+  });
+
+  it("refuses a nonsensical configured percentage", async () => {
+    serverMock.queueResult("app_settings", { data: { success_fee_percentage: 0 }, error: null });
+    await expect(PricingPage()).rejects.toThrow(/success_fee_percentage/);
   });
 });

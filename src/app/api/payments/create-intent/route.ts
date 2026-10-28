@@ -121,8 +121,20 @@ async function handleSuccessFee(supabase: SupabaseClient, userId: string, caseId
 
   const admin = createAdminClient();
 
+  // No fallback percentage, deliberately. This used to be `?? 30` while
+  // the account was configured for 20, so a settings read that came back
+  // empty would have charged half again over the published price without
+  // anything looking wrong. A price is not something to guess at: if the
+  // configured fee can't be read, charge nothing and say so.
   const { data: settings } = await admin.from("app_settings").select("success_fee_percentage").eq("id", 1).single();
-  const percentage = settings?.success_fee_percentage ?? 30;
+  const percentage = Number(settings?.success_fee_percentage);
+  if (!Number.isFinite(percentage) || percentage <= 0) {
+    console.error("Refusing to charge a success fee: success_fee_percentage is unreadable", settings);
+    return NextResponse.json(
+      { error: "We can't calculate your fee right now. Please try again shortly." },
+      { status: 503 },
+    );
+  }
 
   const { data: commitmentPaid } = await admin
     .from("payment_records")

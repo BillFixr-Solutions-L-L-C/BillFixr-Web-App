@@ -18,6 +18,14 @@ export const metadata: Metadata = {
   description: "What BillFixr costs: a $5 commitment fee credited against a success fee charged only on what we save you.",
 };
 
+// Rendered per request, not prerendered. Nothing here reads a dynamic
+// API, so Next was statically baking the page at build time — which made
+// the claim below false: an admin changing the fee in /admin/payments
+// changed what checkout charged while this page kept advertising the
+// percentage from whenever it was last deployed. A published price has to
+// be read at the moment it is published.
+export const dynamic = "force-dynamic";
+
 // No Figma frame exists for this page — the file has no pricing screen —
 // so it is built from the landing page's existing tokens and components
 // rather than invented layout.
@@ -40,7 +48,15 @@ export default async function PricingPage() {
     .eq("id", 1)
     .single();
 
-  const percentage = Number(settings?.success_fee_percentage ?? 30);
+  // No `?? 30` fallback: a published price that quietly differs from what
+  // checkout charges is worse than a page that fails. This page already
+  // advertised the 30% fallback once while the account was configured
+  // otherwise — that was the RLS bug the service-role read above fixed,
+  // but the fallback that made it silent was still here.
+  const percentage = Number(settings?.success_fee_percentage);
+  if (!Number.isFinite(percentage) || percentage <= 0) {
+    throw new Error("Cannot render pricing: success_fee_percentage is unreadable");
+  }
   const commitmentFee = COMMITMENT_FEE_CENTS / 100;
 
   return (
