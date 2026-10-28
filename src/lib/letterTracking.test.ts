@@ -26,7 +26,15 @@ describe("summarizeLetterEvents", () => {
     const t = summarizeLetterEvents([{ type: "email.delivered", occurred_at: SENT_AT }], SENT_AT);
     expect(t.delivered).toBe(true);
     expect(t.opened).toBe(false);
-    expect(describeLetterTracking(t)).toBe("Delivered, not opened yet");
+    expect(describeLetterTracking(t)).toBe("Delivered");
+  });
+
+  it("does not claim the letter is unopened when no open was recorded", () => {
+    // No open event means we did not observe one, not that nobody read
+    // it: a blocked tracking pixel looks exactly the same. The copy must
+    // not turn that silence into a claim.
+    const t = summarizeLetterEvents([{ type: "email.delivered", occurred_at: SENT_AT }], SENT_AT);
+    expect(describeLetterTracking(t)).not.toMatch(/not opened|unopened/i);
   });
 
   it("reports a bounce ahead of anything else", () => {
