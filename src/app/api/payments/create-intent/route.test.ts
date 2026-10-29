@@ -82,7 +82,7 @@ describe("POST /api/payments/create-intent", () => {
       const body = await res.json();
 
       expect(res.status).toBe(409);
-      expect(body.missing).toEqual(["Billing Manager Email"]);
+      expect(body.missing).toEqual(["Billing Department Email"]);
       expect(paymentIntentsCreate).not.toHaveBeenCalled();
     });
 
