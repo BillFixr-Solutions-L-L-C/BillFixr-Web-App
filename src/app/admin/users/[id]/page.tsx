@@ -2,10 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import AccountActions from "@/components/admin/AccountActions";
 import PromoteToAdmin from "@/components/admin/PromoteToAdmin";
-import BillDocumentCard from "@/components/admin/BillDocumentCard";
-import PendingDocumentCard from "@/components/admin/PendingDocumentCard";
 import { createClient } from "@/lib/supabase/server";
-import { getBillDocuments } from "@/lib/billDocuments";
 import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
 
@@ -36,7 +33,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, name, email, status, created_at, avatar_url")
+    .select("id, name, email, status, created_at, avatar_url, address, city, postal_code, country")
     .eq("id", id)
     .eq("role", "customer")
     .single();
@@ -45,13 +42,13 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     notFound();
   }
 
-  const { data: billRows } = await supabase
+  // A count, not the documents themselves: this screen is the customer
+  // record. Their bills and letters belong to a case, and /admin/cases/[id]
+  // already shows the real ones.
+  const { count: billsCount } = await supabase
     .from("bills")
-    .select("id, filename, storage_url, status, uploaded_at")
-    .eq("user_id", id)
-    .order("uploaded_at", { ascending: false });
-  const bills = await getBillDocuments(supabase, billRows ?? []);
-  const billsCount = bills.length;
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", id);
 
   const { count: casesCount } = await supabase
     .from("cases")
@@ -59,8 +56,14 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     .eq("user_id", id);
 
   const { data: canDelete } = await supabase.rpc("can_delete_accounts");
-  const { data: canDeleteBills } = await supabase.rpc("can_delete_bills");
   const { data: roles } = await supabase.from("roles").select("id, name").order("name");
+
+  // Figma shows a single Address line. The profile stores it in four
+  // columns, so they are joined here rather than shown as four fields the
+  // design doesn't have.
+  const address = [profile.address, profile.city, profile.postal_code, profile.country]
+    .filter((part) => part?.trim())
+    .join(", ");
 
   return (
     <div>
@@ -98,28 +101,17 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
         </div>
       </div>
 
+      {/* Figma 228:1795 lays this out as plain customer details and
+          nothing else — no documents. A bill and its letters belong to a
+          case, not to the person, and /admin/cases/[id] shows the real
+          ones with the panel that can actually manage them. The two cards
+          that used to sit here were permanent placeholders: they read
+          "Not generated yet" whether or not a letter existed. */}
       <div className="mt-8 grid gap-5 sm:grid-cols-3">
         <Field label="Full name" value={profile.name} />
         <Field label="Email" value={profile.email} />
+        <Field label="Address" value={address} />
         <Field label="Status" value={profile.status === "active" ? "Active" : "Suspended"} />
-      </div>
-
-      <div className="mt-8">
-        <h2 className="mb-3 text-sm font-semibold text-gray-700">Documents</h2>
-        {bills.length === 0 ? (
-          <p className="text-sm text-gray-400">No bills uploaded yet.</p>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {bills.map((bill, i) => (
-              <BillDocumentCard key={bill.id} doc={bill} label={`Bill ${i + 1}`} canDelete={Boolean(canDeleteBills)} />
-            ))}
-          </div>
-        )}
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <PendingDocumentCard label="AI Generated Letter" />
-          <PendingDocumentCard label="Provider Letter" />
-        </div>
       </div>
 
       <div className="mt-8 flex flex-wrap items-start gap-4">
