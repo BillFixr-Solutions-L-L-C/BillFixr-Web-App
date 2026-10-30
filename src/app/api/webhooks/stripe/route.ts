@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { confirmCompletionPayment } from "@/lib/automation-engine";
+import { isBackendConfigured } from "@/lib/aiStack";
 
 // Source of truth for payment confirmation — never the client. Verifies
 // Stripe's signature against the RAW request body (stripe.webhooks.
@@ -157,15 +158,39 @@ async function handleSucceeded(admin: ReturnType<typeof createAdminClient>, inte
     // running has to be told the client paid — otherwise they have paid
     // and the bill they paid for stays locked, with nothing else in the
     // system that would ever unlock it.
-    //
-    // Thrown, not logged: this is the last step of a paid event, so it
-    // belongs in Stripe's retry window like the rest. Repeating it is
-    // safe — the engine already treats a second confirmation of the same
-    // negotiation as a no-op.
     if (completedCase?.negotiation_id) {
-      await confirmCompletionPayment(completedCase.negotiation_id, intent.id);
+      await unlockRevisedBill(completedCase.negotiation_id, record.case_id, intent.id);
     }
   }
+}
+
+// Asks the seam first, like every other caller of either Python service,
+// and keeps the two failure modes apart the way they do: "not configured"
+// and "configured but not answering" are different problems.
+//
+// Retrying is the right answer to exactly one of them. A missing base URL
+// is not fixed by Stripe sending the event again, so that one is logged
+// loudly and the event is accepted — the client's payment is recorded
+// either way, and the unlock is a one-line operator fix afterwards. An
+// engine that is deployed but refusing gets thrown, so the event stays in
+// Stripe's retry window. Repeating it is safe: the engine treats a second
+// confirmation of the same negotiation as a no-op.
+async function unlockRevisedBill(negotiationId: string, caseId: string, paymentIntentId: string) {
+  if (!isBackendConfigured("automation-engine")) {
+    console.error(
+      "Case",
+      caseId,
+      "has negotiation",
+      negotiationId,
+      "but AUTOMATION_ENGINE_BASE_URL is unset — its revised bill stays locked until the engine is configured and",
+      `POST /api/negotiations/${negotiationId}/pay/completion`,
+      "is replayed for payment",
+      paymentIntentId,
+    );
+    return;
+  }
+
+  await confirmCompletionPayment(negotiationId, paymentIntentId);
 }
 
 async function handleFailed(admin: ReturnType<typeof createAdminClient>, intent: Stripe.PaymentIntent) {

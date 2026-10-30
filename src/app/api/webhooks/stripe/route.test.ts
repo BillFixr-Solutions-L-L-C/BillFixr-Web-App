@@ -4,6 +4,7 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 const adminMock = createSupabaseMock();
 const constructEvent = vi.fn();
 const confirmCompletionPayment = vi.fn();
+const isBackendConfigured = vi.fn();
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(() => adminMock.client),
@@ -13,6 +14,9 @@ vi.mock("@/lib/stripe", () => ({
 }));
 vi.mock("@/lib/automation-engine", () => ({
   confirmCompletionPayment: (...args: unknown[]) => confirmCompletionPayment(...args),
+}));
+vi.mock("@/lib/aiStack", () => ({
+  isBackendConfigured: (...args: unknown[]) => isBackendConfigured(...args),
 }));
 
 const { POST } = await import("./route");
@@ -40,6 +44,7 @@ function queueDedupeOk() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  isBackendConfigured.mockReturnValue(true);
 });
 
 describe("POST /api/webhooks/stripe", () => {
@@ -191,6 +196,29 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(await res.json()).toEqual({ ok: true });
     expect(confirmCompletionPayment).not.toHaveBeenCalled();
+  });
+
+  it("accepts the payment but shouts when the engine is not configured at all", async () => {
+    // Stripe resending the event cannot conjure a base URL, so retrying
+    // forever is the wrong answer — unlike an engine that is deployed and
+    // merely refusing. The log has to carry everything needed to replay
+    // the unlock by hand.
+    queueDedupeOk();
+    constructEvent.mockReturnValue(makeEvent("payment_intent.succeeded", { id: "pi_2" }));
+    adminMock.queueResult("payment_records", { data: { id: "rec-2", type: "success_fee", case_id: "case-1", status: "pending" }, error: null });
+    adminMock.queueResult("payment_records", { data: null, error: null });
+    adminMock.queueResult("cases", { data: { negotiation_id: "neg-1" }, error: null });
+    isBackendConfigured.mockReturnValue(false);
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await POST(makeRequest("{}"));
+
+    expect(res.status).toBe(200);
+    expect(confirmCompletionPayment).not.toHaveBeenCalled();
+    const line = logged.mock.calls[0].join(" ");
+    expect(line).toContain("neg-1");
+    expect(line).toContain("case-1");
+    expect(line).toContain("pi_2");
   });
 
   it("asks Stripe to retry when the engine will not confirm the payment", async () => {
