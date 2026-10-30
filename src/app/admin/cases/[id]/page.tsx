@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getBillDocuments } from "@/lib/billDocuments";
-import { MOCK_ADMIN_CASE_ANALYSIS, type AdminCaseAnalysis } from "@/lib/adminCaseAnalysis";
+import { type AdminCaseAnalysis } from "@/lib/adminCaseAnalysis";
+import { buildNegotiationTimeline, describeNextStep } from "@/lib/negotiationTimeline";
+import type { LetterEvent } from "@/lib/letterTracking";
 import { isCaseCompleted } from "@/lib/caseStatus";
 import BillDocumentCard from "@/components/admin/BillDocumentCard";
 import ManualOverridePanel from "@/components/admin/ManualOverridePanel";
@@ -28,7 +30,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const { data: caseRow } = await supabase
     .from("cases")
     .select(
-      "id, status, admin_analysis, manual_notes, override_reason, approval_chain, manual_review_status, profiles!cases_user_id_fkey(name), bills(id, filename, storage_url, status, uploaded_at)",
+      "id, status, created_at, letter_sent_at, admin_analysis, manual_notes, override_reason, approval_chain, manual_review_status, profiles!cases_user_id_fkey(name), bills(id, filename, storage_url, status, uploaded_at)",
     )
     .eq("id", id)
     .single();
@@ -39,15 +41,36 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
   const profile = Array.isArray(caseRow.profiles) ? caseRow.profiles[0] : caseRow.profiles;
   const bill = Array.isArray(caseRow.bills) ? caseRow.bills[0] : caseRow.bills;
-  const analysis = (caseRow.admin_analysis as AdminCaseAnalysis | null) ?? MOCK_ADMIN_CASE_ANALYSIS;
+  // No mock fallback. This used to fall back to MOCK_ADMIN_CASE_ANALYSIS,
+  // which meant every case — and admin_analysis is null on all of them
+  // until the AI workstream lands — displayed the same invented OCR
+  // values, risk percentages and reply drafts against a real customer's
+  // real bill, indistinguishable from findings. An empty panel is useful;
+  // a fabricated one an admin might act on is not.
+  const analysis = caseRow.admin_analysis as AdminCaseAnalysis | null;
   const [billDoc] = bill ? await getBillDocuments(supabase, [bill]) : [null];
   const delivered = isCaseCompleted(caseRow.status);
 
   const { data: caseDocuments } = await supabase
     .from("case_documents")
-    .select("id, type, filename, created_at")
+    .select("id, type, filename, created_at, received_on")
     .eq("case_id", id)
     .order("created_at", { ascending: true });
+
+  const { data: letterEvents } = await supabase
+    .from("letter_events")
+    .select("type, occurred_at")
+    .eq("case_id", id);
+
+  // The one panel that can be told truthfully today: these are events
+  // that actually happened, not analysis waiting on the AI service.
+  const timeline = buildNegotiationTimeline({
+    caseCreatedAt: caseRow.created_at,
+    letterSentAt: caseRow.letter_sent_at,
+    letterEvents: (letterEvents ?? []) as LetterEvent[],
+    documents: caseDocuments ?? [],
+  });
+  const nextStep = describeNextStep({ letterSentAt: caseRow.letter_sent_at, entries: timeline });
 
   return (
     <div>
@@ -96,46 +119,73 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             <div className="flex flex-col gap-6">
               <div className="rounded-2xl bg-white p-5 shadow-sm">
                 <h3 className="mb-3 text-sm font-semibold text-gray-900">OCR Data Extraction</h3>
-                <div className="space-y-1 rounded-lg bg-gray-50 p-3 text-sm">
-                  {analysis.ocrDataExtraction.map((f) => (
-                    <div key={f.label} className="flex justify-between">
-                      <span className="text-gray-500">{f.label}</span>
-                      <span className="text-gray-800">{f.value}</span>
-                    </div>
-                  ))}
-                </div>
+                {analysis?.ocrDataExtraction?.length ? (
+                  <div className="space-y-1 rounded-lg bg-gray-50 p-3 text-sm">
+                    {analysis.ocrDataExtraction.map((f) => (
+                      <div key={f.label} className="flex justify-between">
+                        <span className="text-gray-500">{f.label}</span>
+                        <span className="text-gray-800">{f.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-400">
+                    Nothing extracted yet — the bill has not been through OCR.
+                  </p>
+                )}
               </div>
 
               <div className="rounded-2xl bg-white p-5 shadow-sm">
                 <h3 className="mb-3 text-sm font-semibold text-gray-900">AI Analysis &amp; Risk Assessment</h3>
-                <div className="space-y-2 text-sm">
-                  {analysis.riskAssessment.map((r, i) => (
-                    <div key={i} className="flex justify-between">
-                      <span className={`font-semibold ${RISK_COLOR[r.level] ?? "text-gray-600"}`}>{r.level}</span>
-                      <span className="text-gray-500">{r.label}</span>
-                      <span className="text-gray-800">{r.value}</span>
-                    </div>
-                  ))}
-                </div>
+                {analysis?.riskAssessment?.length ? (
+                  <div className="space-y-2 text-sm">
+                    {analysis.riskAssessment.map((r, i) => (
+                      <div key={i} className="flex justify-between">
+                        <span className={`font-semibold ${RISK_COLOR[r.level] ?? "text-gray-600"}`}>{r.level}</span>
+                        <span className="text-gray-500">{r.label}</span>
+                        <span className="text-gray-800">{r.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">
+                    No analysis yet. Risk levels appear once the bill has been scanned.
+                  </p>
+                )}
               </div>
 
               <div className="rounded-2xl bg-white p-5 shadow-sm">
                 <h3 className="mb-3 text-sm font-semibold text-gray-900">Negotiation &amp; Communication</h3>
-                <div className="relative pl-6">
-                  <div className="absolute bottom-2 left-[7px] top-2 w-px bg-gray-100" />
-                  <div className="space-y-4">
-                    {analysis.negotiationTimeline.map((t, i) => (
-                      <div key={i} className="relative flex items-start justify-between gap-2">
-                        <span className="absolute -left-6 top-1 h-3 w-3 rounded-full border-2 border-white bg-primary-500 shadow" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">{t.title}</p>
-                          {t.subtitle && <p className="text-xs text-gray-400">{t.subtitle}</p>}
+                {timeline.length === 0 ? (
+                  <p className="text-sm text-gray-400">Nothing has happened on this case yet.</p>
+                ) : (
+                  <div className="relative pl-6">
+                    <div className="absolute bottom-2 left-[7px] top-2 w-px bg-gray-100" />
+                    <div className="space-y-4">
+                      {timeline.map((t, i) => (
+                        <div key={i} className="relative flex items-start justify-between gap-2">
+                          <span
+                            className={`absolute -left-6 top-1 h-3 w-3 rounded-full border-2 border-white shadow ${
+                              t.tone === "failed" ? "bg-danger" : t.tone === "waiting" ? "bg-accent-500" : "bg-primary-500"
+                            }`}
+                          />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{t.title}</p>
+                            {t.subtitle && <p className="text-xs text-gray-400">{t.subtitle}</p>}
+                          </div>
+                          <span className="shrink-0 text-xs text-gray-400">
+                            {new Date(t.date).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </span>
                         </div>
-                        <span className="shrink-0 text-xs text-gray-400">{t.date}</span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+                {nextStep && <p className="mt-4 border-t border-gray-50 pt-3 text-xs text-gray-500">{nextStep}</p>}
               </div>
             </div>
           </div>
@@ -155,8 +205,11 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold text-gray-900">Reply Drafts</h2>
+            {!analysis?.replyDrafts?.length && (
+              <p className="text-xs text-gray-400">No drafts yet — these are written by the AI service.</p>
+            )}
             <div className="space-y-3">
-              {analysis.replyDrafts.map((d, i) => (
+              {(analysis?.replyDrafts ?? []).map((d, i) => (
                 <div key={i} className="flex items-center justify-between gap-3 border-t border-gray-50 pt-3 first:border-0 first:pt-0">
                   <p className="text-xs text-gray-500">{d}</p>
                   <button
