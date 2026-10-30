@@ -1,0 +1,75 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 1963 >>
+stream
+BT /F2 16 Tf 50 735 Td (Riverside Community Health Center) Tj ET
+BT /F1 9 Tf 50 718 Td (Patient Financial Services) Tj ET
+BT /F2 13 Tf 380 735 Td (REVISED ITEMIZED STATEMENT) Tj ET
+1.2 w 50 705 m 562 705 l S
+BT /F1 10 Tf 50 685 Td (Account #: DEMO-000123) Tj ET
+BT /F1 10 Tf 50 670 Td (Case reference: BFX-XXXXX-XXXXXX) Tj ET
+BT /F1 10 Tf 50 655 Td (Statement date: October 23, 2026) Tj ET
+BT /F1 10 Tf 330 685 Td (Reason: Revised after settlement agreement) Tj ET
+BT /F2 10 Tf 50 615 Td (Service) Tj ET
+BT /F2 10 Tf 160 615 Td (Description) Tj ET
+BT /F2 10 Tf 400 615 Td (CPT) Tj ET
+BT /F2 10 Tf 500 615 Td (Charge) Tj ET
+0.6 w 50 609 m 562 609 l S
+BT /F1 10 Tf 50 591 Td (Emergency visit) Tj ET
+BT /F1 10 Tf 160 591 Td (Emergency department, level 3) Tj ET
+BT /F1 10 Tf 400 591 Td (99283) Tj ET
+BT /F1 10 Tf 500 591 Td ($650.00) Tj ET
+BT /F1 10 Tf 50 571 Td (Lab) Tj ET
+BT /F1 10 Tf 160 571 Td (Complete blood count) Tj ET
+BT /F1 10 Tf 400 571 Td (85025) Tj ET
+BT /F1 10 Tf 500 571 Td ($95.00) Tj ET
+BT /F1 10 Tf 50 551 Td (Radiology) Tj ET
+BT /F1 10 Tf 160 551 Td (Ankle X-ray, 3 views) Tj ET
+BT /F1 10 Tf 400 551 Td (73610) Tj ET
+BT /F1 10 Tf 500 551 Td ($420.13) Tj ET
+BT /F1 10 Tf 50 531 Td (Facility) Tj ET
+BT /F1 10 Tf 160 531 Td (Facility operating fee) Tj ET
+BT /F1 10 Tf 400 531 Td (-) Tj ET
+BT /F1 10 Tf 500 531 Td ($835.37) Tj ET
+0.6 w 50 519 m 562 519 l S
+BT /F1 10 Tf 280 495 Td (Total charges) Tj ET
+BT /F1 10 Tf 500 495 Td ($2,000.50) Tj ET
+BT /F1 10 Tf 280 475 Td (Settlement adjustment) Tj ET
+BT /F1 10 Tf 500 475 Td (-$1,850.51) Tj ET
+BT /F2 10 Tf 280 455 Td (Settled amount) Tj ET
+BT /F2 10 Tf 500 455 Td ($149.99) Tj ET
+BT /F2 10 Tf 280 435 Td (Remaining balance after settlement) Tj ET
+BT /F2 10 Tf 500 435 Td ($0.00) Tj ET
+BT /F1 9 Tf 50 401 Td (This statement reflects the agreed settlement of $149.99 in full satisfaction of the account.) Tj ET
+BT /F1 9 Tf 50 387 Td (No further balance is due once the settled amount is received.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000002266 00000 n 
+0000002336 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+2411
+%%EOF

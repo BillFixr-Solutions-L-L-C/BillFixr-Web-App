@@ -1,0 +1,371 @@
+{
+  "_note": "Hospital billing contacts, each traced to the hospital's own pages. A field is null when the hospital does not publish it. Nothing here is guessed. Hospitals rarely publish a billing email, so most entries have a phone number and a billing page only. Re-check an entry before relying on it: hospitals change these. verification_status is 'verified' when the official page lists the contact and 'listed' when it comes from a brochure or secondary source.",
+  "checked_on": "2026-10-24",
+  "providers": [
+    {
+      "name": "Cedars-Sinai Medical Center",
+      "keywords": [
+        "cedars-sinai",
+        "cedars sinai"
+      ],
+      "states": [
+        "CA",
+        "California"
+      ],
+      "billing_email": "patient.billing@cshs.org",
+      "support_email": "patientadvocacy@cshs.org",
+      "phone": "866-803-1777",
+      "billing_url": "https://www.cedars-sinai.org/billing-insurance/billing.html",
+      "verification_status": "listed",
+      "sources": [
+        "https://www.cedars-sinai.org/billing-insurance/billing.html",
+        "https://www-preview.cedars-sinai.org/content/dam/cedars-sinai/billing-insurance/biling/documents/understanding_your_medical_bill-618.pdf",
+        "https://cedars-sinai.org/patients-visitors/resources/patient-rights/patient-advocacy.html"
+      ],
+      "notes": "The billing email is in a Cedars-Sinai billing brochure and a third-party listing, not on the main billing page, so confirm it before relying on it. The phone is on the official billing page. Patient Financial Services also lists 323-866-8600. The advocacy address handles billing complaints and concerns."
+    },
+    {
+      "name": "Mass General Brigham",
+      "keywords": [
+        "mass general brigham",
+        "massachusetts general hospital",
+        "brigham and women",
+        "mass general"
+      ],
+      "states": [
+        "MA",
+        "Massachusetts"
+      ],
+      "billing_email": "patientbilling@partners.org",
+      "support_email": null,
+      "phone": "617-726-3884",
+      "billing_url": "https://www.massgeneralbrigham.org/en/patients-visitors/billing-insurance/billing",
+      "verification_status": "verified",
+      "sources": [
+        "https://www.massgeneralbrigham.org/en/patients-visitors/billing-insurance/billing",
+        "https://www.massgeneralbrigham.org/en/patients-visitors/billing-insurance/billing/contacts"
+      ],
+      "notes": "The email is for general questions only, with a reply in about three business days. For disputes and settlement offers, Mass General Brigham asks for mail to Patient Billing Solutions, 399 Revolution Drive, Suite 410, Somerville, MA 02145-1462, or a phone call."
+    },
+    {
+      "name": "Logan Health (formerly North Valley Hospital, Whitefish)",
+      "keywords": [
+        "logan health",
+        "north valley hospital"
+      ],
+      "states": [
+        "MT",
+        "Montana"
+      ],
+      "billing_email": "patientaccounting@logan.org",
+      "support_email": null,
+      "phone": "406-751-6445",
+      "billing_url": "https://www.logan.org/pay-bill/talk-to-our-team-about-a-bill/",
+      "verification_status": "verified",
+      "sources": [
+        "https://www.logan.org/pay-bill/talk-to-our-team-about-a-bill/"
+      ],
+      "notes": "North Valley Hospital became Logan Health - Whitefish in 2021 and uses Logan Health's Patient Accounting office in Kalispell. Shelby uses a different billing line, 406-434-3205."
+    },
+    {
+      "name": "Sutter Health",
+      "keywords": [
+        "sutter health",
+        "sutter"
+      ],
+      "states": [
+        "CA",
+        "California"
+      ],
+      "billing_email": null,
+      "support_email": "patientresourcectr@sutterhealth.org",
+      "phone": "800-478-8837",
+      "billing_url": "https://sutterhealth.org/myhealthonline/billing-and-insurance-questions",
+      "verification_status": "verified",
+      "sources": [
+        "https://sutterhealth.org/myhealthonline/billing-and-insurance-questions",
+        "https://sutterhealth.org/smf-for-patients"
+      ],
+      "notes": "Sutter publishes no general billing email. The phone is the general billing line, (800) 4Sutter, weekdays 7 am to 7 pm PT. Billing questions go to the Sutter affiliate that treated the patient or the number on the statement. The email is the Patient Resource Center for patient questions and concerns, (800) 866-7724. It is not billing-specific."
+    },
+    {
+      "name": "UCLA Health",
+      "keywords": [
+        "ucla health",
+        "ronald reagan ucla",
+        "ucla medical center",
+        "ucla mattel",
+        "ucla santa monica",
+        "ucla west valley"
+      ],
+      "states": [
+        "CA",
+        "California"
+      ],
+      "billing_email": null,
+      "support_email": null,
+      "phone": "310-301-8860",
+      "billing_url": "https://www.uclahealth.org/patient-resources/billing-insurance",
+      "verification_status": "verified",
+      "sources": [
+        "https://www.uclahealth.org/patient-resources/billing-insurance"
+      ],
+      "notes": "No billing email is published. The phone is Ronald Reagan UCLA Medical Center billing. UCLA Mattel Children's Hospital is 310-825-8021, UCLA Santa Monica is 310-825-8325, and UCLA West Valley is 855-337-9915. Hospitals and physicians in California often bill separately."
+    },
+    {
+      "name": "Mayo Clinic",
+      "keywords": [
+        "mayo clinic"
+      ],
+      "states": [
+        "MN",
+        "Minnesota",
+        "AZ",
+        "Arizona",
+        "FL",
+        "Florida"
+      ],
+      "billing_email": null,
+      "support_email": null,
+      "phone": "844-217-9591",
+      "billing_url": "https://www.mayoclinic.org/patient-visitor-guide/billing-insurance/contact-us",
+      "verification_status": "verified",
+      "sources": [
+        "https://www.mayoclinic.org/patient-visitor-guide/billing-insurance/contact-us"
+      ],
+      "notes": "No billing email is published. Mayo asks patients to send a secure message through their patient online services account. Patient Account Services, weekdays."
+    },
+    {
+      "name": "Cleveland Clinic",
+      "keywords": [
+        "cleveland clinic"
+      ],
+      "states": [
+        "OH",
+        "Ohio",
+        "FL",
+        "Florida",
+        "NV",
+        "Nevada"
+      ],
+      "billing_email": null,
+      "support_email": null,
+      "phone": "866-621-6385",
+      "billing_url": "https://my.clevelandclinic.org/patients/billing-finance/faq",
+      "verification_status": "verified",
+      "sources": [
+        "https://my.clevelandclinic.org/patients/billing-finance/faq"
+      ],
+      "notes": "No billing email is published. The local number is 216-445-6249. Weekdays 8 am to 5 pm ET."
+    },
+    {
+      "name": "NYU Langone Health",
+      "keywords": [
+        "nyu langone"
+      ],
+      "states": [
+        "NY",
+        "New York",
+        "FL",
+        "Florida",
+        "NV",
+        "Nevada"
+      ],
+      "billing_email": null,
+      "support_email": null,
+      "phone": "800-237-6977",
+      "billing_url": "https://nyulangone.org/contact-us",
+      "verification_status": "verified",
+      "sources": [
+        "https://nyulangone.org/contact-us"
+      ],
+      "notes": "No billing email is published. The phone is hospital billing. Physician services billing and emergency care billing is 877-648-2964."
+    },
+    {
+      "name": "Johns Hopkins Medicine",
+      "keywords": [
+        "johns hopkins"
+      ],
+      "states": [
+        "MD",
+        "Maryland",
+        "FL",
+        "Florida",
+        "DC",
+        "District of Columbia"
+      ],
+      "billing_email": null,
+      "support_email": null,
+      "phone": "855-662-3017",
+      "billing_url": "https://www.hopkinsmedicine.org/patient-care/patients-visitors/billing-insurance/pay-bill/customer-service",
+      "verification_status": "verified",
+      "sources": [
+        "https://www.hopkinsmedicine.org/patient-care/patients-visitors/billing-insurance/pay-bill/customer-service"
+      ],
+      "notes": "Billing customer service, weekdays 8:30 am to 4:30 pm ET. Some hospitals have their own lines. The Johns Hopkins Hospital is 443-997-3370."
+    },
+    {
+      "name": "Duke Health",
+      "keywords": [
+        "duke health",
+        "duke university hospital",
+        "duke regional"
+      ],
+      "states": [
+        "NC",
+        "North Carolina"
+      ],
+      "billing_email": null,
+      "support_email": null,
+      "phone": "800-782-6945",
+      "billing_url": "https://www.dukehealth.org/billing",
+      "verification_status": "verified",
+      "sources": [
+        "https://www.dukehealth.org/billing"
+      ],
+      "notes": "No billing email is published. Customer Service Center, also 919-620-4555."
+    },
+    {
+      "name": "Northwestern Medicine",
+      "keywords": [
+        "northwestern medicine",
+        "northwestern memorial"
+      ],
+      "states": [
+        "IL",
+        "Illinois"
+      ],
+      "billing_email": null,
+      "support_email": null,
+      "phone": "855-694-2866",
+      "billing_url": "https://www.nm.org/contact-us",
+      "verification_status": "verified",
+      "sources": [
+        "https://www.nm.org/contact-us"
+      ],
+      "notes": "No billing email is published. Patient Financial Services for the Illinois system."
+    },
+    {
+      "name": "Mount Sinai Health System",
+      "keywords": [
+        "mount sinai health system",
+        "mount sinai hospital",
+        "mount sinai west",
+        "mount sinai morningside",
+        "mount sinai brooklyn",
+        "mount sinai queens",
+        "icahn"
+      ],
+      "states": [
+        "NY",
+        "New York"
+      ],
+      "billing_email": null,
+      "support_email": null,
+      "phone": "212-987-3100",
+      "billing_url": "https://www.mountsinai.org/about/pay-bill/contact",
+      "verification_status": "verified",
+      "sources": [
+        "https://www.mountsinai.org/about/pay-bill/contact"
+      ],
+      "notes": "No billing email is published. General hospital and physician billing, weekdays 9 am to 5 pm. Mount Sinai says to use the number printed on the statement, because it depends on the bill type."
+    },
+    {
+      "name": "Stanford Health Care",
+      "keywords": [
+        "stanford health care",
+        "stanford hospital"
+      ],
+      "states": [
+        "CA",
+        "California"
+      ],
+      "billing_email": null,
+      "support_email": null,
+      "phone": "800-549-3720",
+      "billing_url": "https://stanfordhealthcare.org/for-patients-visitors/billing/billing-faqs.html",
+      "verification_status": "verified",
+      "sources": [
+        "https://stanfordhealthcare.org/for-patients-visitors/billing/billing-faqs.html"
+      ],
+      "notes": "No billing email is published. The local number is 650-498-5850."
+    },
+    {
+      "name": "Penn Medicine",
+      "keywords": [
+        "penn medicine",
+        "hospital of the university of pennsylvania",
+        "penn presbyterian"
+      ],
+      "states": [
+        "PA",
+        "Pennsylvania",
+        "NJ",
+        "New Jersey"
+      ],
+      "billing_email": null,
+      "support_email": null,
+      "phone": "800-406-1177",
+      "billing_url": "https://www.pennmedicine.org/patient-resources/policies/patient-billing",
+      "verification_status": "verified",
+      "sources": [
+        "https://www.pennmedicine.org/patient-resources/policies/patient-billing"
+      ],
+      "notes": "No billing email is published for bills. This is the number for the Philadelphia area, Doylestown and Chester County. Lancaster General is 717-544-4953 and Princeton Medical Center is 609-620-8300. Penn says to call the number on the bill."
+    },
+    {
+      "name": "Providence Health & Services",
+      "keywords": [
+        "providence health",
+        "providence swedish",
+        "providence st joseph",
+        "providence portland",
+        "providence sacred heart"
+      ],
+      "states": [
+        "WA",
+        "Washington",
+        "OR",
+        "Oregon",
+        "CA",
+        "California",
+        "MT",
+        "Montana",
+        "AK",
+        "Alaska",
+        "TX",
+        "Texas",
+        "NM",
+        "New Mexico"
+      ],
+      "billing_email": null,
+      "support_email": null,
+      "phone": "800-378-4189",
+      "billing_url": "https://www.providence.org/billing-support/bill-pay",
+      "verification_status": "verified",
+      "sources": [
+        "https://www.providence.org/billing-support/bill-pay"
+      ],
+      "notes": "No billing email is published. In California, bills for care on or after September 18, 2021 go to 866-747-2455. Providence asks for written disputes to be mailed to the hospital address on the front of the bill."
+    },
+    {
+      "name": "Houston Methodist",
+      "keywords": [
+        "houston methodist"
+      ],
+      "states": [
+        "TX",
+        "Texas"
+      ],
+      "billing_email": null,
+      "support_email": null,
+      "phone": "877-493-3228",
+      "billing_url": "https://www.houstonmethodist.org/for-patients/patient-resources/patient-faqs/",
+      "verification_status": "verified",
+      "sources": [
+        "https://www.houstonmethodist.org/for-patients/patient-resources/patient-faqs/"
+      ],
+      "notes": "No billing email is published. Billing customer service is also 832-667-5900. After discharge, the Centralized Business Office is 844-755-1418."
+    }
+  ]
+}

@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BillFixr | AI Medical Bill Auditor & Negotiator</title>
+  <meta name="description" content="AI-powered medical bill negotiation and audit engine. Detect unbundled codes, duplicate charges, upcoding, and generate legally grounded hospital settlement letters.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/app.css?v=20261023-popup">
+</head>
+<body>
+  <div class="app-background">
+    <div aria-hidden="true" class="ambient-orb orb-1"></div>
+    <div aria-hidden="true" class="ambient-orb orb-2"></div>
+    <div aria-hidden="true" class="ambient-orb orb-3"></div>
+  </div>
+
+  <!-- Header Navigation -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <a href="/" class="brand-link">
+          <img src="/static/brand/logo-icon-green.png" alt="BillFixr" class="brand-logo-img" width="30" height="30">
+          <span class="brand-text-logo"><span class="brand-bill">Bill</span><span class="brand-fixr">Fixr</span></span>
+        </a>
+        <span class="brand-badge">AI Engine Demo</span>
+      </div>
+
+      <div class="header-status">
+        <!-- Role Switcher (Patient vs Admin) -->
+        <button type="button" class="btn-role-switch" id="roleSwitchBtn" onclick="toggleRoleView()">
+          <span class="role-icon">👤</span>
+          <span id="roleLabel">Role: Patient View</span>
+        </button>
+
+        <div class="status-indicator online">
+          <span class="pulse-dot"></span>
+          <span>OpenRouter & SMTP Active</span>
+        </div>
+        <div class="model-tags">
+          <span class="chip-tag vision" title="OCR and document extraction">Qwen 2.5 VL 72B</span>
+          <span class="chip-tag reasoning" title="Legal dispute and settlement reasoning">DeepSeek V3</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-badge">AI-POWERED MEDICAL BILLS REVIEW</div>
+      <h1 class="hero-title">Take Control of Your Medical Bills — <br><span class="accent-text">Automatically</span></h1>
+      <p class="hero-subtitle">
+        Reduce your cost with AI-powered bill negotiation. Scan line-item charges, cross-reference benchmarks, and negotiate fair settlements on one shared thread.
+      </p>
+
+      <!-- Workflow Stepper -->
+      <div class="workflow-stepper" id="workflowStepper">
+        <div class="step-node active" id="stepNode1"><span class="node-num">1</span><span>Upload Bill</span></div>
+        <div class="step-connector"></div>
+        <div class="step-node" id="stepNode2"><span class="node-num">2</span><span>Case Profile & Contacts</span></div>
+        <div class="step-connector"></div>
+        <div class="step-node" id="stepNode3"><span class="node-num">3</span><span>Commitment Fee</span></div>
+        <div class="step-connector"></div>
+        <div class="step-node" id="stepNode4"><span class="node-num">4</span><span>Forensic Audit</span></div>
+        <div class="step-connector"></div>
+        <div class="step-node" id="stepNode5"><span class="node-num">5</span><span>Negotiation</span></div>
+      </div>
+    </section>
+
+    <!-- STEP 1: Intake & Fast-Track Section -->
+    <section class="intake-section" id="intakeSection">
+      <div class="intake-grid">
+        <!-- File Upload Card -->
+        <div class="intake-card upload-card" id="dropZone">
+          <div class="card-glow"></div>
+          <div class="upload-inner">
+            <div class="upload-icon-wrapper">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <h3 class="upload-heading">Step 1: Upload Medical Bill</h3>
+            <p class="upload-subtext">Drag & drop your bill scan, PDF statement, or photo</p>
+            <div class="upload-formats">Supports PDF, PNG, JPG, WebP (Multi-page ready)</div>
+            <label for="billFileInput" class="btn-primary upload-btn" id="uploadLabel">
+              <span>Choose Document(s)</span>
+              <input type="file" id="billFileInput" accept="image/*,application/pdf" multiple style="display:none;">
+            </label>
+            <div id="selectedFileNotice" class="selected-file-notice" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- Fast Track Demo Card -->
+        <div class="intake-card demo-card">
+          <div class="demo-header">
+            <span class="demo-tag">Instant Live Test</span>
+            <h3>Or Test With Real Hospital Scenarios</h3>
+            <p>Experience the audit engine immediately without uploading a personal bill:</p>
+          </div>
+
+          <div class="demo-options">
+
+            <button type="button" class="demo-option-btn" id="demoBtnER" onclick="loadDemo('er-metro-general')">
+              <div class="demo-btn-icon er">🚑</div>
+              <div class="demo-btn-info">
+                <div class="demo-btn-title">Emergency Room Visit ($8,640.00)</div>
+                <div class="demo-btn-desc">Twisted Ankle • Upcoded Level 5 ER (99285) • Duplicate CBC • Unbundled IV Kit</div>
+              </div>
+              <div class="demo-btn-arrow">→</div>
+            </button>
+
+            <button type="button" class="demo-option-btn" id="demoBtnOrtho" onclick="loadDemo('surgery-valley-ortho')">
+              <div class="demo-btn-icon surgery">🏥</div>
+              <div class="demo-btn-info">
+                <div class="demo-btn-title">Outpatient Knee Surgery ($14,850.00)</div>
+                <div class="demo-btn-desc">Meniscectomy • Unbundled $1,250 Surgical Tray • Incidental Pulse Ox</div>
+              </div>
+              <div class="demo-btn-arrow">→</div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Processing Indicator (Hidden by default) -->
+    <section class="processing-section" id="processingSection" style="display: none;">
+      <div class="processing-card">
+        <div class="spinner-ring"></div>
+        <h3 id="processingTitle">Extracting Medical Bill with AI...</h3>
+        <p id="processingSubtitle">Qwen 2.5 VL 72B is extracting itemized codes, rates, and provider info.</p>
+        <div class="pipeline-steps">
+          <div class="pipeline-step active" id="step1">1. OCR & Table Extraction</div>
+          <div class="pipeline-step" id="step2">2. CPT & NCCI Cross-Reference</div>
+          <div class="pipeline-step" id="step3">3. Duplicate & Upcoding Audit</div>
+          <div class="pipeline-step" id="step4">4. Medicare Benchmark Pricing</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2: Extracted Case Profile & Contact Discovery (Pre-Payment) -->
+    <section class="case-profile-section" id="caseProfileSection" style="display: none;">
+      <div class="profile-card">
+        <div class="profile-header-row">
+          <div>
+            <div class="section-badge">Step 2: Pre-Payment Case Review</div>
+            <h2>Extracted Case Profile & Hospital Contacts</h2>
+            <p class="section-subtext">Review extracted facts, line items, and hospital endpoints before committing to audit. Unknown contact fields remain blank until verified.</p>
+          </div>
+          <div class="profile-badges">
+            <span class="badge-tag multi-doc" id="profileEncountersBadge">3 Encounter Records Combined</span>
+            <span class="badge-tag verified" id="profileVerifyTag">Ready for Verification</span>
+          </div>
+        </div>
+
+        <div class="profile-grid">
+          <!-- Left: Core Case Facts (Editable) -->
+          <div class="profile-box editable-facts-box">
+            <div class="box-title">
+              <h4>Case & Billing Identifiers (Editable)</h4>
+              <button type="button" class="btn-link" onclick="saveProfileCorrections()">💾 Save Corrections</button>
+            </div>
+            
+            <div class="facts-form-grid">
+              <div class="input-group">
+                <label for="editPatientName">Patient Name</label>
+                <input type="text" id="editPatientName" value="Jordan Example">
+              </div>
+              <div class="input-group">
+                <label for="editProviderName">Billing Healthcare Organization</label>
+                <input type="text" id="editProviderName" value="Example Community Health Center">
+              </div>
+              <div class="input-group">
+                <label for="editAccountNumber">Account / Invoice #</label>
+                <input type="text" id="editAccountNumber" value="0001000000000001">
+              </div>
+              <div class="input-group">
+                <label for="editStatementDate">Date Range / Statement</label>
+                <input type="text" id="editStatementDate" value="2026-01-01 to 2026-01-31">
+              </div>
+              <div class="input-group">
+                <label for="editTotalBilled">Total Billed Demand ($)</label>
+                <input type="number" id="editTotalBilled" value="2000.50" step="0.01">
+              </div>
+              <div class="input-group">
+                <label for="editPatientDue">Patient Responsibility Due ($)</label>
+                <input type="number" id="editPatientDue" value="450.00" step="0.01">
+              </div>
+            </div>
+
+            <div class="edit-correction-notice">
+              <small>✏️ Corrections are recorded in the case audit log with timestamp and actor attribution.</small>
+            </div>
+          </div>
+
+          <!-- Right: Hospital Contacts & Discovery -->
+          <div class="profile-box contact-discovery-box">
+            <div class="box-title">
+              <h4>Hospital Contact Discovery & Verification</h4>
+              <span class="chip-tag reasoning">Non-Hallucination Policy</span>
+            </div>
+
+            <p class="box-desc">
+              AI requires verified billing and support email addresses. If unknown, they remain blank until discovered or entered manually.
+            </p>
+
+            <div class="contact-inputs-grid">
+              <div class="input-group">
+                <label for="profileBillingEmail">Hospital Billing Department Email</label>
+                <input type="email" id="profileBillingEmail" placeholder="billing@hospital.example" value="">
+              </div>
+              <div class="input-group">
+                <label for="profileSupportEmail">Hospital Support / Patient Advocate Email</label>
+                <input type="email" id="profileSupportEmail" placeholder="support@hospital.example" value="">
+              </div>
+              <div class="input-group">
+                <label for="profilePhone">Hospital Phone Number</label>
+                <input type="text" id="profilePhone" placeholder="(555) 010-0100" value="(555) 010-0100">
+              </div>
+            </div>
+
+            <!-- Contact Discovery Action Deck -->
+            <div class="contact-discovery-actions">
+              <button type="button" class="btn-secondary" id="searchContactBtn" onclick="triggerContactSearch()">
+                <span>🔍 AI Web & Directory Search for Hospital Contacts</span>
+              </button>
+              <button type="button" class="btn-ghost" onclick="applyTestEmails()">
+                <span>🧪 Fill Test Profile</span>
+              </button>
+            </div>
+
+            <div class="discovery-results-card" id="discoveryResultsCard" style="display: none;">
+              <div class="result-status-row">
+                <span class="status-pill verified" id="discStatusPill">VERIFIED DIRECTORY MATCH</span>
+                <span class="disc-provider" id="discProviderName">Example Community Health Center</span>
+              </div>
+              <div class="sources-list" id="discSourcesList">
+                <!-- Sources -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Encounters Summary & Advance Button -->
+        <div class="profile-footer-row">
+          <div class="encounters-summary">
+            <strong>Line Items Status:</strong> <span id="profileLineItemsCount">12 Extracted Charges across 3 Encounters</span> (Itemized & ready for audit)
+          </div>
+          <button type="button" class="btn-primary proceed-btn" onclick="proceedToCommitmentFee()">
+            <span>Proceed to Step 3: Commitment Fee →</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3: Commitment Fee ($20 Deposit Screen) -->
+    <section class="commitment-fee-section" id="commitmentFeeSection" style="display: none;">
+      <div class="commitment-card">
+        <div class="commitment-badge">Step 3: Commitment Fee Deposit</div>
+        <h2>Unlock Full Forensic AI Audit & Settlement Negotiation</h2>
+        <p class="commitment-lead">
+          Your documents and billing profile are verified. To perform comprehensive CPT unbundling detection, FQHC sliding-scale cross-referencing, Medicare allowable rate benchmarking, and automated negotiation dispatch, confirm your case audit deposit:
+        </p>
+
+        <div class="pricing-tier-card">
+          <div class="pricing-header">
+            <div>
+              <h3>Case Commitment Fee</h3>
+              <p>One-time deposit credited against ultimate resolution</p>
+            </div>
+            <div class="price-tag">
+              <span class="currency">$</span>
+              <span class="amount">20</span>
+              <span class="period">deposit</span>
+            </div>
+          </div>
+
+          <div class="tier-features-list">
+            <div class="feat-item">✓ Complete 5-Page Itemized Forensic Audit & CPT Coding Analysis</div>
+            <div class="feat-item">✓ Public Health Service Act Sec 330 & FQHC Sliding-Fee Cross-Check</div>
+            <div class="feat-item">✓ Medicare 200% Fair-Market Settlement Calculation</div>
+            <div class="feat-item">✓ Dual-Recipient Threaded Email Negotiation Engine Activated</div>
+            <div class="feat-item">✓ 1-Time User AI Rescan Allowance Included</div>
+            <div class="feat-item">✓ 100% Money-Back Guarantee: If no billing reduction is substantiated, fee is refunded</div>
+          </div>
+
+          <div class="input-group">
+            <label for="commitmentHospitalEmail">Hospital Billing Email (negotiation recipient)</label>
+            <input type="email" id="commitmentHospitalEmail" placeholder="billing@hospital.example" value="">
+          </div>
+          <label class="toggle-label" for="commitmentHipaaCheck">
+            <input type="checkbox" id="commitmentHipaaCheck">
+            I authorize BillFixr to negotiate this bill on my behalf (HIPAA authorization).
+          </label>
+
+          <!-- Simulated payment (no provider yet). Paying starts the audit and autopilot together. -->
+          <div class="testing-payment-action-box">
+            <button type="button" class="btn-primary dummy-paid-btn" id="dummyPaidBtn" onclick="simulatePaymentPaid()">
+              <span class="lock-icon">🔒</span>
+              <span>Pay $20 Commitment Fee &amp; Start Autopilot</span>
+            </button>
+            <div class="dummy-test-subtext">
+              <em>* Demo: payment is simulated. Once you pay, the audit runs and autopilot starts the negotiation.</em>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4: Forensic Audit Results Section -->
+    <section class="results-section" id="resultsSection" style="display: none;">
+      <!-- Patient & Provider Dossier Bar -->
+      <div class="dossier-bar">
+        <div class="dossier-col">
+          <span class="dossier-label">Healthcare Provider</span>
+          <span class="dossier-val" id="dossierProvider">Example Community Health Center</span>
+        </div>
+        <div class="dossier-col">
+          <span class="dossier-label">Patient Name</span>
+          <span class="dossier-val" id="dossierPatient">Jordan Example</span>
+        </div>
+        <div class="dossier-col">
+          <span class="dossier-label">Account / Invoice #</span>
+          <span class="dossier-val monospace" id="dossierAccount">0001000000000001</span>
+        </div>
+        <div class="dossier-col">
+          <span class="dossier-label">Audit Risk Level</span>
+          <span class="badge-risk-critical" id="dossierRisk">HIGH RISK (85/100)</span>
+        </div>
+      </div>
+
+      <!-- Step 5: User 1-Time Additional AI Rescan Card -->
+      <div class="rescan-banner" id="rescanBanner">
+        <div class="rescan-banner-content">
+          <div class="rescan-status-wrap">
+            <span class="rescan-icon">🔄</span>
+            <div>
+              <div class="rescan-title">1-Time User AI Rescan Allowance</div>
+              <p class="rescan-desc">Trigger one additional AI audit to look for further reduction across all encounters and CPT codes. A rescan explains what changed or why no additional supported reduction was found.</p>
+            </div>
+          </div>
+          <button type="button" class="btn-secondary" id="triggerRescanBtn" onclick="triggerUserRescan()">
+            <span>Trigger AI Rescan (1-Time Allowed)</span>
+          </button>
+        </div>
+        <div class="rescan-diff-card" id="rescanDiffCard" style="display: none;">
+          <div class="diff-header">
+            <strong>Rescan Result: What Changed & Why</strong>
+            <span class="status-pill info" id="rescanIterationTag">Iteration #1</span>
+          </div>
+          <p id="rescanDiffText"></p>
+        </div>
+      </div>
+
+      <!-- KPI Scorecards Grid -->
+      <div class="kpi-grid">
+        <div class="kpi-card billed">
+          <div class="kpi-header">
+            <span class="kpi-title">Total Billed Demand</span>
+            <span class="kpi-icon">🧾</span>
+          </div>
+          <div class="kpi-value" id="kpiTotalBilled">$2,000.50</div>
+          <div class="kpi-subtext" id="kpiPatientDueSub">Patient balance: $450.00</div>
+        </div>
+
+        <div class="kpi-card flagged">
+          <div class="kpi-header">
+            <span class="kpi-title">Flagged Billing Flaws</span>
+            <span class="kpi-icon">⚠️</span>
+          </div>
+          <div class="kpi-value text-red" id="kpiFlaggedAmount">$250.00</div>
+          <div class="kpi-subtext" id="kpiIssuesCount">FQHC Sliding Scale & Unapplied Credits</div>
+        </div>
+
+        <div class="kpi-card fair-value">
+          <div class="kpi-header">
+            <span class="kpi-title">Fair Market / FQHC Baseline</span>
+            <span class="kpi-icon">⚖️</span>
+          </div>
+          <div class="kpi-value" id="kpiMedicareBenchmark">$175.00</div>
+          <div class="kpi-subtext">Statutory Section 330 allowance</div>
+        </div>
+
+        <div class="kpi-card savings">
+          <div class="kpi-header">
+            <span class="kpi-title">Projected Patient Savings</span>
+            <span class="kpi-icon">💰</span>
+          </div>
+          <div class="kpi-value text-emerald" id="kpiSavingsAmount">$250.00</div>
+          <div class="kpi-subtext" id="kpiSavingsPercent">59.2% reduction achievable</div>
+        </div>
+      </div>
+
+      <!-- Audit Findings & Line Items Grid -->
+      <div class="audit-details-grid">
+        <!-- Left: Disputed Issues List -->
+        <div class="findings-container">
+          <div class="section-header-row">
+            <h2>Audited Inaccuracies & Violations</h2>
+            <span class="badge-count" id="issuesBadgeCount">3 Flaws</span>
+          </div>
+          <div class="issues-list" id="issuesList">
+            <!-- Dynamic Issue Cards Injected Here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Line Item Details Table -->
+      <div class="line-items-section">
+        <div class="section-header-row">
+          <h2>Itemized Bill Breakdown & CPT Codes</h2>
+          <span class="sub-counter" id="lineItemsCount">12 Line Items across 3 Encounters</span>
+        </div>
+        <div class="table-responsive">
+          <table class="bill-table" id="billTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Service Date</th>
+                <th>CPT / Rev Code</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th>Billed Charge</th>
+                <th>Medicare Baseline</th>
+                <th>Audit Status</th>
+              </tr>
+            </thead>
+            <tbody id="billTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Negotiation Letter Studio Section -->
+      <div class="letter-studio-section" id="letterStudioSection">
+        <div class="section-header-row">
+          <div>
+            <h2>Formal Dispute & Settlement Demand Letter</h2>
+            <p class="section-subtext">Your letter is drafted from your audit and ready to send. Start the negotiation below and BillFixr sends it to the hospital for you.</p>
+          </div>
+        </div>
+
+        <!-- The letter stays blurred so it can't be copied or screenshotted. The app sends it on your behalf. -->
+        <div class="letter-preview-box is-locked">
+          <div class="letter-sheet" id="letterSheetContent" aria-hidden="true">
+            <!-- Rendered Markdown Letter Content -->
+          </div>
+          <div class="letter-lock-overlay">
+            <strong>Letter drafted and ready to send</strong>
+            <span>Based on your bill audit. Start the negotiation to dispatch it to the hospital.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5: Autonomous Dual-Recipient Negotiation & Dispatch Hub -->
+      <div class="negotiation-hub-section" id="negotiationHubSection">
+        <div class="dispatch-cta-card" id="dispatchCtaCard">
+          <div class="dispatch-cta-content">
+            <div class="dispatch-badge">Step 5: Shared Dual-Recipient Email Negotiation Engine</div>
+            <h3>Ready to Dispatch to Hospital in One Shared Thread?</h3>
+            <p>Dispatches from the <strong>BillFixr advocate address</strong> directly to <strong>Hospital Billing</strong> and <strong>Hospital Support / Patient Advocacy</strong> in ONE unified conversation thread.</p>
+            
+            <div class="dispatch-inputs-row">
+              <div class="input-group">
+                <label for="hospitalEmailInput">Hospital Billing Department Email (To:)</label>
+                <input type="email" id="hospitalEmailInput" placeholder="billing@hospital.example" value="">
+              </div>
+              <div class="input-group">
+                <label for="hospitalSupportEmailInput">Hospital Support / Patient Advocacy Email (Cc:)</label>
+                <input type="email" id="hospitalSupportEmailInput" placeholder="billing@hospital.example" value="">
+              </div>
+            </div>
+
+            <div class="hipaa-consent-row">
+              <label class="toggle-label" for="hipaaConsentCheck">
+                <input type="checkbox" id="hipaaConsentCheck">
+                <span>Attach Formal Legal HIPAA Release (45 CFR § 164.508) — <em>Omitted for testing mode</em></span>
+              </label>
+            </div>
+
+            <button type="button" class="btn-primary dispatch-start-btn" id="startNegBtn" onclick="startNegotiationSession()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <span>Dispatch to Both Hospital Contacts in Shared Thread</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Active Negotiation Dashboard & Timeline (Revealed once dispatched) -->
+        <div class="active-negotiation-panel" id="activeNegPanel" style="display: none;">
+          <div class="neg-header-bar">
+            <div class="neg-header-left" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span class="neg-token-badge" id="negTrackingCode">BFX-12193-A1B2</span>
+              <span class="neg-status-badge status-dispatched" id="negStatusBadge">DISPATCHED</span>
+              <span class="autopilot-badge" id="negAutoPilotBadge"><span class="pulse-dot"></span>🤖 Auto-Pilot: ACTIVE</span>
+              <span class="thread-badge" id="negThreadBadge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> 1 Case = 1 Shared Email Thread</span>
+            </div>
+            <div class="neg-header-right">
+              <div class="neg-stat">
+                <span class="stat-lbl">Demanded Balance:</span>
+                <span class="stat-val text-red" id="negDemandedVal">$450.00</span>
+              </div>
+              <div class="neg-stat">
+                <span class="stat-lbl">Current Patient Offer:</span>
+                <span class="stat-val text-emerald" id="negCurrentOfferVal">$175.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Negotiation Timeline Thread -->
+          <div class="thread-container">
+            <div class="thread-title-row">
+              <h3>Negotiation Timeline & Communications Log</h3>
+              <div class="thread-actions-group" style="display: flex; align-items: center; gap: 12px;">
+                <button type="button" class="btn-secondary" id="syncGmailBtn" onclick="checkInboundGmail()" style="padding: 6px 14px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  <span>Checking...</span>
+                </button>
+                <span class="thread-count" id="threadMsgCount">1 Message</span>
+              </div>
+            </div>
+            <div class="thread-messages-list" id="threadMessagesList">
+              <!-- Dynamically populated messages -->
+            </div>
+          </div>
+
+          <!-- Feature: Upload as Hospital Reply (Fax, Paper, Photo OCR) -->
+          <div class="paper-reply-upload-card" id="paperReplyCard">
+            <div class="paper-reply-header">
+              <div class="paper-reply-title-wrap">
+                <span class="paper-icon">📠</span>
+                <div>
+                  <h4>Upload as a Hospital Reply to this Case (Fax / Paper / Photo OCR)</h4>
+                  <p>When the hospital replies via physical mail, fax, or portal screenshot, upload or paste it here. Preserves originals and runs OCR interpretation.</p>
+                </div>
+              </div>
+              <span class="chip-tag vision">OCR Enabled</span>
+            </div>
+
+            <div class="paper-upload-actions-grid">
+              <div class="upload-drop-mini">
+                <label for="paperFileInput" class="btn-ghost upload-mini-btn">
+                  <span>📷 Choose Scanned / Photo Reply</span>
+                  <input type="file" id="paperFileInput" accept="image/*,application/pdf" style="display:none;" onchange="onPaperFileSelected(this)">
+                </label>
+                <span id="paperFileChosenName">No file selected</span>
+              </div>
+              <div class="paper-sim-buttons">
+                <button type="button" class="btn-ghost" onclick="simulatePaperReply('no_error')">
+                  <span>Simulate Written Reply: "No Error Found"</span>
+                </button>
+                <button type="button" class="btn-ghost" onclick="simulatePaperReply('counter')">
+                  <span>Simulate Written Counteroffer: $250.00</span>
+                </button>
+                <button type="button" class="btn-ghost" onclick="simulatePaperReply('accept')">
+                  <span>Simulate Written Acceptance: $175.00</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Advice & Pushback Card (revealed when provider says No Error) -->
+            <div class="no-error-decision-card" id="noErrorDecisionCard" style="display: none;">
+              <div class="decision-badge-row">
+                <span class="status-pill warning">PROVIDER DETERMINATION: NO ERROR</span>
+                <span class="decision-statute">Section 330 FQHC Statutory Right</span>
+              </div>
+              <div class="decision-advice-text" id="decisionAdviceText">
+                <strong>Primary Advice:</strong> The hospital audited the charges and found no clerical coding errors. You may remit the original balance of $450.00 or request a 12-month interest-free installment plan.
+              </div>
+              <div class="pushback-container">
+                <div class="pushback-header">
+                  <strong>AI Recommended Pushback:</strong> Assert Statutory FQHC Sliding-Fee Rights & Prompt-Pay Cash Discount ($175.00)
+                  <button type="button" class="btn-primary" onclick="deployPushbackDispute()" style="padding: 4px 12px; font-size: 0.85rem;">
+                    Deploy AI Pushback on Thread
+                  </button>
+                </div>
+                <div class="pushback-draft-preview" id="pushbackDraftPreview"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature: 72-Hour Follow-Up Cadence & No-Response Flow -->
+          <div class="cadence-control-card" id="cadenceControlCard">
+            <div class="cadence-header-row">
+              <div class="cadence-title-wrap">
+                <span class="cadence-clock-icon">⏱️</span>
+                <div>
+                  <h4>72-Hour Autonomous Follow-Up Cadence</h4>
+                  <p>Initial dispatch + maximum of three 72-hour automated follow-ups in the shared thread. A hospital reply interrupts this sequence.</p>
+                </div>
+              </div>
+              <span class="cadence-step-pill" id="cadenceStepPill">Cadence: Initial Sent (0/3 Follow-ups)</span>
+            </div>
+
+            <div class="cadence-actions-row">
+              <button type="button" class="btn-secondary" id="cadenceTickBtn" onclick="triggerCadenceTick()">
+                <span>Simulate +72h (Send Next Follow-Up in Thread)</span>
+              </button>
+              <button type="button" class="btn-ghost" id="cadenceExhaustBtn" onclick="exhaustCadenceNotice()">
+                <span>Simulate Sequence Exhausted (+216h)</span>
+              </button>
+            </div>
+
+            <!-- No-Response Notice Review Deck (Shown when sequence exhausted) -->
+            <div class="no-response-notice-box" id="noResponseNoticeBox" style="display: none;">
+              <div class="notice-box-header">
+                <strong>Notice of Hospital Non-Response Prepared</strong>
+                <span class="status-pill danger">Awaiting Admin Closure Approval</span>
+              </div>
+              <p>Three consecutive 72-hour follow-ups elicited no response. AI has prepared the legal next-step notice invoking FDCPA § 1692g, FCRA dispute rights, and CMS grievance procedures.</p>
+              <div class="notice-preview-box" id="noticePreviewBox"></div>
+              <div class="notice-admin-actions">
+                <button type="button" class="btn-primary" onclick="adminApproveClosure()" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+                  🛡️ Admin Approve Notice & Close Case (Non-Response)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inbound Response Simulation & Testing Deck -->
+          <div class="simulator-deck">
+            <div class="simulator-header">
+              <div>
+                <h4>Hospital Email Testing Deck</h4>
+                <p class="sim-subtext">Test how the AI negotiator parses hospital replies on the thread, updates status, and drafts counter-offers:</p>
+              </div>
+              <span class="sim-tag">Live Testing Suite</span>
+            </div>
+
+            <div class="sim-presets-grid">
+              <button type="button" class="sim-preset-btn" onclick="simulatePreset('counter')">
+                <span class="sim-icon">📉</span>
+                <div class="sim-btn-text">
+                  <strong>Hospital Counter-Offer ($250.00)</strong>
+                  <span>"We offer a 40% reduction down to $250.00."</span>
+                </div>
+              </button>
+
+              <button type="button" class="sim-preset-btn" onclick="simulatePreset('charity')">
+                <span class="sim-icon">📄</span>
+                <div class="sim-btn-text">
+                  <strong>Financial Assistance Request</strong>
+                  <span>"Please submit W-2 and pay stubs for 501(r) review."</span>
+                </div>
+              </button>
+
+              <button type="button" class="sim-preset-btn" onclick="simulatePreset('accept')">
+                <span class="sim-icon">🤝</span>
+                <div class="sim-btn-text">
+                  <strong>Settlement Acceptance ($175.00)</strong>
+                  <span>"Offer accepted. Remit $175 for zero balance."</span>
+                </div>
+              </button>
+            </div>
+
+            <!-- Custom message input -->
+            <div class="custom-inbound-box">
+              <div class="input-group">
+                <label for="customInboundText">Or Test Any Custom Hospital Response Message:</label>
+                <div class="custom-inbound-row">
+                  <textarea id="customInboundText" rows="2" placeholder="e.g. In response to your dispute, our billing committee has authorized a courtesy write-off..."></textarea>
+                  <button type="button" class="btn-secondary" id="sendCustomInboundBtn" onclick="sendCustomInboundMessage()">
+                    Send Inbound Test
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Human-in-the-Loop Counter-Offer Approval Card -->
+          <div class="counter-approval-card" id="counterApprovalCard" style="display: none;">
+            <div class="approval-header">
+              <div class="approval-title-wrap">
+                <span class="ai-spark-icon">✨</span>
+                <h4>AI Recommended Action: Counter-Offer Prepared</h4>
+              </div>
+              <span class="chip-tag reasoning">DeepSeek V3 Recommendation</span>
+            </div>
+
+            <p class="approval-reasoning" id="approvalReasoningText">
+              Hospital offered a partial discount. The AI recommends splitting the difference with a binding prompt settlement.
+            </p>
+
+            <div class="counter-inputs-grid">
+              <div class="input-group">
+                <label for="revisedOfferInput">Approved Counter-Offer Amount ($)</label>
+                <input type="number" id="revisedOfferInput" value="175" step="25">
+              </div>
+              <div class="counter-action-actions" style="display: flex; gap: 10px; align-items: flex-end;">
+                <button type="button" class="btn-primary" id="acceptOfferBtn" onclick="acceptHospitalOffer()" style="background: linear-gradient(135deg, #10b981, #059669); border-color: #059669;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span id="acceptOfferBtnText">Accept Hospital Offer ($175.00)</span>
+                </button>
+                <button type="button" class="btn-secondary" id="approveCounterBtn" onclick="approveAndSendCounterOffer()">
+                  <span>Send Revised Counter Instead</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="drafted-reply-preview">
+              <label>Pre-Drafted Reply Letter Preview:</label>
+              <div class="draft-preview-box" id="draftPreviewBox"></div>
+            </div>
+          </div>
+
+          <!-- Completion card: shown once the hospital accepts. The revised bill stays locked until the completion fee is paid. -->
+          <div class="settlement-payment-card" id="completionCard" style="display: none;">
+            <div class="settlement-banner-header">
+              <div class="settlement-badge-wrap">
+                <div class="settlement-trophy-icon">🏆</div>
+                <div>
+                  <h3 id="completionTitle">Settlement agreed</h3>
+                  <p class="settlement-subtitle" id="completionSubtitle"></p>
+                </div>
+              </div>
+              <div class="settlement-savings-pill" id="completionSavingsPill"></div>
+            </div>
+
+            <div class="settlement-stats-grid">
+              <div class="settlement-stat-box">
+                <span class="stat-meta">Original Billed Charges</span>
+                <span class="stat-number text-red" id="completionBilled"></span>
+              </div>
+              <div class="settlement-stat-box highlight">
+                <span class="stat-meta">Hospital Accepted</span>
+                <span class="stat-number text-emerald" id="completionSettled"></span>
+              </div>
+              <div class="settlement-stat-box">
+                <span class="stat-meta">Completion Fee (10% of savings)</span>
+                <span class="stat-number text-blue" id="completionFee"></span>
+              </div>
+            </div>
+
+            <div class="letter-preview-box is-locked" id="revisedBillBox">
+              <div class="letter-sheet" id="revisedBillContent" aria-hidden="true"></div>
+              <div class="letter-lock-overlay" id="revisedBillOverlay">
+                <strong>Your new bill is locked</strong>
+                <span>It becomes available once the completion fee is paid.</span>
+              </div>
+            </div>
+
+            <div class="completion-actions">
+              <button type="button" class="btn-primary" id="payCompletionBtn" onclick="payCompletionFee()" style="display: none;"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ADMIN CAPABILITIES DRAWER / PANEL (Toggled via Header) -->
+    <section class="admin-panel-section" id="adminPanelSection" style="display: none;">
+      <div class="admin-card">
+        <div class="admin-header-row">
+          <div class="admin-title-wrap">
+            <span class="admin-badge-icon">🛡️</span>
+            <div>
+              <h3>Admin Caseworker Supervision Center</h3>
+              <p>Cross-tenant case inspector, contact overrides, unbounded audit reruns, and completion approvals.</p>
+            </div>
+          </div>
+          <button type="button" class="btn-ghost" onclick="toggleRoleView()">✕ Exit Admin View</button>
+        </div>
+
+        <div class="admin-tabs-grid">
+          <!-- Left: Admin Re-Run Audit & Negotiation -->
+          <div class="admin-box rerun-box">
+            <h4>Admin Re-Run Audit & Negotiation (Unbounded)</h4>
+            <p class="admin-box-sub">Separate from the user's 1-time rescan. Accepts custom instructions and selectable scope:</p>
+
+            <div class="input-group">
+              <label for="adminInstructionsInput">Custom Directives / Prompt Instructions:</label>
+              <textarea id="adminInstructionsInput" rows="2" placeholder="e.g. Scrutinize emergency room coding 99285 and assert FQHC statutory sliding-fee scale guidelines more strictly"></textarea>
+            </div>
+
+            <div class="input-group">
+              <label for="adminScopeSelect">Selectable Scope:</label>
+              <select id="adminScopeSelect" class="admin-select">
+                <option value="all">Full Scope (Audit + Benchmark + Strategy + Draft)</option>
+                <option value="audit">Clinical & Coding Audit Only</option>
+                <option value="savings">Savings & Fair-Market Benchmarks Only</option>
+                <option value="strategy">Negotiation Strategy Only</option>
+                <option value="draft">Dispute Letter Drafting Only</option>
+              </select>
+            </div>
+
+            <button type="button" class="btn-primary" onclick="triggerAdminRerun()">
+              <span>Execute Admin Re-Run (Retain Version)</span>
+            </button>
+
+            <div class="admin-rerun-history-list" id="adminRerunHistoryList">
+              <!-- Past versions injected here -->
+            </div>
+          </div>
+
+          <!-- Right: Field-Level Audit Trail & Approval Actions -->
+          <div class="admin-box audit-trail-box">
+            <h4>Field Corrections & Material Changes Trail</h4>
+            <p class="admin-box-sub">Records actor, timestamp, reason, and before/after values:</p>
+
+            <div class="admin-audit-log-box" id="adminAuditLogBox">
+              <div class="audit-log-item initial">
+                <span class="log-time">System Startup</span>
+                <span class="log-actor">AI Ingestion</span>
+                <span class="log-desc">Extracted 24 line items from 5 encounter documents.</span>
+              </div>
+            </div>
+
+            <div class="admin-final-actions-box">
+              <h4>Case Governance & Completion</h4>
+              <div class="admin-action-buttons">
+                <button type="button" class="btn-secondary" onclick="adminApproveClosure()">
+                  Approve No-Response Closure & Release Documents
+                </button>
+                <button type="button" class="btn-primary" onclick="adminApproveSettlement()" style="background: linear-gradient(135deg, #10b981, #059669);">
+                  Approve Final Settlement & Verified Savings
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-brand-row">
+        <div class="footer-logo">
+          <img src="/static/brand/logo-icon-white.png" alt="BillFixr" width="36" height="36">
+          <span class="footer-brand-name"><span>Bill</span><span class="footer-fixr">Fixr</span></span>
+        </div>
+        <p class="footer-tagline">Before you pay, let BillFixr read it. Because bills shouldn't come as a burden.</p>
+      </div>
+      <div class="footer-bottom-row">
+        <p class="footer-copy">© 2026 BillFixr Technologies. All Rights Reserved. • AI Engine &amp; Automation Pipeline Demo</p>
+        <div class="footer-links">
+          <span>Terms of Use</span>
+          <span>Privacy Policy</span>
+          <span>Govt. Compliance</span>
+          <span>CMS Transparency</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Global Beautiful App Modal Card -->
+  <!-- Full-screen completion pop-up: shows the fee, then the new bill once it is paid -->
+  <div class="completion-overlay" id="completionOverlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="completionOverlayTitle">
+    <div class="completion-overlay-card">
+      <div id="completionOverlayPay">
+        <div class="completion-overlay-icon">🔔</div>
+        <h2 id="completionOverlayTitle">Negotiation complete</h2>
+        <p id="completionOverlayText"></p>
+        <div class="completion-overlay-stats">
+          <div><span class="stat-meta">You saved</span><strong id="completionOverlaySaved"></strong></div>
+          <div><span class="stat-meta">Completion fee</span><strong id="completionOverlayFee"></strong></div>
+        </div>
+        <button type="button" class="btn-primary completion-overlay-btn" id="completionOverlayPayBtn" onclick="payCompletionFee()"></button>
+        <p class="completion-overlay-note">Payment is simulated in this demo.</p>
+      </div>
+      <div id="completionOverlayBill" style="display: none;">
+        <h2>Your new bill</h2>
+        <div class="completion-overlay-bill-body" id="completionOverlayBillBody"></div>
+        <button type="button" class="btn-secondary" onclick="closeCompletionOverlay()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-modal-backdrop" id="appModalBackdrop" style="display:none;" onclick="handleModalBackdropClick(event)">
+    <div class="app-modal-card">
+      <div class="app-modal-icon-circle success" id="appModalIcon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h3 class="app-modal-title" id="appModalTitle">Notification</h3>
+      <p class="app-modal-message" id="appModalMessage"></p>
+      <button type="button" class="btn-primary app-modal-btn" onclick="closeAppModal()">Got It</button>
+    </div>
+  </div>
+
+  <script src="/static/app.js?v=20261023-popup"></script>
+</body>
+</html>
