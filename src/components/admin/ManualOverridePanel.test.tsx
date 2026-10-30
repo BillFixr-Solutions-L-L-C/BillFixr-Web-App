@@ -44,6 +44,41 @@ describe("ManualOverridePanel", () => {
     expect(screen.getByText("Approved")).toBeInTheDocument();
   });
 
+  it("offers Manual Approve as the only decision", () => {
+    // Figma dropped Reject and Deny & Escalate from this panel. They were
+    // annotation-only — the override route never touched the case
+    // lifecycle — so nothing behavioural went with them.
+    render(
+      <ManualOverridePanel
+        caseId="case-1"
+        initialNotes=""
+        initialOverrideReason=""
+        initialApprovalChain=""
+        initialDecision={null}
+        canWrite
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Manual Approve" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Deny & Escalate" })).not.toBeInTheDocument();
+  });
+
+  it("still shows a decision recorded before those buttons were removed", () => {
+    // The column keeps its old values, and a case an admin rejected last
+    // month must not read as undecided just because the button is gone.
+    render(
+      <ManualOverridePanel
+        caseId="case-1"
+        initialNotes=""
+        initialOverrideReason=""
+        initialApprovalChain=""
+        initialDecision="rejected"
+        canWrite
+      />,
+    );
+    expect(screen.getByText("Rejected")).toBeInTheDocument();
+  });
+
   it("disables Re-Run AI Analysis", () => {
     render(
       <ManualOverridePanel
@@ -101,10 +136,10 @@ describe("ManualOverridePanel", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await user.click(screen.getByRole("button", { name: "Manual Approve" }));
 
     await waitFor(() => expect(screen.getByText("forbidden")).toBeInTheDocument());
-    expect(screen.queryByText("Rejected")).not.toBeInTheDocument();
+    expect(screen.queryByText("Approved")).not.toBeInTheDocument();
   });
 
   it("hides the decision buttons and makes fields read-only when canWrite is false", () => {
@@ -119,8 +154,6 @@ describe("ManualOverridePanel", () => {
       />,
     );
     expect(screen.queryByRole("button", { name: "Manual Approve" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Deny & Escalate" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Re-Run AI Analysis" })).toBeDisabled();
     expect(screen.getByDisplayValue("Existing notes")).toHaveAttribute("readonly");
   });

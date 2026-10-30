@@ -87,6 +87,13 @@ export default function ManualOverridePanel({
 
       {error && <p className="mt-2 text-sm text-danger">{error}</p>}
 
+      {/* Manual Approve is the only decision the current design offers —
+          Reject and Deny & Escalate are gone from Figma. Nothing is lost
+          by it: this panel is an annotation track that never touched the
+          case lifecycle, so those buttons only ever wrote a different
+          word into manual_review_status. The type and labels below still
+          cover all three so a case decided before this change keeps
+          displaying correctly. */}
       {canWrite && (
         <div className="mt-4 flex flex-col gap-2">
           <button
@@ -96,22 +103,6 @@ export default function ManualOverridePanel({
             className="rounded-full bg-primary-600 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {saving === "approved" ? "Saving…" : "Manual Approve"}
-          </button>
-          <button
-            type="button"
-            onClick={() => submit("rejected")}
-            disabled={saving !== null}
-            className="rounded-full bg-red-500 py-2 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {saving === "rejected" ? "Saving…" : "Reject"}
-          </button>
-          <button
-            type="button"
-            onClick={() => submit("escalated")}
-            disabled={saving !== null}
-            className="rounded-full bg-red-100 py-2 text-sm font-semibold text-red-500 disabled:opacity-60"
-          >
-            {saving === "escalated" ? "Saving…" : "Deny & Escalate"}
           </button>
         </div>
       )}
