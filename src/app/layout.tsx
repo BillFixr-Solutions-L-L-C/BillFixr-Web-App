@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Playfair_Display } from "next/font/google";
 import "./globals.css";
 
 const aeonik = localFont({
@@ -13,10 +12,25 @@ const aeonik = localFont({
   ],
 });
 
-const playfair = Playfair_Display({
+// Self-hosted rather than next/font/google. Fetching it from Google at
+// build time meant every build — including every CI run — depended on
+// reaching fonts.gstatic.com, and a single hiccup there failed the build
+// with a module-not-found on the generated font CSS. Nothing about the
+// font was wrong; the network was.
+//
+// This is the exact file Google was serving (latin subset, v40), so the
+// rendering is unchanged. It is one file because Playfair Display is a
+// variable font: Google served the same woff2 for weight 600 and 700 and
+// let the browser interpolate, which is also why the declared range is
+// the axis the file really carries (400-900) rather than the two weights
+// the design happens to use. Playfair Display is OFL-1.1, which permits
+// this — the licence ships beside it.
+const playfair = localFont({
   variable: "--font-serif",
-  subsets: ["latin"],
-  weight: ["600", "700"],
+  src: "./fonts/playfair-display/PlayfairDisplay-latin-variable.woff2",
+  weight: "400 900",
+  style: "normal",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
