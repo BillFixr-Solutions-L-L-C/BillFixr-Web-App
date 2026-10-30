@@ -12,6 +12,8 @@ import { getBillDocuments, type BillDocument } from "@/lib/billDocuments";
 import { buildCaseDocumentRows, type CaseDocumentRow } from "@/lib/caseDocuments";
 import { summarizeLetterEvents, describeLetterTracking, type LetterEvent } from "@/lib/letterTracking";
 import { COMPLETED_STATUSES } from "@/lib/caseStatus";
+import { agreedSavings, clientNotices, describeNegotiationStatus } from "@/lib/negotiationStatus";
+import type { AutomationNegotiation } from "@/types/automation-engine";
 
 // "letter"/"summary" are gone: the provider's reply is a row in the
 // document list now, and the route to payment is Check and Proceed.
@@ -27,6 +29,7 @@ type CaseRow = {
   ai_summary_text: string | null;
   letter_sent_at: string | null;
   adjusted_total: number | null;
+  negotiation_id: string | null;
 };
 
 // Phase 2 (AI) fields — errors_detected/savings_found/appeal_letter_text/
@@ -81,7 +84,7 @@ export default function ActiveCasePage() {
         supabase
           .from("cases")
           .select(
-            "id, status, bills(filename, storage_url, uploaded_at, provider_name), errors_detected, savings_found, appeal_letter_text, ai_summary_text, letter_sent_at, adjusted_total",
+            "id, status, bills(filename, storage_url, uploaded_at, provider_name), errors_detected, savings_found, appeal_letter_text, ai_summary_text, letter_sent_at, adjusted_total, negotiation_id",
           )
           .eq("user_id", user.id)
           // Completed cases live on their own page (/dashboard/completed).
@@ -175,6 +178,34 @@ export default function ActiveCasePage() {
   // Whether the provider actually opened the appeal letter (Figma
   // 815:3326) — derived from Resend's webhook events.
   const letterTracking = summarizeLetterEvents(letterEvents, selectedCase?.letter_sent_at ?? null);
+
+  // Step 3 "Follow" from services/automation-engine/INTEGRATION.md: the
+  // engine owns the negotiation's state, so the only way to know where a
+  // case actually stands is to ask it when the page opens. Only cases the
+  // engine is running have a negotiation_id, so everything else — and the
+  // whole app while the engine is undeployed — skips this entirely.
+  const [negotiation, setNegotiation] = useState<AutomationNegotiation | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!selectedCase?.negotiation_id) {
+        if (!cancelled) setNegotiation(null);
+        return;
+      }
+      const res = await fetch(`/api/dashboard/cases/${selectedCase.id}/negotiation`);
+      if (cancelled) return;
+      // A failure here means we cannot say where the case stands, so the
+      // page shows nothing rather than a stale or invented status.
+      setNegotiation(res.ok ? ((await res.json()) as AutomationNegotiation) : null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCase]);
+
+  const negotiationStatus = negotiation ? describeNegotiationStatus(negotiation.status) : null;
+  const negotiationSavings = negotiation ? agreedSavings(negotiation) : null;
+  const notices = negotiation ? clientNotices(negotiation) : [];
 
   // Figma labels this "ADJUSTED BILL"; the stored type is new_bill.
   const adjustedBillDoc = docRows.find((d) => d.label === "New Bill" && d.available) ?? null;
@@ -521,6 +552,69 @@ export default function ActiveCasePage() {
       <BackToCasesButton onClick={backToList} />
       <PageHeading title="Active Case" />
 
+      {/* Where the negotiation actually stands, straight from the engine
+          that is running it. Absent for cases it is not running — the
+          screen says nothing rather than guessing. */}
+      {negotiationStatus && negotiation && (
+        <div
+          className={`mb-6 rounded-2xl border-l-4 bg-white p-5 shadow-sm ${
+            negotiationStatus.tone === "attention"
+              ? "border-accent-500"
+              : negotiationStatus.tone === "good" || negotiationStatus.tone === "done"
+                ? "border-primary-600"
+                : "border-gray-200"
+          }`}
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm font-semibold text-gray-900">{negotiationStatus.label}</p>
+            <p className="text-xs text-gray-400">
+              Updated{" "}
+              {new Date(negotiation.updated_at).toLocaleString("en-US", {
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
+          <p className="mt-1 text-sm text-gray-500">{negotiationStatus.detail}</p>
+
+          {/* Only shown once the provider has agreed a figure. The audit's
+              estimate is not a reduction and must not read like one. */}
+          {negotiationSavings != null && negotiation.settled_amount != null && (
+            <p className="mt-3 text-sm text-gray-600">
+              Agreed: <span className="font-semibold text-gray-900">${negotiation.settled_amount.toLocaleString()}</span>{" "}
+              down from ${negotiation.total_billed.toLocaleString()} —{" "}
+              <span className="font-semibold text-primary-600">${negotiationSavings.toLocaleString()} saved</span>
+            </p>
+          )}
+
+          {notices.length > 0 && (
+            <ul className="mt-4 space-y-2 border-t border-gray-50 pt-3">
+              {notices.slice(-3).map((notice) => (
+                <li key={notice.id} className="text-xs text-gray-500">
+                  <span className="text-gray-400">
+                    {new Date(notice.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>{" "}
+                  {notice.subject || notice.content_markdown}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {negotiation.revised_bill_available && selectedCaseId && (
+            <a
+              href={`/api/dashboard/cases/${selectedCaseId}/revised-bill/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-block rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+            >
+              View corrected bill
+            </a>
+          )}
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[1fr_auto]">
         <div className="rounded-2xl bg-white p-6 shadow-sm">
           {docRows.map((doc) => (
@@ -597,7 +691,14 @@ export default function ActiveCasePage() {
             { label: "Bill Analyzed", value: "1" },
             {
               label: "Savings Found",
-              value: selectedCase?.savings_found != null ? `$${selectedCase.savings_found}` : MOCK_SAVINGS_FOUND,
+              // An agreed reduction is the real number and outranks both
+              // the stored estimate and the placeholder below it.
+              value:
+                negotiationSavings != null
+                  ? `$${negotiationSavings.toLocaleString()}`
+                  : selectedCase?.savings_found != null
+                    ? `$${selectedCase.savings_found}`
+                    : MOCK_SAVINGS_FOUND,
             },
             {
               label: "Errors Detected",
