@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { findProviderContact, getAiServiceConfig } from "@/lib/ai-service";
+import { findProviderContact, preferredBackend } from "@/lib/aiStack";
 
 const FIELDS = ["billingManagerEmail", "supportEmail"] as const;
 type ContactField = (typeof FIELDS)[number];
@@ -53,8 +53,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!searchName) {
     return NextResponse.json({ error: "Add the hospital name first, then search.", value: null }, { status: 400 });
   }
-  if (!getAiServiceConfig()) {
-    console.warn("Provider contact lookup requested but AI_SERVICE_BASE_URL is not set");
+  // Either backend can answer this; the seam picks, preferring the
+  // engine, whose lookup is backed by a real provider directory.
+  if (!preferredBackend()) {
+    console.warn("Provider contact lookup requested but no AI backend base URL is set");
     return NextResponse.json(
       { error: "Automatic search isn't available right now — please type it in.", value: null },
       { status: 503 },

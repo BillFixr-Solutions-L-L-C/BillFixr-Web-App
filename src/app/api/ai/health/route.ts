@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getAiHealth, getAiServiceConfig } from "@/lib/ai-service";
+import { configuredBackends, getStackHealth } from "@/lib/aiStack";
 import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
 
 // Security audit finding (BACKEND-PLAN.md "Security plan", Medium): this
@@ -26,15 +26,15 @@ export async function GET() {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  if (!getAiServiceConfig()) {
-    return NextResponse.json({ error: "AI service is not configured." }, { status: 503 });
+  // Both backends are reported, each with its own state, so an admin can
+  // see which half of the stack is down instead of one red light for the
+  // pair. getStackHealth never throws — a backend that fails comes back
+  // as unreachable — so the only 503 left is "nothing is set up at all".
+  if (configuredBackends().length === 0) {
+    return NextResponse.json({ error: "No AI backend is configured." }, { status: 503 });
   }
 
-  try {
-    const health = await getAiHealth();
-    return NextResponse.json(health);
-  } catch (error) {
-    console.error("AI service health check failed:", error);
-    return NextResponse.json({ error: "Failed to reach the AI service." }, { status: 502 });
-  }
+  const backends = await getStackHealth();
+  const anyReachable = backends.some((b) => b.reachable);
+  return NextResponse.json({ backends }, { status: anyReachable ? 200 : 502 });
 }
