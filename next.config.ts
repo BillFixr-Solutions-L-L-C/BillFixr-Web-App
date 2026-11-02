@@ -35,8 +35,18 @@ const CSP = [
   `img-src 'self' data: blob: ${SUPABASE_ORIGIN}`,
   "font-src 'self' data:",
   `connect-src 'self' ${SUPABASE_ORIGIN} https://api.stripe.com`,
-  "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
-  "frame-ancestors 'none'",
+  // Supabase storage is framed, not only fetched: the document viewer
+  // embeds a bill or a provider letter from its signed storage URL. The
+  // same omission that killed Stripe.js killed this silently too — a
+  // blocked frame renders as an empty box with the refusal only in the
+  // console, so it looked like a document that would not load.
+  `frame-src 'self' ${SUPABASE_ORIGIN} https://js.stripe.com https://hooks.stripe.com`,
+  // 'self', not 'none': the document viewer frames documents this app
+  // serves itself — the customer's watermarked case documents and the
+  // appeal letter PDF. 'none' blocks a page from framing its own origin,
+  // so those rendered as "refused to connect". Other sites still cannot
+  // frame us, which is what this directive is for.
+  "frame-ancestors 'self'",
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
@@ -47,7 +57,11 @@ const CSP = [
 const SECURITY_HEADERS = [
   { key: "Content-Security-Policy", value: CSP },
   { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "DENY" },
+  // SAMEORIGIN rather than DENY, for the same reason as frame-ancestors
+  // above: DENY blocks framing even by our own pages. Browsers that
+  // support frame-ancestors ignore this header; it is here for ones that
+  // do not, and SAMEORIGIN gives them the same rule.
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },

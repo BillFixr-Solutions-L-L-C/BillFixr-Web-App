@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import DocumentsTable, { type DocumentRow } from "./DocumentsTable";
 
@@ -27,12 +27,17 @@ describe("DocumentsTable", () => {
     }
   });
 
-  it("links a file row straight to the file", () => {
+  it("opens a file row over the page instead of navigating to the file", () => {
     render(<DocumentsTable rows={[ROW]} />);
-    expect(screen.getByRole("link", { name: "View" })).toHaveAttribute("href", "https://signed/doc");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "View" }));
+
+    expect(screen.getByRole("dialog")).toHaveAttribute("aria-modal", "true");
+    expect(screen.getByTitle("Appeal Letter")).toHaveAttribute("src", "https://signed/doc");
   });
 
-  it("links the analysis row to its page instead", () => {
+  it("still navigates for the analysis row, which is a page and not a file", () => {
     render(<DocumentsTable rows={[{ ...ROW, label: "Analysis Generated", href: "/dashboard/documents/bill-1", previewUrl: null }]} />);
     expect(screen.getByRole("link", { name: "View" })).toHaveAttribute("href", "/dashboard/documents/bill-1");
   });

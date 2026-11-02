@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DocumentViewer from "@/components/dashboard/DocumentViewer";
 import type { BillDocument } from "@/lib/billDocuments";
 import DeleteBillButton from "@/components/admin/DeleteBillButton";
 
@@ -24,6 +25,9 @@ export default function UploadsTable({
   emptyMessage?: string;
 }) {
   const [selected, setSelected] = useState<UploadRow | null>(null);
+  // The file opens over the drawer rather than in another tab, so closing
+  // it puts the admin back where they were.
+  const [viewingFile, setViewingFile] = useState(false);
 
   return (
     <>
@@ -153,23 +157,22 @@ export default function UploadsTable({
             <div className="mt-4 max-h-64 max-w-[220px] overflow-hidden rounded-xl">
               {selected.doc?.previewUrl ? (
                 selected.doc.isImage ? (
-                  <a href={selected.doc.previewUrl} target="_blank" rel="noopener noreferrer">
+                  <button type="button" onClick={() => setViewingFile(true)} className="block w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={selected.doc.previewUrl}
                       alt={selected.filename}
                       className="aspect-[3/4] w-full rounded-xl border border-gray-100 object-cover"
                     />
-                  </a>
+                  </button>
                 ) : (
-                  <a
-                    href={selected.doc.previewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => setViewingFile(true)}
                     className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-2 rounded-xl border border-gray-100 bg-gray-50 p-4 text-center text-xs text-gray-500 hover:bg-gray-100"
                   >
                     <span>View file</span>
-                  </a>
+                  </button>
                 )
               ) : (
                 <div className="flex aspect-[3/4] w-full items-center justify-center rounded-xl border border-dashed border-gray-200 p-4 text-center text-xs text-gray-400">
@@ -179,6 +182,15 @@ export default function UploadsTable({
             </div>
           </div>
         </div>
+      )}
+
+      {viewingFile && selected?.doc?.previewUrl && (
+        <DocumentViewer
+          title={selected.filename}
+          url={selected.doc.previewUrl}
+          downloadUrl={selected.doc.downloadUrl}
+          onClose={() => setViewingFile(false)}
+        />
       )}
     </>
   );

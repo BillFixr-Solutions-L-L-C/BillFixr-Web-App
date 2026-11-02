@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import DocumentViewer from "./DocumentViewer";
 
 export type DocumentRow = {
   key: string;
@@ -15,6 +19,8 @@ function formatDate(value: string | null) {
 }
 
 export default function DocumentsTable({ rows }: { rows: DocumentRow[] }) {
+  const [viewing, setViewing] = useState<DocumentRow | null>(null);
+
   if (rows.length === 0) {
     return (
       <div className="rounded-2xl bg-white p-10 text-center text-sm text-gray-500 shadow-sm">
@@ -51,14 +57,16 @@ export default function DocumentsTable({ rows }: { rows: DocumentRow[] }) {
                     View
                   </Link>
                 ) : row.previewUrl ? (
-                  <a
-                    href={row.previewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  // Opens over this page. A row whose `href` is set still
+                  // navigates: that one goes to the analysis of the
+                  // document, which is a page, not a file.
+                  <button
+                    type="button"
+                    onClick={() => setViewing(row)}
                     className="text-sm font-medium text-primary-600 hover:text-primary-700"
                   >
                     View
-                  </a>
+                  </button>
                 ) : (
                   <span className="text-sm text-gray-300">View</span>
                 )}
@@ -67,6 +75,14 @@ export default function DocumentsTable({ rows }: { rows: DocumentRow[] }) {
           ))}
         </tbody>
       </table>
+
+      {viewing?.previewUrl && (
+        <DocumentViewer
+          title={viewing.label}
+          url={viewing.previewUrl}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   );
 }

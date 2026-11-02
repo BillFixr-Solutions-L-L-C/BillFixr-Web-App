@@ -1,5 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import type { BillDocument } from "@/lib/billDocuments";
 import DeleteBillButton from "@/components/admin/DeleteBillButton";
+import DocumentViewer from "@/components/dashboard/DocumentViewer";
 
 function FileIcon() {
   return (
@@ -23,6 +27,10 @@ export default function BillDocumentCard({
   label: string;
   canDelete?: boolean;
 }) {
+  // Opens over the case rather than in another tab — an admin reading a
+  // bill is reading it against the rest of the case.
+  const [viewing, setViewing] = useState(false);
+
   return (
     <div className="rounded-xl border border-gray-100 bg-white p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -39,30 +47,38 @@ export default function BillDocumentCard({
 
       {doc.previewUrl ? (
         doc.isImage ? (
-          <a href={doc.previewUrl} target="_blank" rel="noopener noreferrer">
+          <button type="button" onClick={() => setViewing(true)} className="block w-full">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={doc.previewUrl}
               alt={doc.filename}
               className="aspect-[3/4] w-full rounded-lg border border-gray-100 object-cover"
             />
-          </a>
+          </button>
         ) : (
-          <a
-            href={doc.previewUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => setViewing(true)}
             className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-2 rounded-lg border border-gray-100 bg-gray-50 p-4 text-center text-gray-400 hover:bg-gray-100"
           >
             <FileIcon />
             <span className="break-all text-[11px] text-gray-600">{doc.filename}</span>
             <span className="text-[10px] uppercase tracking-wide">View file</span>
-          </a>
+          </button>
         )
       ) : (
         <div className="flex aspect-[3/4] w-full items-center justify-center rounded-lg border border-dashed border-gray-200 p-4 text-center text-xs text-gray-400">
           File unavailable
         </div>
+      )}
+
+      {viewing && doc.previewUrl && (
+        <DocumentViewer
+          title={doc.filename}
+          url={doc.previewUrl}
+          downloadUrl={doc.downloadUrl}
+          onClose={() => setViewing(false)}
+        />
       )}
     </div>
   );

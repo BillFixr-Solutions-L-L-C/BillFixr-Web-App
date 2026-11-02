@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import type { CaseDocumentRow } from "@/lib/caseDocuments";
+import DocumentViewer from "./DocumentViewer";
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -6,6 +10,11 @@ function formatDate(value: string | null) {
 }
 
 export default function CaseDocumentList({ documents }: { documents: CaseDocumentRow[] }) {
+  // View opens the document over this page rather than navigating away to
+  // it. Working through a case means opening several of these in turn, and
+  // the old target="_blank" link lost the case from view every time.
+  const [viewing, setViewing] = useState<CaseDocumentRow | null>(null);
+
   return (
     <div className="rounded-2xl bg-white p-6 shadow-sm">
       <ul>
@@ -39,17 +48,18 @@ export default function CaseDocumentList({ documents }: { documents: CaseDocumen
                 nothing to withhold. */}
             <div className="flex w-36 shrink-0 items-center justify-end gap-3">
               {doc.previewUrl ? (
-                <a
-                  href={doc.previewUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => setViewing(doc)}
                   className="text-sm font-medium text-primary-600 hover:text-primary-700"
                 >
                   👁 View
-                </a>
+                </button>
               ) : (
                 <span className="text-sm text-gray-300">👁 View</span>
               )}
+              {/* Still a real link: a download should download, and an
+                  anchor is what makes the browser do that. */}
               {doc.downloadUrl ? (
                 <a
                   href={doc.downloadUrl}
@@ -64,6 +74,16 @@ export default function CaseDocumentList({ documents }: { documents: CaseDocumen
           </li>
         ))}
       </ul>
+
+      {viewing?.previewUrl && (
+        <DocumentViewer
+          title={viewing.label}
+          filename={viewing.sublabel}
+          url={viewing.previewUrl}
+          downloadUrl={viewing.downloadUrl}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   );
 }
