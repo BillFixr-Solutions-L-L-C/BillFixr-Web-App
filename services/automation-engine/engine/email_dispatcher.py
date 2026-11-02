@@ -25,11 +25,11 @@ from email.mime.text import MIMEText
 from email.utils import parseaddr, formataddr
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
-from dotenv import load_dotenv
+from engine.env import load_service_env
 
 from engine.config import ADVOCATE_EMAIL
 
-load_dotenv(override=True)
+load_service_env(override=True)
 logger = logging.getLogger("billfixr.email")
 
 RESEND_API_BASE = os.getenv("RESEND_API_BASE", "https://api.resend.com").rstrip("/")
@@ -39,7 +39,7 @@ class EmailDispatcher:
         self._load_config()
 
     def _load_config(self):
-        load_dotenv(override=True)
+        load_service_env(override=True)
         self.smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
         self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
         self.smtp_user = os.getenv("SMTP_USER", "").strip()

@@ -150,6 +150,39 @@ webhook can attribute it.
 and replies are what the team gets, and a reply is the only real proof a
 provider read anything.
 
+### It checks itself on startup
+
+The engine inspects its configuration before it serves anything and prints
+the result. The deploy log opens with:
+
+```
+BillFixr automation engine - configuration check
+  letters tracked (Resend) : yes
+  replies read (IMAP)      : NO
+  API key required         : yes
+  sending as               : advocate@billfixr.com
+  [WARNING] SMTP_USER / SMTP_PASSWORD: ...
+```
+
+Read those four lines after every deploy. They are the difference between
+a service that works and one that only looks like it does.
+
+**It refuses to start** on anything critical — no `ENGINE_API_KEY`, no
+`OPENROUTER_API_KEY`, or a `From` address Resend will reject — and exits
+non-zero, so Render fails the deploy rather than quietly putting an open
+API or an untracked sender into service. `ENGINE_ALLOW_INCOMPLETE=1`
+overrides it; that is for local work, not for anywhere that can write to a
+real hospital.
+
+Untracked letters (no `RESEND_API_KEY`) and an unread inbox (no mailbox
+credentials) are warnings, not refusals: sending untracked is bad, and not
+sending at all is worse.
+
+`/api/health` reports the same thing as booleans — `ready`,
+`letters_tracked`, `replies_read`, `api_protected` — so it can be checked
+without reading logs. It is outside the API key gate, so it says what is
+configured and never what anything is set to.
+
 ### The disk
 
 `/app/data` holds the SQLite database and every revised-bill PDF. Without
@@ -193,3 +226,8 @@ Then check, on one real case, in this order:
   was real. After step 4, it is.
 - **The QA Super Admin** on the production Supabase project is still
   there, by decision, until testing finishes.
+- **The engine's Docker image has still never been built.** The author
+  never built it, and there is no Docker daemon on the machine this was
+  prepared on. Its dependencies were checked against its imports and the
+  service was booted directly from source, but the first real build will
+  happen on Render. Watch that build.

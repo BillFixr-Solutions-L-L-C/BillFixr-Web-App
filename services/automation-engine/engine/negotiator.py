@@ -11,7 +11,7 @@ import json
 import re
 from typing import Dict, Any, List, Optional
 import httpx
-from dotenv import load_dotenv
+from engine.env import load_service_env
 
 from database import NegotiationRepository
 from engine.config import ADVOCATE_EMAIL
@@ -19,7 +19,7 @@ from engine.payments import completion_fee, savings_amount
 from engine.revised_bill import check_revised_bill, read_pdf, save_pdf
 from engine.audit_engine import CITATIONS, HOLD_FOR_REVIEW as AUTOPILOT_HOLD_FOR_REVIEW, findings_for_letter
 
-load_dotenv()
+load_service_env()
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 REASONING_MODEL = "deepseek/deepseek-chat"
@@ -390,7 +390,7 @@ class NegotiationService:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or OPENROUTER_API_KEY
         if not self.api_key:
-            load_dotenv(override=True)
+            load_service_env(override=True)
             self.api_key = os.getenv("OPENROUTER_API_KEY", "")
 
     async def analyze_hospital_response(

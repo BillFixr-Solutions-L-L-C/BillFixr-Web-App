@@ -11,11 +11,11 @@ import io
 import re
 from typing import Dict, Any, Optional
 import httpx
-from dotenv import load_dotenv
+from engine.env import load_service_env
 from PIL import Image
 import pypdf
 
-load_dotenv()
+load_service_env()
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 VISION_MODEL = os.getenv("VISION_MODEL", "google/gemini-2.5-flash")
@@ -76,7 +76,7 @@ class VisionExtractor:
         self.api_key = api_key or OPENROUTER_API_KEY
         if not self.api_key:
             # Re-read from .env if needed
-            load_dotenv(override=True)
+            load_service_env(override=True)
             self.api_key = os.getenv("OPENROUTER_API_KEY", "")
 
     def process_file_to_images(self, file_bytes: bytes, filename: str) -> list[str]:

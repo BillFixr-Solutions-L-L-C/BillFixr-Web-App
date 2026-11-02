@@ -12,7 +12,7 @@ import email
 import asyncio
 import logging
 from typing import List, Dict, Any, Optional
-from dotenv import load_dotenv
+from engine.env import load_service_env
 
 from database import NegotiationRepository
 from engine.negotiator import NegotiationService
@@ -28,7 +28,7 @@ class InboundEmailPoller:
         self._sync_lock = asyncio.Lock()
 
     def _load_config(self):
-        load_dotenv(override=True)
+        load_service_env(override=True)
         self.imap_host = os.getenv("IMAP_HOST", "imap.gmail.com")
         self.imap_port = int(os.getenv("IMAP_PORT", "993"))
         self.user = os.getenv("SMTP_USER", "").strip()

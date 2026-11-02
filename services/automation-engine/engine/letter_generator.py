@@ -10,12 +10,12 @@ import re
 from datetime import datetime
 from typing import Dict, Any, Optional
 import httpx
-from dotenv import load_dotenv
+from engine.env import load_service_env
 
 from engine.audit_engine import CITATIONS, findings_for_letter
 from engine.config import ADVOCATE_EMAIL
 
-load_dotenv()
+load_service_env()
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 REASONING_MODEL = os.getenv("LETTER_MODEL", "google/gemini-2.5-flash")
@@ -79,7 +79,7 @@ class LetterGenerator:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or OPENROUTER_API_KEY
         if not self.api_key:
-            load_dotenv(override=True)
+            load_service_env(override=True)
             self.api_key = os.getenv("OPENROUTER_API_KEY", "")
 
     def build_first_letter(self, audit_result: Dict[str, Any], settlement_offer: float) -> str:

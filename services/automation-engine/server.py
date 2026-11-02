@@ -13,7 +13,7 @@ from pydantic import BaseModel
 import json
 import re
 from datetime import datetime, timezone
-from dotenv import load_dotenv
+from engine.env import load_service_env
 
 import asyncio
 from engine.vision_extractor import VisionExtractor
@@ -27,6 +27,7 @@ from engine.negotiator import (
 from engine.config import ADVOCATE_EMAIL
 from engine.payments import COMMITMENT_FEE, COMPLETION_FEE_RATE, completion_fee
 from engine.email_dispatcher import email_dispatcher, case_tags
+from engine import readiness
 from engine.inbound_poller import inbound_poller
 from engine.demo_data import DEMO_BILLS, get_demo_bill
 from database import NegotiationRepository, get_connection
@@ -34,7 +35,7 @@ from engine.contact_finder import ProviderContactFinder
 
 contact_finder = ProviderContactFinder()
 
-load_dotenv()
+load_service_env()
 
 app = FastAPI(
     title="BillFixr API",
@@ -86,6 +87,13 @@ def _cadence_due(neg: dict) -> bool:
 
 # Automated Background Gmail Inbox Poller (Every 30 seconds)
 @app.on_event("startup")
+async def check_configuration():
+    """First thing on startup, so a misconfigured deploy says so in its log
+    rather than running on and looking healthy."""
+    readiness.enforce()
+
+
+@app.on_event("startup")
 async def start_background_inbox_poller():
     async def poll_loop():
         await asyncio.sleep(5)
@@ -131,12 +139,25 @@ class LetterRequest(BaseModel):
 
 @app.get("/api/health")
 async def health_check():
-    has_key = bool(os.getenv("OPENROUTER_API_KEY", "").strip())
+    # This used to report qwen and deepseek as the models in use. Those are
+    # the *fallbacks*; the models actually called are these, and either can
+    # be overridden by environment variable. The one endpoint used to check
+    # a deployment should not be the one that describes it wrongly.
+    from engine.letter_generator import REASONING_MODEL
+    from engine.vision_extractor import VISION_MODEL
+
+    state = readiness.check()
     return {
         "status": "healthy",
-        "openrouter_configured": has_key,
-        "vision_model": "qwen/qwen2.5-vl-72b-instruct",
-        "reasoning_model": "deepseek/deepseek-chat"
+        "openrouter_configured": bool(os.getenv("OPENROUTER_API_KEY", "").strip()),
+        "vision_model": VISION_MODEL,
+        "reasoning_model": REASONING_MODEL,
+        # Booleans only. This route is deliberately outside the API key
+        # check, so it says what is configured and never what it is set to.
+        "ready": state["ready"],
+        "letters_tracked": state["letters_tracked"],
+        "replies_read": state["replies_read"],
+        "api_protected": state["api_protected"],
     }
 
 @app.get("/api/demo-bills")
