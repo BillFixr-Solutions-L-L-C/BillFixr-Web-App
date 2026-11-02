@@ -48,7 +48,7 @@ describe("buildCaseDocumentRows", () => {
     // Chronological: the analysis produces the letter, the provider
     // responds to it, and the corrected bill arrives last.
     expect(rows.map((r) => r.label)).toEqual([
-      "bill.pdf",
+      "Original Bill",
       "Analysis Generated",
       "Appeal Letter",
       "Provider Responses",
@@ -105,6 +105,64 @@ describe("buildCaseDocumentRows", () => {
     const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), { ...BASE, bill: null });
     expect(rows.some((r) => r.label === "bill.pdf")).toBe(false);
     expect(rows[0].label).toBe("Analysis Generated");
+  });
+});
+
+describe("the analysis row", () => {
+  it("carries no date until an analysis exists", async () => {
+    // The caller passes the case's creation date, which is not when an
+    // analysis was generated. Shown beside "Not available yet" it read
+    // as a thing that had already happened.
+    const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), { ...BASE, hasAnalysis: false });
+    const analysis = rows.find((r) => r.id === "analysis")!;
+    expect(analysis.available).toBe(false);
+    expect(analysis.date).toBeNull();
+  });
+
+  it("still dates it once there is one", async () => {
+    const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), BASE);
+    const analysis = rows.find((r) => r.id === "analysis")!;
+    expect(analysis.available).toBe(true);
+    expect(analysis.date).toBe(BASE.analysisDate);
+  });
+});
+
+describe("the original bill row", () => {
+  it("is named for what it is, with the filename kept underneath", async () => {
+    // It used to be labelled with the raw filename, so beside "Appeal
+    // Letter" and "Provider Responses" it read as a stray upload rather
+    // than the bill the whole case is about. Removing the separate
+    // "Original Bill" card left nothing else naming it.
+    const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), BASE);
+    const bill = rows.find((r) => r.id === "original-bill")!;
+    expect(bill.label).toBe("Original Bill");
+    expect(bill.sublabel).toBe("bill.pdf");
+  });
+
+  it("names the bill for the customer too, not only for staff", async () => {
+    // showFilenames is a staff setting; the bill's own name is not.
+    const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), { ...BASE, showFilenames: false });
+    const bill = rows.find((r) => r.id === "original-bill")!;
+    expect(bill.label).toBe("Original Bill");
+    expect(bill.sublabel).toBe("bill.pdf");
+  });
+
+  it("is openable and downloadable", async () => {
+    const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), BASE);
+    const bill = rows.find((r) => r.id === "original-bill")!;
+    expect(bill.available).toBe(true);
+    expect(bill.previewUrl).toBe("https://signed/u/bill.pdf");
+    expect(bill.downloadUrl).toBe("https://signed/u/bill.pdf?dl");
+  });
+
+  it("is still listed, but not available, when the file is missing", async () => {
+    const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), {
+      ...BASE,
+      bill: { ...BASE.bill, storage_url: null },
+    });
+    const bill = rows.find((r) => r.id === "original-bill")!;
+    expect(bill.label).toBe("Original Bill");
+    expect(bill.available).toBe(false);
   });
 });
 

@@ -110,9 +110,16 @@ export async function buildCaseDocumentRows(
     const signed = source.bill.storage_url
       ? await sign(supabase, source.bill.storage_url, source.bill.filename)
       : { previewUrl: null, downloadUrl: null };
+    // Named for what it is, like every other row. It used to carry the
+    // raw filename as its label — "Screen Shot 2026-10-23 at 5.40.05
+    // PM.png" beside "Appeal Letter" and "Provider Responses" — which
+    // read as some stray upload rather than the bill the case is about.
+    // The filename stays underneath, where it is still useful and no
+    // longer the only thing identifying the row.
     rows.push({
       id: "original-bill",
-      label: source.bill.filename,
+      label: "Original Bill",
+      sublabel: source.bill.filename,
       status: "Uploaded",
       date: source.bill.uploaded_at,
       sizeLabel: null,
@@ -125,7 +132,11 @@ export async function buildCaseDocumentRows(
     id: "analysis",
     label: "Analysis Generated",
     status: "Generated",
-    date: source.analysisDate,
+    // No date until there is an analysis. The caller passes the case's
+    // creation date, which is not when an analysis was generated — on a
+    // case with none it put a date beside "Not available yet", which
+    // reads as something that happened.
+    date: source.hasAnalysis ? source.analysisDate : null,
     sizeLabel: null,
     previewUrl: null,
     downloadUrl: null,
