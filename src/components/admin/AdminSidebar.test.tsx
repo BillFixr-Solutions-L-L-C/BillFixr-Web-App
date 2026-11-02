@@ -79,7 +79,6 @@ describe("AdminSidebar", () => {
       "Uploads",
       "Case Detail",
       "User Management",
-      "Automation Monitoring",
       "Support",
     ];
     const seen = order.map((o) => labels.findIndex((l) => l.startsWith(o)));

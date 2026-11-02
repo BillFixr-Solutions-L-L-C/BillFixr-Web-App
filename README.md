@@ -39,14 +39,20 @@ have legal authorization to act on behalf of.
 
 ## AI backend
 
-The repository includes an isolated Python AI service at
-`services/ai-service/` for ingestion, OCR, extraction, case analysis, and
-draft generation. See `AI-SERVICE-INTEGRATION.md` for the frontend handoff
-and integration path.
+There is none in this repository. Two Python services used to live under
+`services/` — `ai-service` (ingestion, OCR, extraction, case analysis,
+draft generation) and `automation-engine` (audit rules and the negotiation
+autopilot) — along with the web app's clients for them. Both were removed
+on 2026-11-02; neither was ever deployed, so nothing in production
+changed.
 
-The audit rules and the negotiation autopilot (follow-ups, replies, settlement, the
-revised bill, and the completion fee) are in `services/automation-engine/`. See
-`services/automation-engine/INTEGRATION.md` for how the web app connects to it.
+They are not lost. `services/automation-engine` is still on the remote
+branch `stmarkadebayo/automation-engine`, and both services, their
+clients, and the routes that called them are in this repository's history
+up to commit `6583250`.
+
+Nothing in the app reads a bill or negotiates automatically now. A case
+reaches `scanning` and waits for a person.
 
 ## How BillFixr is paid
 

@@ -1,6 +1,5 @@
 // Retrying a stalled case means re-running the AI/OCR pipeline, and there
-// is no admin route that can do that: /api/dev/process-with-ai is scoped
-// to the case's own owner, and no admin equivalent exists yet.
+// is nothing left to re-run: the AI services were removed on 2026-11-02.
 //
 // So this is deliberately inert and says so, matching ManualOverridePanel's
 // "Re-Run AI Analysis". The version it replaced looked like it worked — it

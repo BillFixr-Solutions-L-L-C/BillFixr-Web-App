@@ -1,5 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import DocumentAnalysisClient from "./DocumentAnalysisClient";
 import { MOCK_BILL_ANALYSIS } from "@/lib/billAnalysis";
@@ -43,53 +42,16 @@ describe("DocumentAnalysisClient", () => {
     expect(screen.queryByText("Issue 1")).not.toBeInTheDocument();
   });
 
-  it("shows Re-scan and Proceed once the bill has a case", () => {
+  it("shows Proceed once the bill has a case", () => {
+    // Re-scan went with the AI services: nothing can read a bill twice.
     render(<DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" />);
-    expect(screen.getByRole("button", { name: "Re-scan" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Proceed" })).toHaveAttribute("href", "/dashboard/case");
+    expect(screen.queryByRole("button", { name: /Re-scan/ })).not.toBeInTheDocument();
   });
 
-  it("disables Re-scan once the one re-scan has been used", () => {
-    render(
-      <DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" canRescan={false} />,
-    );
-    const button = screen.getByRole("button", { name: /Re-scan/ });
-    expect(button).toBeDisabled();
-    expect(button).toHaveAttribute("title", expect.stringContaining("already used"));
-    // Proceed still works
-    expect(screen.getByRole("link", { name: "Proceed" })).toBeInTheDocument();
-  });
-
-  it("hides them when there is no case yet", () => {
+  it("hides Proceed when there is no case yet", () => {
     render(<DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} />);
-    expect(screen.queryByRole("button", { name: "Re-scan" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Proceed" })).not.toBeInTheDocument();
-  });
-
-  it("re-scan asks for a fresh read and refreshes the page", async () => {
-    global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    const user = userEvent.setup();
-    render(<DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" />);
-
-    await user.click(screen.getByRole("button", { name: "Re-scan" }));
-
-    await waitFor(() => expect(refresh).toHaveBeenCalled());
-    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(url).toBe("/api/dev/process-with-ai");
-    expect(JSON.parse(init.body)).toEqual({ caseId: "case-1", force: true });
-  });
-
-  it("shows why a re-scan failed instead of silently doing nothing", async () => {
-    global.fetch = vi.fn(
-      async () => new Response(JSON.stringify({ error: "AI processing failed" }), { status: 502 }),
-    );
-    const user = userEvent.setup();
-    render(<DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" />);
-
-    await user.click(screen.getByRole("button", { name: "Re-scan" }));
-
-    expect(await screen.findByText("AI processing failed")).toBeInTheDocument();
-    expect(refresh).not.toHaveBeenCalled();
   });
 
   it("shows the Appeal Letter card only when the bill has a case", () => {
