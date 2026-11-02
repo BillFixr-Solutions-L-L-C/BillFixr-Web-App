@@ -9,7 +9,16 @@ function formatDate(value: string | null) {
   return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export default function CaseDocumentList({ documents }: { documents: CaseDocumentRow[] }) {
+export default function CaseDocumentList({
+  documents,
+  title,
+}: {
+  documents: CaseDocumentRow[];
+  /** Rendered inside the card, where every other section on the admin
+      case screen keeps its heading. The customer's page has its own
+      heading above and passes none. */
+  title?: string;
+}) {
   // View opens the document over this page rather than navigating away to
   // it. Working through a case means opening several of these in turn, and
   // the old target="_blank" link lost the case from view every time.
@@ -17,6 +26,7 @@ export default function CaseDocumentList({ documents }: { documents: CaseDocumen
 
   return (
     <div className="rounded-2xl bg-white p-6 shadow-sm">
+      {title && <h2 className="mb-2 text-lg font-semibold text-gray-900">{title}</h2>}
       <ul>
         {documents.map((doc) => (
           <li

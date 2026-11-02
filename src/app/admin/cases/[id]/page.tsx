@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getBillDocuments } from "@/lib/billDocuments";
 import { type AdminCaseAnalysis } from "@/lib/adminCaseAnalysis";
 import { buildNegotiationTimeline, describeNextStep } from "@/lib/negotiationTimeline";
 import { caseProgress, endedEarly } from "@/lib/caseProgress";
@@ -15,7 +14,6 @@ import { buildCaseDocumentRows, type CaseDocumentSource } from "@/lib/caseDocume
 import CaseDocumentList from "@/components/dashboard/CaseDocumentList";
 import LetterDeliveryPanel from "@/components/admin/LetterDeliveryPanel";
 import { isCaseCompleted } from "@/lib/caseStatus";
-import BillDocumentCard from "@/components/admin/BillDocumentCard";
 import ManualOverridePanel from "@/components/admin/ManualOverridePanel";
 import CaseDocumentsPanel from "@/components/admin/CaseDocumentsPanel";
 import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
@@ -57,7 +55,6 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   // real bill, indistinguishable from findings. An empty panel is useful;
   // a fabricated one an admin might act on is not.
   const analysis = caseRow.admin_analysis as AdminCaseAnalysis | null;
-  const [billDoc] = bill ? await getBillDocuments(supabase, [bill]) : [null];
   const delivered = isCaseCompleted(caseRow.status);
 
   const { data: caseDocuments } = await supabase
@@ -157,101 +154,90 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             </div>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-[1fr_1fr]">
-            <div>
-              <p className="mb-2 text-sm font-bold uppercase tracking-wide text-primary-700">Original Bill</p>
-              {billDoc ? (
-                <BillDocumentCard doc={billDoc} label="Original Bill" />
-              ) : (
-                <div className="flex aspect-[3/4] w-full items-center justify-center rounded-xl border border-dashed border-gray-200 p-4 text-center text-xs text-gray-400">
-                  No bill on file
+          {/* What the scan found, side by side: both are about the bill
+              itself, and both stay empty until it has been read. */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold text-gray-900">OCR Data Extraction</h3>
+              {analysis?.ocrDataExtraction?.length ? (
+                <div className="space-y-1 rounded-lg bg-gray-50 p-3 text-sm">
+                  {analysis.ocrDataExtraction.map((f) => (
+                    <div key={f.label} className="flex justify-between">
+                      <span className="text-gray-500">{f.label}</span>
+                      <span className="text-gray-800">{f.value}</span>
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-400">
+                  Nothing extracted yet — the bill has not been through OCR.
+                </p>
               )}
             </div>
 
-            <div className="flex flex-col gap-6">
-              <div className="rounded-2xl bg-white p-5 shadow-sm">
-                <h3 className="mb-3 text-sm font-semibold text-gray-900">OCR Data Extraction</h3>
-                {analysis?.ocrDataExtraction?.length ? (
-                  <div className="space-y-1 rounded-lg bg-gray-50 p-3 text-sm">
-                    {analysis.ocrDataExtraction.map((f) => (
-                      <div key={f.label} className="flex justify-between">
-                        <span className="text-gray-500">{f.label}</span>
-                        <span className="text-gray-800">{f.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-400">
-                    Nothing extracted yet — the bill has not been through OCR.
-                  </p>
-                )}
-              </div>
-
-              <div className="rounded-2xl bg-white p-5 shadow-sm">
-                <h3 className="mb-3 text-sm font-semibold text-gray-900">AI Analysis &amp; Risk Assessment</h3>
-                {analysis?.riskAssessment?.length ? (
-                  <div className="space-y-2 text-sm">
-                    {analysis.riskAssessment.map((r, i) => (
-                      <div key={i} className="flex justify-between">
-                        <span className={`font-semibold ${RISK_COLOR[r.level] ?? "text-gray-600"}`}>{r.level}</span>
-                        <span className="text-gray-500">{r.label}</span>
-                        <span className="text-gray-800">{r.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-400">
-                    No analysis yet. Risk levels appear once the bill has been scanned.
-                  </p>
-                )}
-              </div>
-
-              <div className="rounded-2xl bg-white p-5 shadow-sm">
-                <h3 className="mb-3 text-sm font-semibold text-gray-900">Negotiation &amp; Communication</h3>
-                {timeline.length === 0 ? (
-                  <p className="text-sm text-gray-400">Nothing has happened on this case yet.</p>
-                ) : (
-                  <div className="relative pl-6">
-                    <div className="absolute bottom-2 left-[7px] top-2 w-px bg-gray-100" />
-                    <div className="space-y-4">
-                      {timeline.map((t, i) => (
-                        <div key={i} className="relative flex items-start justify-between gap-2">
-                          <span
-                            className={`absolute -left-6 top-1 h-3 w-3 rounded-full border-2 border-white shadow ${
-                              t.tone === "failed" ? "bg-danger" : t.tone === "waiting" ? "bg-accent-500" : "bg-primary-500"
-                            }`}
-                          />
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900">{t.title}</p>
-                            {t.subtitle && <p className="text-xs text-gray-400">{t.subtitle}</p>}
-                          </div>
-                          <span className="shrink-0 text-xs text-gray-400">
-                            {new Date(t.date).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })}
-                          </span>
-                        </div>
-                      ))}
+            <div className="rounded-2xl bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold text-gray-900">AI Analysis &amp; Risk Assessment</h3>
+              {analysis?.riskAssessment?.length ? (
+                <div className="space-y-2 text-sm">
+                  {analysis.riskAssessment.map((r, i) => (
+                    <div key={i} className="flex justify-between">
+                      <span className={`font-semibold ${RISK_COLOR[r.level] ?? "text-gray-600"}`}>{r.level}</span>
+                      <span className="text-gray-500">{r.label}</span>
+                      <span className="text-gray-800">{r.value}</span>
                     </div>
-                  </div>
-                )}
-                {nextStep && <p className="mt-4 border-t border-gray-50 pt-3 text-xs text-gray-500">{nextStep}</p>}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400">
+                  No analysis yet. Risk levels appear once the bill has been scanned.
+                </p>
+              )}
             </div>
           </div>
 
-          <div>
-            <h2 className="mb-3 text-lg font-semibold text-gray-900">Case Documents</h2>
-            {/* Everything the process produces, in the order it happens:
-                the bill the customer uploaded, the analysis, the appeal
-                letter that went to the provider, and whatever came back.
-                Staff could previously see only the bill and a list of
-                filenames they had no way to open. */}
-            <CaseDocumentList documents={documents} />
+          {/* Full width: a timeline is a sequence, and it reads better
+              across the page than squeezed into half of it. */}
+          <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <h3 className="mb-3 text-sm font-semibold text-gray-900">Negotiation &amp; Communication</h3>
+            {timeline.length === 0 ? (
+              <p className="text-sm text-gray-400">Nothing has happened on this case yet.</p>
+            ) : (
+              <div className="relative pl-6">
+                <div className="absolute bottom-2 left-[7px] top-2 w-px bg-gray-100" />
+                <div className="space-y-4">
+                  {timeline.map((t, i) => (
+                    <div key={i} className="relative flex items-start justify-between gap-2">
+                      <span
+                        className={`absolute -left-6 top-1 h-3 w-3 rounded-full border-2 border-white shadow ${
+                          t.tone === "failed" ? "bg-danger" : t.tone === "waiting" ? "bg-accent-500" : "bg-primary-500"
+                        }`}
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{t.title}</p>
+                        {t.subtitle && <p className="text-xs text-gray-400">{t.subtitle}</p>}
+                      </div>
+                      <span className="shrink-0 text-xs text-gray-400">
+                        {new Date(t.date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {nextStep && <p className="mt-4 border-t border-gray-50 pt-3 text-xs text-gray-500">{nextStep}</p>}
           </div>
+
+          {/* Everything the process produces, in the order it happens:
+              the bill the customer uploaded, the analysis, the appeal
+              letter that went to the provider, and whatever came back.
+              The bill used to also sit in a card of its own above — the
+              same file in two places, and the card left half a row of
+              empty page beside it. */}
+          <CaseDocumentList documents={documents} title="Case Documents" />
         </div>
 
         <div className="flex flex-col gap-6">
