@@ -46,10 +46,10 @@ autopilot) — along with the web app's clients for them. Both were removed
 on 2026-11-02; neither was ever deployed, so nothing in production
 changed.
 
-They are not lost. `services/automation-engine` is still on the remote
-branch `stmarkadebayo/automation-engine`, and both services, their
-clients, and the routes that called them are in this repository's history
-up to commit `6583250`.
+They are not lost, and bringing the engine back is documented:
+`docs/AUTOMATION-ENGINE.md` summarises the author's handover — where the
+code is, how to deploy it, the lifecycle the web app has to drive, and
+what the handover gets wrong.
 
 Nothing in the app reads a bill or negotiates automatically now. A case
 reaches `scanning` and waits for a person.
