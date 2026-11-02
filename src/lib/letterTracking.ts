@@ -53,3 +53,85 @@ export function describeLetterTracking(t: LetterTracking): string {
   if (t.delivered) return "Delivered";
   return "Sent";
 }
+
+// What the team is told about whether the provider read the letter.
+//
+// This is the question the business actually cares about, and email cannot
+// answer it directly: see describeLetterTracking for why an open event is
+// both deliberately disabled and unreliable when enabled. So rather than
+// present an "Opened" figure that is really "a tracking pixel loaded", the
+// admin view is ranked by evidential strength:
+//
+//   replied   — the provider answered. Proof they read it, and the only
+//               proof email can ever supply.
+//   delivered — their mail server accepted it. Proof it arrived, and
+//               nothing at all about whether a person looked at it.
+//   failed    — it did not arrive. Actionable: the address is wrong.
+//   sent      — we handed it to the mail provider and heard nothing back.
+//
+// An open event, if one ever arrives, is reported — but below a reply,
+// never as a substitute for one.
+export type ProviderEngagement = {
+  state: "replied" | "opened" | "delivered" | "failed" | "sent" | "not-sent";
+  headline: string;
+  /** What that state does and does not prove, in a line. */
+  caveat: string;
+  tone: "done" | "waiting" | "failed";
+};
+
+export function describeProviderEngagement({
+  tracking,
+  repliedAt,
+}: {
+  tracking: LetterTracking;
+  /** When a provider response was logged on the case, if one was. */
+  repliedAt: string | null;
+}): ProviderEngagement {
+  if (repliedAt) {
+    return {
+      state: "replied",
+      headline: "The provider replied",
+      caveat: "A reply is the only proof of reading that email can give. They read it.",
+      tone: "done",
+    };
+  }
+  if (!tracking.sent) {
+    return {
+      state: "not-sent",
+      headline: "Not sent yet",
+      caveat: "Nothing has gone to the provider, so there is nothing to track.",
+      tone: "waiting",
+    };
+  }
+  if (tracking.bounced) {
+    return {
+      state: "failed",
+      headline: "Delivery failed",
+      caveat: "The provider's mail server rejected it — check the billing department address.",
+      tone: "failed",
+    };
+  }
+  if (tracking.opened) {
+    return {
+      state: "opened",
+      headline: tracking.openCount === 1 ? "Opened once" : `Opened ${tracking.openCount} times`,
+      caveat: "An open means an image in the letter loaded. It is evidence, not proof.",
+      tone: "done",
+    };
+  }
+  if (tracking.delivered) {
+    return {
+      state: "delivered",
+      headline: "Delivered, no reply yet",
+      caveat:
+        "Delivered means their mail server accepted it. Whether anyone has read it cannot be known until they reply.",
+      tone: "waiting",
+    };
+  }
+  return {
+    state: "sent",
+    headline: "Sent, delivery unconfirmed",
+    caveat: "Handed to the mail provider, which has not yet reported delivery.",
+    tone: "waiting",
+  };
+}

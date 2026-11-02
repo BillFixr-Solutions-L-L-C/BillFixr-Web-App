@@ -21,6 +21,7 @@ export default function CaseDocumentList({ documents }: { documents: CaseDocumen
               <p className={`truncate text-sm font-medium ${doc.available ? "text-gray-800" : "text-gray-400"}`}>
                 {doc.label}
               </p>
+              {doc.sublabel && <p className="truncate text-xs text-gray-400">{doc.sublabel}</p>}
               <p className="mt-0.5 flex items-center gap-2 text-xs">
                 {doc.sizeLabel && <span className="text-gray-400">{doc.sizeLabel}</span>}
                 {doc.available ? (
@@ -31,9 +32,11 @@ export default function CaseDocumentList({ documents }: { documents: CaseDocumen
               </p>
             </div>
             <p className="w-32 shrink-0 text-sm text-gray-500">{formatDate(doc.date)}</p>
-            {/* Only Completed Case renders this list, and a completed case
-                is paid for — so everything is downloadable here, unlike
-                Active Case, where the documents are view-only. */}
+            {/* Downloadable wherever this list renders. On the customer
+                side that is Completed Case only, and a completed case is
+                paid for — Active Case keeps its documents view-only. On
+                the admin side the team is working the case, so there is
+                nothing to withhold. */}
             <div className="flex w-36 shrink-0 items-center justify-end gap-3">
               {doc.previewUrl ? (
                 <a

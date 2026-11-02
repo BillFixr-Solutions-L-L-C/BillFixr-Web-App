@@ -6,7 +6,14 @@ import { type AdminCaseAnalysis } from "@/lib/adminCaseAnalysis";
 import { buildNegotiationTimeline, describeNextStep } from "@/lib/negotiationTimeline";
 import { caseProgress, endedEarly } from "@/lib/caseProgress";
 import TextStepper from "@/components/dashboard/TextStepper";
-import type { LetterEvent } from "@/lib/letterTracking";
+import {
+  describeProviderEngagement,
+  summarizeLetterEvents,
+  type LetterEvent,
+} from "@/lib/letterTracking";
+import { buildCaseDocumentRows, type CaseDocumentSource } from "@/lib/caseDocuments";
+import CaseDocumentList from "@/components/dashboard/CaseDocumentList";
+import LetterDeliveryPanel from "@/components/admin/LetterDeliveryPanel";
 import { isCaseCompleted } from "@/lib/caseStatus";
 import BillDocumentCard from "@/components/admin/BillDocumentCard";
 import ManualOverridePanel from "@/components/admin/ManualOverridePanel";
@@ -32,7 +39,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const { data: caseRow } = await supabase
     .from("cases")
     .select(
-      "id, status, created_at, letter_sent_at, admin_analysis, manual_notes, override_reason, approval_chain, manual_review_status, profiles!cases_user_id_fkey(name), bills(id, filename, storage_url, status, uploaded_at)",
+      "id, status, created_at, letter_sent_at, appeal_letter_text, admin_analysis, manual_notes, override_reason, approval_chain, manual_review_status, profiles!cases_user_id_fkey(name), bills(id, filename, storage_url, status, uploaded_at, analysis_result)",
     )
     .eq("id", id)
     .single();
@@ -55,7 +62,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
   const { data: caseDocuments } = await supabase
     .from("case_documents")
-    .select("id, type, filename, created_at, received_on")
+    .select("id, type, filename, storage_url, size_bytes, created_at, received_on")
     .eq("case_id", id)
     .order("created_at", { ascending: true });
 
@@ -64,12 +71,14 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
     .select("type, occurred_at")
     .eq("case_id", id);
 
+  const events = (letterEvents ?? []) as LetterEvent[];
+
   // The one panel that can be told truthfully today: these are events
   // that actually happened, not analysis waiting on the AI service.
   const timeline = buildNegotiationTimeline({
     caseCreatedAt: caseRow.created_at,
     letterSentAt: caseRow.letter_sent_at,
-    letterEvents: (letterEvents ?? []) as LetterEvent[],
+    letterEvents: events,
     documents: caseDocuments ?? [],
   });
   const nextStep = describeNextStep({ letterSentAt: caseRow.letter_sent_at, entries: timeline });
@@ -78,6 +87,28 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   // where an admin was previously able to tell a case was finished only
   // by its absence from here and its presence under Completed Cases.
   const progress = caseProgress(caseRow.status);
+
+  // The same document set the customer sees on their own case, with the
+  // appeal letter made openable and the provider files served as signed
+  // storage URLs rather than through the customer's watermarking route.
+  const documents = await buildCaseDocumentRows(supabase, {
+    bill: bill ? { filename: bill.filename, storage_url: bill.storage_url, uploaded_at: bill.uploaded_at } : null,
+    appealLetterText: caseRow.appeal_letter_text,
+    letterSentAt: caseRow.letter_sent_at,
+    hasAnalysis: Boolean(bill?.analysis_result),
+    analysisDate: caseRow.created_at,
+    stored: (caseDocuments ?? []) as CaseDocumentSource["stored"],
+    signStored: true,
+    showFilenames: true,
+    appealLetterUrl: `/api/admin/cases/${id}/appeal-letter`,
+  });
+
+  const tracking = summarizeLetterEvents(events, caseRow.letter_sent_at);
+  const firstResponse = (caseDocuments ?? []).find((d) => d.type === "provider_response");
+  const engagement = describeProviderEngagement({
+    tracking,
+    repliedAt: firstResponse ? (firstResponse.received_on ?? firstResponse.created_at) : null,
+  });
 
   return (
     <div>
@@ -211,9 +242,27 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
               </div>
             </div>
           </div>
+
+          <div>
+            <h2 className="mb-3 text-lg font-semibold text-gray-900">Case Documents</h2>
+            {/* Everything the process produces, in the order it happens:
+                the bill the customer uploaded, the analysis, the appeal
+                letter that went to the provider, and whatever came back.
+                Staff could previously see only the bill and a list of
+                filenames they had no way to open. */}
+            <CaseDocumentList documents={documents} />
+          </div>
         </div>
 
         <div className="flex flex-col gap-6">
+          <LetterDeliveryPanel
+            engagement={engagement}
+            tracking={tracking}
+            sentAt={caseRow.letter_sent_at}
+            repliedAt={firstResponse ? (firstResponse.received_on ?? firstResponse.created_at) : null}
+            hasEvents={events.length > 0}
+          />
+
           <ManualOverridePanel
             caseId={id}
             initialNotes={caseRow.manual_notes ?? ""}
@@ -223,7 +272,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             canWrite={canOverride}
           />
 
-          <CaseDocumentsPanel caseId={id} existing={caseDocuments ?? []} canWrite={canOverride} />
+          <CaseDocumentsPanel caseId={id} canWrite={canOverride} />
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold text-gray-900">Reply Drafts</h2>

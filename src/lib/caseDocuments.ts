@@ -34,6 +34,8 @@ const TYPE_ORDER: CaseDocumentType[] = [
 export type CaseDocumentRow = {
   id: string;
   label: string;
+  /** The real filename, shown under the label where it is useful (admin). */
+  sublabel?: string | null;
   status: "Uploaded" | "Sent" | "Generated";
   date: string | null;
   sizeLabel: string | null;
@@ -74,6 +76,19 @@ export type CaseDocumentSource = {
   letterSentAt: string | null;
   hasAnalysis: boolean;
   analysisDate: string | null;
+  // Staff see the same list, but not through the customer's route: that
+  // route watermarks anything taken before the case is paid for, and a
+  // watermark aimed at the customer has no business on the copy the team
+  // reads. Signed storage URLs instead, which the bills bucket policy
+  // already grants an admin with client_data access.
+  signStored?: boolean;
+  // Where the appeal letter can be read, when the caller has somewhere to
+  // serve it from. The customer reads it on the Active Case screen rather
+  // than as a file, so they pass nothing and the row stays link-less.
+  appealLetterUrl?: string | null;
+  // Shows the stored filename under each provider document. Staff work
+  // with the files themselves; the customer only needs the label.
+  showFilenames?: boolean;
   stored: {
     id: string;
     type: string;
@@ -117,15 +132,16 @@ export async function buildCaseDocumentRows(
     available: source.hasAnalysis,
   });
 
+  const hasLetter = Boolean(source.appealLetterText);
   rows.push({
     id: "appeal-letter",
     label: "Appeal Letter",
     status: "Sent",
     date: source.letterSentAt,
     sizeLabel: null,
-    previewUrl: null,
-    downloadUrl: null,
-    available: Boolean(source.appealLetterText),
+    previewUrl: hasLetter && source.appealLetterUrl ? source.appealLetterUrl : null,
+    downloadUrl: hasLetter && source.appealLetterUrl ? `${source.appealLetterUrl}?download=1` : null,
+    available: hasLetter,
   });
 
   for (const type of TYPE_ORDER) {
@@ -143,18 +159,25 @@ export async function buildCaseDocumentRows(
       });
       continue;
     }
-    // Served by /api/dashboard/case-documents/[id] rather than a signed
-    // storage URL: the bytes have to pass through us to be watermarked
-    // while the case is still in progress. The uploaded bill above keeps
-    // its signed URL — it is the customer's own document.
+    // For the customer, served by /api/dashboard/case-documents/[id]
+    // rather than a signed storage URL: the bytes have to pass through us
+    // to be watermarked while the case is still in progress. The uploaded
+    // bill above keeps its signed URL — it is the customer's own
+    // document — and so does every row when `signStored` is set.
+    const urls = source.signStored
+      ? await sign(supabase, stored.storage_url, stored.filename)
+      : {
+          previewUrl: `/api/dashboard/case-documents/${stored.id}`,
+          downloadUrl: `/api/dashboard/case-documents/${stored.id}?download=1`,
+        };
     rows.push({
       id: stored.id,
       label: CASE_DOCUMENT_LABELS[type],
+      sublabel: source.showFilenames ? stored.filename : null,
       status: "Sent",
       date: stored.received_on ?? stored.created_at,
       sizeLabel: formatFileSize(stored.size_bytes),
-      previewUrl: `/api/dashboard/case-documents/${stored.id}`,
-      downloadUrl: `/api/dashboard/case-documents/${stored.id}?download=1`,
+      ...urls,
       available: true,
     });
   }

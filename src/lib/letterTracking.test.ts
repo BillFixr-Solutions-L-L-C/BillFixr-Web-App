@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { summarizeLetterEvents, describeLetterTracking } from "./letterTracking";
+import { describeProviderEngagement, summarizeLetterEvents, describeLetterTracking } from "./letterTracking";
 
 const SENT_AT = "2026-10-20T10:00:00Z";
 const open = (at: string) => ({ type: "email.opened", occurred_at: at });
@@ -57,5 +57,69 @@ describe("summarizeLetterEvents", () => {
   it("reads naturally for a single open", () => {
     const t = summarizeLetterEvents([open("2026-10-21T09:00:00Z")], SENT_AT);
     expect(describeLetterTracking(t)).toBe("Opened once");
+  });
+});
+
+describe("describeProviderEngagement", () => {
+  const tracking = (events: { type: string; occurred_at: string }[], sentAt: string | null = SENT_AT) =>
+    summarizeLetterEvents(events, sentAt);
+
+  it("ranks a reply above everything else", () => {
+    // The whole point of the panel: a reply is proof of reading, so it
+    // must not be buried under a delivery line or an open count.
+    const e = describeProviderEngagement({
+      tracking: tracking([{ type: "email.delivered", occurred_at: SENT_AT }, open("2026-10-21T09:00:00Z")]),
+      repliedAt: "2026-10-25T00:00:00Z",
+    });
+    expect(e.state).toBe("replied");
+    expect(e.tone).toBe("done");
+  });
+
+  it("reports a reply even when no delivery event was ever recorded", () => {
+    // This is the automation engine's case: it sends over its own SMTP, so
+    // Resend reports nothing, and the reply is the only evidence there is.
+    const e = describeProviderEngagement({ tracking: tracking([]), repliedAt: "2026-10-25T00:00:00Z" });
+    expect(e.state).toBe("replied");
+  });
+
+  it("never claims a provider read a letter that was only delivered", () => {
+    const e = describeProviderEngagement({
+      tracking: tracking([{ type: "email.delivered", occurred_at: SENT_AT }]),
+      repliedAt: null,
+    });
+    expect(e.state).toBe("delivered");
+    expect(e.headline).not.toMatch(/read/i);
+    // And it must say so, rather than leaving "Delivered" to be read as
+    // "they have seen it".
+    expect(e.caveat).toMatch(/cannot be known/i);
+  });
+
+  it("puts a failed delivery above an open, since a bounce is actionable", () => {
+    const e = describeProviderEngagement({
+      tracking: tracking([{ type: "email.bounced", occurred_at: SENT_AT }, open("2026-10-21T09:00:00Z")]),
+      repliedAt: null,
+    });
+    expect(e.state).toBe("failed");
+    expect(e.tone).toBe("failed");
+  });
+
+  it("reports an open as evidence, not proof", () => {
+    const e = describeProviderEngagement({
+      tracking: tracking([{ type: "email.delivered", occurred_at: SENT_AT }, open("2026-10-21T09:00:00Z")]),
+      repliedAt: null,
+    });
+    expect(e.state).toBe("opened");
+    expect(e.caveat).toMatch(/not proof/i);
+  });
+
+  it("distinguishes sent-but-unconfirmed from delivered", () => {
+    const e = describeProviderEngagement({ tracking: tracking([]), repliedAt: null });
+    expect(e.state).toBe("sent");
+    expect(e.tone).toBe("waiting");
+  });
+
+  it("says nothing is being tracked before the letter goes out", () => {
+    const e = describeProviderEngagement({ tracking: tracking([], null), repliedAt: null });
+    expect(e.state).toBe("not-sent");
   });
 });

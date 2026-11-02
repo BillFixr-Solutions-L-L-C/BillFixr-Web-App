@@ -107,3 +107,71 @@ describe("buildCaseDocumentRows", () => {
     expect(rows[0].label).toBe("Analysis Generated");
   });
 });
+
+describe("buildCaseDocumentRows for staff", () => {
+  const STORED = {
+    id: "doc-1",
+    type: "provider_response",
+    filename: "response.pdf",
+    storage_url: "u/case-documents/c1/response.pdf",
+    size_bytes: 2048,
+    received_on: null,
+    created_at: "2026-07-25T00:00:00Z",
+  };
+
+  it("signs stored documents instead of routing them through the customer's watermarker", async () => {
+    // The customer's route stamps anything taken before the case is paid
+    // for. Staff reading the file they were sent must not get that mark.
+    const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), {
+      ...BASE,
+      stored: [STORED],
+      signStored: true,
+    });
+    const row = rows.find((r) => r.id === "doc-1")!;
+    expect(row.previewUrl).toBe(`https://signed/${STORED.storage_url}`);
+    expect(row.downloadUrl).toBe(`https://signed/${STORED.storage_url}?dl`);
+  });
+
+  it("still uses the watermarking route for the customer", async () => {
+    const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), { ...BASE, stored: [STORED] });
+    const row = rows.find((r) => r.id === "doc-1")!;
+    expect(row.previewUrl).toBe("/api/dashboard/case-documents/doc-1");
+  });
+
+  it("makes the appeal letter openable when given somewhere to serve it from", async () => {
+    const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), {
+      ...BASE,
+      appealLetterUrl: "/api/admin/cases/c1/appeal-letter",
+    });
+    const row = rows.find((r) => r.id === "appeal-letter")!;
+    expect(row.previewUrl).toBe("/api/admin/cases/c1/appeal-letter");
+    expect(row.downloadUrl).toBe("/api/admin/cases/c1/appeal-letter?download=1");
+  });
+
+  it("does not link an appeal letter that has not been written", async () => {
+    // A link here would open a 404 and read as a missing file rather than
+    // a letter that does not exist yet.
+    const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), {
+      ...BASE,
+      appealLetterText: null,
+      appealLetterUrl: "/api/admin/cases/c1/appeal-letter",
+    });
+    const row = rows.find((r) => r.id === "appeal-letter")!;
+    expect(row.available).toBe(false);
+    expect(row.previewUrl).toBeNull();
+    expect(row.downloadUrl).toBeNull();
+  });
+
+  it("shows the real filename to staff and not to the customer", async () => {
+    const forStaff = await buildCaseDocumentRows(supabaseWithSignedUrls(), {
+      ...BASE,
+      stored: [STORED],
+      signStored: true,
+      showFilenames: true,
+    });
+    expect(forStaff.find((r) => r.id === "doc-1")!.sublabel).toBe("response.pdf");
+
+    const forCustomer = await buildCaseDocumentRows(supabaseWithSignedUrls(), { ...BASE, stored: [STORED] });
+    expect(forCustomer.find((r) => r.id === "doc-1")!.sublabel).toBeNull();
+  });
+});
