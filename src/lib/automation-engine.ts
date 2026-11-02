@@ -115,6 +115,7 @@ export async function startNegotiation(input: StartNegotiationInput): Promise<Au
       commitment_paid: true,
       commitment_payment_ref: input.commitmentPaymentRef,
       completion_fee_rate: input.completionFeeRate,
+      external_ref: input.caseId,
     }),
   );
   return readJson(response, "start negotiation");

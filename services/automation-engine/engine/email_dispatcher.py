@@ -2,7 +2,13 @@
 Email Dispatcher Service for BillFixr.
 Transmits dispute letters between advocate, hospital billing, and patient.
 Sender / Advocate comes from SMTP_FROM. Hospital recipients are always passed in by the caller.
-Supports live SMTP delivery (if configured in .env) and testing dispatch mode.
+Supports live delivery through Resend (preferred) or SMTP, and a testing dispatch mode.
+
+Resend is preferred because it reports what became of a letter: the web app
+has a Resend webhook, so delivery, bounces and opens for a letter sent here
+reach the case it belongs to. SMTP reports nothing back, so a letter sent
+that way is invisible to the team from the moment it leaves. SMTP remains as
+the fallback when RESEND_API_KEY is unset.
 Live dispatch occurs ONLY upon explicit user approval/permission. The patient is never CC'd or
 added to the thread.
 """
@@ -12,6 +18,8 @@ import smtplib
 import logging
 import uuid
 import re
+import time
+import httpx
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import parseaddr, formataddr
@@ -23,6 +31,8 @@ from engine.config import ADVOCATE_EMAIL
 
 load_dotenv(override=True)
 logger = logging.getLogger("billfixr.email")
+
+RESEND_API_BASE = os.getenv("RESEND_API_BASE", "https://api.resend.com").rstrip("/")
 
 class EmailDispatcher:
     def __init__(self):
@@ -36,6 +46,114 @@ class EmailDispatcher:
         raw_pw = os.getenv("SMTP_PASSWORD", "").strip()
         self.smtp_password = raw_pw.replace(" ", "")
         self.from_email = os.getenv("SMTP_FROM") or ADVOCATE_EMAIL
+        self.resend_api_key = os.getenv("RESEND_API_KEY", "").strip()
+
+    def is_live_resend_configured(self) -> bool:
+        # Same guard as SMTP: a test run must never reach a real provider.
+        if os.getenv("PYTEST_CURRENT_TEST") or os.getenv("TESTING"):
+            return False
+        self._load_config()
+        return bool(self.resend_api_key)
+
+    def _resend_message_id(self, email_id: str) -> Optional[str]:
+        """Reads back the Message-ID Resend assigned to a sent email.
+
+        Resend does not let the caller choose the Message-ID, so the one this
+        class generates is not what the hospital will see. The inbound poller
+        matches a reply by its In-Reply-To header against the stored value, so
+        storing ours would mean never matching a reply. Resend exposes the real
+        one on GET /emails/:id, shortly after the send is accepted.
+
+        Returns None rather than a guess when it cannot be read: a wrong
+        Message-ID is worse than none, because it would also be sent as the
+        In-Reply-To of the next letter and break the thread in the hospital's
+        mail client.
+        """
+        for attempt in range(3):
+            try:
+                with httpx.Client(timeout=10) as client:
+                    res = client.get(
+                        f"{RESEND_API_BASE}/emails/{email_id}",
+                        headers={"Authorization": f"Bearer {self.resend_api_key}"},
+                    )
+                if res.status_code == 200:
+                    real = (res.json() or {}).get("message_id")
+                    if real:
+                        return real
+            except Exception as exc:
+                logger.warning("Could not read the Message-ID for Resend email %s: %s", email_id, exc)
+            if attempt < 2:
+                time.sleep(1)
+        logger.error(
+            "Resend accepted email %s but never reported its Message-ID. "
+            "Replies to this letter will not be matched to the thread.", email_id
+        )
+        return None
+
+    def _send_via_resend(
+        self,
+        sender: str,
+        to: str,
+        cc: str,
+        subject: str,
+        html: str,
+        text: str,
+        in_reply_to: Optional[str],
+        references: Optional[str],
+        tags: Optional[Dict[str, str]],
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            "from": formataddr(("BillFixr Advocate", sender)),
+            "to": [to],
+            "reply_to": sender,
+            "subject": subject,
+            "html": html,
+            "text": text,
+        }
+        if cc and cc != to:
+            payload["cc"] = [cc]
+
+        # Message-ID is deliberately absent: Resend assigns its own and
+        # ignores ours. Threading is carried by these two instead, which is
+        # what Resend documents.
+        headers = {}
+        if in_reply_to:
+            headers["In-Reply-To"] = in_reply_to
+        if references:
+            headers["References"] = references
+        if headers:
+            payload["headers"] = headers
+
+        # Tags come back on the webhook event, which is how the web app links
+        # a delivery or a bounce to the case it belongs to without the engine
+        # having to call back into it. Resend restricts tag values to ASCII
+        # letters, digits, underscores and dashes.
+        if tags:
+            clean = [
+                {"name": k, "value": re.sub(r"[^A-Za-z0-9_-]", "", str(v))[:256]}
+                for k, v in tags.items()
+                if v
+            ]
+            if clean:
+                payload["tags"] = clean
+
+        with httpx.Client(timeout=20) as client:
+            res = client.post(
+                f"{RESEND_API_BASE}/emails",
+                headers={
+                    "Authorization": f"Bearer {self.resend_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+        if res.status_code >= 300:
+            raise RuntimeError(f"Resend rejected the send ({res.status_code}): {res.text[:300]}")
+
+        email_id = (res.json() or {}).get("id")
+        if not email_id:
+            raise RuntimeError("Resend accepted the send but returned no id.")
+
+        return {"provider_message_id": email_id, "message_id": self._resend_message_id(email_id)}
 
     def is_live_smtp_configured(self) -> bool:
         # Never send live emails in automated test environments
@@ -369,7 +487,8 @@ class EmailDispatcher:
         include_legal_attachment: bool = False,
         message_id: Optional[str] = None,
         in_reply_to: Optional[str] = None,
-        references: Optional[str] = None
+        references: Optional[str] = None,
+        tags: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         """
         Dispatches dispute letter connecting both hospital contacts (Billing & Support/Advocacy)
@@ -462,10 +581,41 @@ class EmailDispatcher:
             "timestamp": timestamp,
             "legal_attachment_included": include_legal_attachment,
             "message_id": assigned_message_id,
+            # Resend's own id for the send, which its webhook quotes as
+            # `email_id`. None on every other path — SMTP has no such thing.
+            "provider_message_id": None,
             "in_reply_to": in_reply_to,
             "references": references,
             "delivered": True
         }
+
+        if self.is_live_resend_configured():
+            try:
+                sent = self._send_via_resend(
+                    sender=target_sender,
+                    to=target_hospital,
+                    cc=target_support,
+                    subject=clean_subj,
+                    html=html_email,
+                    text=full_body,
+                    in_reply_to=in_reply_to,
+                    references=references,
+                    tags=tags,
+                )
+                receipt["provider_message_id"] = sent["provider_message_id"]
+                # The Message-ID Resend assigned, not the one generated above.
+                # None when it could not be read — see _resend_message_id.
+                receipt["message_id"] = sent["message_id"]
+                receipt["mode"] = "LIVE_RESEND"
+                receipt["status_note"] = f"Delivered to {target_hospital} via Resend"
+                logger.info(receipt["status_note"])
+                return receipt
+            except Exception as e:
+                # Falling through to SMTP would send the letter untracked,
+                # which is the thing Resend was chosen to fix — but not
+                # sending at all is worse, so it falls through and says so.
+                logger.error("Resend send failed (%s). Falling back.", e)
+                receipt["resend_error"] = str(e)[:300]
 
         if self.is_live_smtp_configured():
             try:
@@ -553,5 +703,17 @@ class EmailDispatcher:
             print(f"STATUS:    DISPATCHED & LINKED IN DATABASE")
             print("=" * 70 + "\n")
             return receipt
+
+def case_tags(external_ref: Optional[str]) -> Optional[Dict[str, str]]:
+    """The tags that let a delivery event find its way back to a case.
+
+    Resend echoes tags on its webhook events, so the web app reads the case
+    from the event itself rather than keeping a table of message ids or
+    having the engine call back. Nothing is tagged when the caller did not
+    give a reference — an untagged letter is untracked, not mislabelled.
+    """
+    ref = (external_ref or "").strip()
+    return {"case_ref": ref} if ref else None
+
 
 email_dispatcher = EmailDispatcher()

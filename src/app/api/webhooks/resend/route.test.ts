@@ -42,11 +42,15 @@ function makeRequest({
   return new Request("http://localhost/api/webhooks/resend", { method: "POST", headers, body });
 }
 
-const event = (type: string, emailId: string | null = "email_abc") =>
+const event = (
+  type: string,
+  emailId: string | null = "email_abc",
+  tags?: Record<string, string> | { name: string; value: string }[],
+) =>
   JSON.stringify({
     type,
     created_at: "2026-10-28T10:00:00Z",
-    data: emailId === null ? {} : { email_id: emailId },
+    data: emailId === null ? {} : { email_id: emailId, ...(tags ? { tags } : {}) },
   });
 
 function queueMatchingCase() {
@@ -245,5 +249,72 @@ describe("POST /api/webhooks/resend", () => {
 
     // Losing the event silently would under-report opens forever.
     expect(res.status).toBe(500);
+  });
+
+  // Letters the automation engine sends are not recorded on the case
+  // beforehand — the web app never saw them go out. The engine tags each
+  // one with the case id and Resend echoes the tag back here.
+  describe("letters sent by the automation engine", () => {
+    it("attributes an event to the case named in its tags", async () => {
+      adminMock.queueResult("cases", { data: { id: CASE_ID }, error: null });
+      adminMock.queueResult("letter_events", { data: null, error: null });
+
+      const res = await POST(
+        makeRequest({ body: event("email.delivered", "email_engine", { case_ref: CASE_ID }), id: "msg_eng_1" }),
+      );
+
+      expect(await res.json()).toEqual({ ok: true });
+      expect(adminMock.from.mock.results[1].value.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ case_id: CASE_ID, message_id: "email_engine" }),
+        expect.anything(),
+      );
+    });
+
+    it("reads tags sent as a name/value list as well as an object", async () => {
+      adminMock.queueResult("cases", { data: { id: CASE_ID }, error: null });
+      adminMock.queueResult("letter_events", { data: null, error: null });
+
+      const res = await POST(
+        makeRequest({ body: event("email.bounced", "email_engine", [{ name: "case_ref", value: CASE_ID }]) }),
+      );
+
+      expect(await res.json()).toEqual({ ok: true });
+    });
+
+    it("does not look up a case id the tag did not supply in a usable form", async () => {
+      // A tag is attacker-reachable only through a signed Resend event, but
+      // it is still a string from outside: anything that is not a uuid is
+      // not sent to the database at all.
+      adminMock.queueResult("cases", { data: null, error: null });
+
+      const res = await POST(
+        makeRequest({ body: event("email.delivered", "email_x", { case_ref: "not-a-uuid" }) }),
+      );
+
+      expect(await res.json()).toEqual({ ok: true, unmatched: true });
+      // One lookup, by message id — the malformed tag was never queried.
+      expect(adminMock.from).toHaveBeenCalledTimes(1);
+      expect(adminMock.from).toHaveBeenCalledWith("cases");
+    });
+
+    it("ignores a tagged case that does not exist, rather than writing to it", async () => {
+      const ghost = "99999999-9999-4999-8999-999999999999";
+      adminMock.queueResult("cases", { data: null, error: null });
+      adminMock.queueResult("cases", { data: null, error: null });
+
+      const res = await POST(makeRequest({ body: event("email.delivered", "email_x", { case_ref: ghost }) }));
+
+      expect(await res.json()).toEqual({ ok: true, unmatched: true });
+    });
+
+    it("still matches by message id when an event carries no tags", async () => {
+      // Letters the web app sent itself have no tags, and must keep working.
+      queueMatchingCase();
+      adminMock.queueResult("letter_events", { data: null, error: null });
+
+      const res = await POST(makeRequest({ body: event("email.delivered") }));
+
+      expect(await res.json()).toEqual({ ok: true });
+    });
   });
 });

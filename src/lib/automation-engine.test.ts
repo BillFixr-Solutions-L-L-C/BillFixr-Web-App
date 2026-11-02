@@ -61,6 +61,7 @@ describe("automation engine client", () => {
       auditResult,
       initialOffer: 150,
       hospitalEmail: "billing@hospital.example",
+      caseId: "case-1",
       commitmentPaymentRef: "pi_commit",
       completionFeeRate: 0.15,
     });
@@ -75,6 +76,9 @@ describe("automation engine client", () => {
       commitment_paid: true,
       commitment_payment_ref: "pi_commit",
       completion_fee_rate: 0.15,
+      // Without this the engine cannot tag its letters, and every delivery
+      // event for the case would arrive with nothing to match it to.
+      external_ref: "case-1",
     });
   });
 

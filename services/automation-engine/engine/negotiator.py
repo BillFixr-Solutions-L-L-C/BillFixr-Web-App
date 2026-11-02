@@ -143,7 +143,7 @@ def looks_like_revised_bill(text: str, category: str) -> bool:
 def settle_and_request_revised_bill(neg: Dict[str, Any], accepted_amount: float) -> Dict[str, Any]:
     """Accepts the hospital's offer on the shared thread, asks for a revised bill, and tells the client."""
     from datetime import datetime, timezone
-    from engine.email_dispatcher import email_dispatcher
+    from engine.email_dispatcher import email_dispatcher, case_tags
 
     tracking_code = neg["tracking_code"]
     provider_name = neg["provider_name"]
@@ -184,6 +184,7 @@ Sincerely,
         include_legal_attachment=False,
         in_reply_to=last_parent_id,
         references=thread_refs,
+        tags=case_tags(neg.get("external_ref")),
     )
 
     NegotiationRepository.add_message(
@@ -242,7 +243,7 @@ Sincerely,
 def send_dispute_rebuttal(neg: Dict[str, Any]) -> Dict[str, Any]:
     """Answers a rejected dispute on the shared thread, asking for the itemized bill and documentation."""
     from datetime import datetime, timezone
-    from engine.email_dispatcher import email_dispatcher
+    from engine.email_dispatcher import email_dispatcher, case_tags
 
     tracking_code = neg["tracking_code"]
     target = neg.get("hospital_email") or ""
@@ -265,6 +266,7 @@ def send_dispute_rebuttal(neg: Dict[str, Any]) -> Dict[str, Any]:
         include_legal_attachment=False,
         in_reply_to=last_parent_id,
         references=thread_refs,
+        tags=case_tags(neg.get("external_ref")),
     )
     NegotiationRepository.add_message(
         negotiation_id=neg["id"],
@@ -290,7 +292,7 @@ def send_dispute_rebuttal(neg: Dict[str, Any]) -> Dict[str, Any]:
 
 def request_bill_correction(neg: Dict[str, Any], check: Dict[str, Any]) -> None:
     """Tells the hospital its revised bill does not show the agreed amount, and tells the client we are on it."""
-    from engine.email_dispatcher import email_dispatcher
+    from engine.email_dispatcher import email_dispatcher, case_tags
 
     tracking_code = neg["tracking_code"]
     target = neg.get("hospital_email") or ""
@@ -316,6 +318,7 @@ Sincerely,
         letter_markdown=body, tracking_code=tracking_code, patient_email="",
         sender_email=ADVOCATE_EMAIL, include_legal_attachment=False,
         in_reply_to=last_parent_id, references=thread_refs,
+        tags=case_tags(neg.get("external_ref")),
     )
     NegotiationRepository.add_message(
         negotiation_id=neg["id"], direction="OUTBOUND", sender="BillFixr Advocate (Auto-Pilot)", recipient=target,

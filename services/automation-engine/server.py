@@ -26,7 +26,7 @@ from engine.negotiator import (
 )
 from engine.config import ADVOCATE_EMAIL
 from engine.payments import COMMITMENT_FEE, COMPLETION_FEE_RATE, completion_fee
-from engine.email_dispatcher import email_dispatcher
+from engine.email_dispatcher import email_dispatcher, case_tags
 from engine.inbound_poller import inbound_poller
 from engine.demo_data import DEMO_BILLS, get_demo_bill
 from database import NegotiationRepository, get_connection
@@ -241,6 +241,9 @@ class StartNegotiationRequest(BaseModel):
     commitment_payment_ref: Optional[str] = None
     # The web app's completion fee rate for this case (for example from its pricing settings). Default is the engine's.
     completion_fee_rate: Optional[float] = None
+    # The web app's id for this case. Tagged onto every letter so delivery
+    # events can be matched back to it.
+    external_ref: Optional[str] = None
 
 class InboundMessageRequest(BaseModel):
     message_text: str
@@ -311,7 +314,8 @@ async def start_negotiation(payload: StartNegotiationRequest):
             hipaa_auth_text=hipaa_text,
             hospital_email=target_hosp_email,
             patient_email=target_patient_email,
-            auto_pilot_enabled=True
+            auto_pilot_enabled=True,
+            external_ref=payload.external_ref or ""
         )
 
         NegotiationRepository.update_fields(
@@ -338,8 +342,30 @@ async def start_negotiation(payload: StartNegotiationRequest):
             patient_email="",
             sender_email=target_sender_email,
             include_legal_attachment=False,
-            message_id=record.get("root_message_id")
+            message_id=record.get("root_message_id"),
+            tags=case_tags(payload.external_ref)
         )
+
+        # Resend assigns its own Message-ID and ignores the one generated
+        # above, so the thread is rooted on whatever it actually sent. Left
+        # unreconciled, every reply would arrive quoting an id this engine
+        # has no record of, and the inbound poller would never match one.
+        real_mid = receipt.get("message_id")
+        if receipt.get("mode") == "LIVE_RESEND" and real_mid and real_mid != record.get("root_message_id"):
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE negotiations SET root_message_id = ?, last_message_id = ? WHERE id = ?",
+                (real_mid, real_mid, record["id"]),
+            )
+            cur.execute(
+                "UPDATE negotiation_messages SET message_id_header = ?, references_header = ? "
+                "WHERE negotiation_id = ? AND message_id_header = ?",
+                (real_mid, real_mid, record["id"], record.get("root_message_id")),
+            )
+            conn.commit()
+            conn.close()
+
         record["dispatch_receipt"] = receipt
         return NegotiationRepository.get_negotiation(record["id"])
     except HTTPException:
@@ -561,7 +587,8 @@ BillFixr Patient Advocacy
             sender_email=ADVOCATE_EMAIL,
             include_legal_attachment=False,
             in_reply_to=last_id,
-            references=thread_refs
+            references=thread_refs,
+            tags=case_tags(neg.get("external_ref"))
         )
         
         NegotiationRepository.add_message(
@@ -725,7 +752,8 @@ async def dispatch_counter_offer(negotiation_id: str, payload: CounterOfferReque
             sender_email=target_sender_email,
             include_legal_attachment=False,
             in_reply_to=last_parent_id,
-            references=thread_refs
+            references=thread_refs,
+            tags=case_tags(neg.get("external_ref"))
         )
 
         NegotiationRepository.add_message(

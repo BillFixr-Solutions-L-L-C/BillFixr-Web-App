@@ -97,6 +97,10 @@ def init_db():
         ("commitment_payment_ref", "TEXT"),
         ("completion_payment_ref", "TEXT"),
         ("completion_fee_rate", "REAL"),
+        # The web app's case id. Tagged onto every letter sent through
+        # Resend so its webhook can match a delivery, bounce or open back
+        # to the case without the engine calling into the web app.
+        ("external_ref", "TEXT"),
     ]
     for col_name, col_def in migration_cols_negotiations:
         try:
@@ -169,7 +173,8 @@ class NegotiationRepository:
         hipaa_auth_text: str,
         hospital_email: str = "",
         patient_email: str = "",
-        auto_pilot_enabled: bool = True
+        auto_pilot_enabled: bool = True,
+        external_ref: str = ""
     ) -> Dict[str, Any]:
         neg_id = str(uuid.uuid4())
         short_id = neg_id[:6].upper()
@@ -190,14 +195,14 @@ class NegotiationRepository:
             total_billed, original_balance_due, current_demanded_balance,
             current_offer, status, hospital_email, patient_email,
             audit_summary_json, hipaa_authorization_text, created_at, updated_at,
-            root_message_id, last_message_id, auto_pilot_enabled
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            root_message_id, last_message_id, auto_pilot_enabled, external_ref
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             neg_id, tracking_code, provider_name, patient_name, account_number,
             total_billed, patient_due, patient_due,
             initial_offer, "DISPATCHED", hospital_email, patient_email,
             json.dumps(audit_result), hipaa_auth_text, now, now,
-            root_msg_id, root_msg_id, 1 if auto_pilot_enabled else 0
+            root_msg_id, root_msg_id, 1 if auto_pilot_enabled else 0, external_ref or None
         ))
 
         # Add initial outbound dispute letter message

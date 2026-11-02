@@ -133,6 +133,10 @@ export type AutomationNegotiation = {
 export type StartNegotiationInput = {
   auditResult: AutomationAuditResult;
   initialOffer: number;
+  // This case's id, tagged onto every letter the engine sends through
+  // Resend so its webhook can attribute delivery events back to the case.
+  // Without it a letter is sent untracked.
+  caseId: string;
   hospitalEmail: string;
   supportEmail?: string;
   // The web app charges the client and reports it here. The engine does not take payments.

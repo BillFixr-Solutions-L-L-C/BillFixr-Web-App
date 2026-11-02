@@ -138,6 +138,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       initialOffer: audit.settlement_options.aggressive_offer,
       hospitalEmail: bill.provider_email,
       supportEmail: bill.provider_support_email ?? undefined,
+      caseId: id,
       commitmentPaymentRef: paidFee.processor_ref ?? id,
       completionFeeRate: Number.isFinite(feeRate) ? feeRate / 100 : undefined,
     });

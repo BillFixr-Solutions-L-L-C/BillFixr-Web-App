@@ -22,6 +22,21 @@ const TRACKED = new Set([
   "email.complained",
 ]);
 
+// Resend has sent tags as an object and as a name/value list over the life
+// of its API; both are read rather than betting on one. Anything else is
+// treated as no tag at all, which costs a letter its tracking but never
+// attributes an event to the wrong case.
+function caseIdFromTags(tags: Record<string, string> | { name: string; value: string }[] | undefined): string | null {
+  if (!tags) return null;
+  const raw = Array.isArray(tags)
+    ? tags.find((t) => t?.name === "case_ref")?.value
+    : tags["case_ref"];
+  if (typeof raw !== "string") return null;
+  // The engine strips tag values to what Resend allows, which leaves a
+  // plain UUID intact. Anything that is not one is not a case id.
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw) ? raw : null;
+}
+
 // Svix tolerates a 5-minute clock skew; anything older is a replay.
 const MAX_AGE_SECONDS = 5 * 60;
 
@@ -66,7 +81,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid signature" }, { status: 400 });
   }
 
-  let event: { type?: string; created_at?: string; data?: { email_id?: string } };
+  let event: {
+    type?: string;
+    created_at?: string;
+    data?: { email_id?: string; tags?: Record<string, string> | { name: string; value: string }[] };
+  };
   try {
     event = JSON.parse(rawBody);
   } catch {
@@ -81,15 +100,37 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
-  const { data: caseRow } = await admin
-    .from("cases")
-    .select("id")
-    .eq("letter_message_id", messageId)
-    .maybeSingle();
+
+  // Two kinds of letter arrive here. One the web app sent itself, which
+  // recorded Resend's id on the case before it ever heard back. One the
+  // automation engine sent, which the web app knows nothing about — the
+  // engine tags those with the case id, and Resend echoes tags on the
+  // event, so the case comes from the event itself with no shared table
+  // and no call back into the engine.
+  const taggedCaseId = caseIdFromTags(event.data?.tags);
+
+  let caseId: string | null = null;
+  if (taggedCaseId) {
+    // The tag says which case, but an id arriving over a webhook is still
+    // just a string — confirm it is a real case before writing to it.
+    const { data: tagged } = await admin.from("cases").select("id").eq("id", taggedCaseId).maybeSingle();
+    caseId = tagged?.id ?? null;
+    if (!caseId) {
+      console.error("Resend event", event.type, "carries case_ref", taggedCaseId, "which is not a case");
+    }
+  }
+  if (!caseId) {
+    const { data: byMessage } = await admin
+      .from("cases")
+      .select("id")
+      .eq("letter_message_id", messageId)
+      .maybeSingle();
+    caseId = byMessage?.id ?? null;
+  }
 
   // Every email we send reaches this endpoint, not just appeal letters, so
   // an unmatched message is ordinary rather than an error.
-  if (!caseRow) {
+  if (!caseId) {
     return NextResponse.json({ ok: true, unmatched: true });
   }
 
@@ -97,7 +138,7 @@ export async function POST(request: Request) {
   const { error } = await admin.from("letter_events").upsert(
     {
       id: eventId,
-      case_id: caseRow.id,
+      case_id: caseId,
       message_id: messageId,
       type: event.type,
       occurred_at: event.created_at ?? new Date().toISOString(),
