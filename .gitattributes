@@ -1,0 +1,4 @@
+# Shell scripts run on Linux in a container. A CRLF line ending would
+# leave a carriage return on the end of the shebang, and the container
+# fails to start with "no such file or directory".
+*.sh text eol=lf

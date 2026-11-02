@@ -1,0 +1,129 @@
+# Render blueprint for both Python services.
+#
+# Apply from the repo root: Render → Blueprints → New Blueprint Instance,
+# pointing at this file. Everything marked `sync: false` is a secret and is
+# typed into the Render dashboard, never committed. See DEPLOY-RENDER.md for
+# what each one is and the order to bring them up in.
+#
+# Both services are private: `AI_SERVICE_BASE_URL` and
+# `AUTOMATION_ENGINE_BASE_URL` on Vercel point at the internal hostnames
+# Render assigns, so neither is reachable from the internet. They
+# authenticate the web app anyway — a private network is not an authn story.
+
+# A disk pins its service to a single instance. That is not a constraint
+# here: both services keep their state in a SQLite file, which cannot be
+# shared across instances anyway.
+
+services:
+  # ---------------------------------------------------------------------
+  # ai-service — reads bills. Nothing else can start until this works:
+  # the engine negotiates from a structured extraction, and
+  # `bill_extractions` is empty until this service fills it.
+  # ---------------------------------------------------------------------
+  - type: pserv
+    name: billfixr-ai-service
+    runtime: docker
+    repo: https://github.com/BillFixr-Solutions-L-L-C/BillFixr-Web-App
+    branch: main
+    rootDir: services/ai-service
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    region: oregon
+    # No healthCheckPath: Render only supports it on web services, and
+    # these are private. /health is checked by hand after a deploy.
+    # The API and the job worker share one SQLite file, and a Render disk
+    # attaches to exactly one service — so they cannot be split into a web
+    # service and a background worker the way docker-compose runs them.
+    # Both run here, under one disk. See DEPLOY-RENDER.md.
+    dockerCommand: ./render-start.sh
+    disk:
+      name: ai-data
+      mountPath: /app/.billfixr-data
+      sizeGB: 5
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_PATH
+        value: /app/.billfixr-data/billfixr.sqlite3
+      - key: STORAGE_DIR
+        value: /app/.billfixr-data
+      # Deliberately NOT on the disk: a cache is derived data, and paying
+      # to persist it buys nothing.
+      - key: CACHE_DIR
+        value: /app/.billfixr-cache
+      - key: ENABLE_OCR
+        value: "true"
+      - key: OCR_ENGINE
+        value: tesseract
+      # The web app sends this as X-API-Key on every call.
+      - key: LOCAL_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      # Bills at rest. Set it: without it the stored files are plaintext.
+      - key: STORAGE_ENCRYPTION_KEY
+        sync: false
+
+  # ---------------------------------------------------------------------
+  # automation-engine — audits, writes to hospitals, reads their replies.
+  # ---------------------------------------------------------------------
+  - type: pserv
+    name: billfixr-automation-engine
+    runtime: docker
+    repo: https://github.com/BillFixr-Solutions-L-L-C/BillFixr-Web-App
+    branch: main
+    rootDir: services/automation-engine
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    region: oregon
+    # Private service, so no healthCheckPath — check /api/health by hand.
+    disk:
+      name: engine-data
+      # Matches ENGINE_DB_PATH and ENGINE_DATA_DIR in the Dockerfile. Without
+      # it the SQLite database and every revised-bill PDF are lost on each
+      # deploy and restart.
+      mountPath: /app/data
+      sizeGB: 2
+    envVars:
+      - key: ENABLE_DEMO_UI
+        value: "0"
+      # No browser calls this service, so no origin needs allowing.
+      - key: ENGINE_CORS_ORIGINS
+        value: ""
+      # Holds a send whenever a finding still needs review, rather than
+      # writing to a hospital off an unreviewed audit.
+      - key: AUTOPILOT_HOLD_FOR_REVIEW
+        value: "1"
+      # Without this the engine's API is open to anyone who reaches it.
+      - key: ENGINE_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      # Letters go out through Resend so the web app's webhook hears what
+      # became of them. MUST be the same Resend account as the web app —
+      # a key from another account sends mail and reports nothing.
+      - key: RESEND_API_KEY
+        sync: false
+      # The From address. Resend only sends from a domain verified on the
+      # account, so this has to be on billfixr.com — a gmail.com address
+      # here means every send is rejected and the engine falls back to
+      # untracked SMTP.
+      - key: ADVOCATE_EMAIL
+        value: advocate@billfixr.com
+      # Where replies are read from. This mailbox must be the one that
+      # ADVOCATE_EMAIL delivers to, or replies are never seen.
+      #
+      # Note the names: the inbound poller authenticates to IMAP with
+      # SMTP_USER and SMTP_PASSWORD. There is no IMAP_USER — setting one
+      # does nothing and the poller stays silently unconfigured.
+      - key: IMAP_HOST
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      # The same pair also arms the SMTP fallback used when Resend is
+      # unavailable, so point this at the real mail host rather than
+      # leaving it on the gmail.com default, which would fail.
+      - key: SMTP_HOST
+        sync: false
