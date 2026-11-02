@@ -3,12 +3,20 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 
 const adminMock = createSupabaseMock();
 const constructEvent = vi.fn();
+const confirmCompletionPayment = vi.fn();
+const isBackendConfigured = vi.fn();
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(() => adminMock.client),
 }));
 vi.mock("@/lib/stripe", () => ({
   stripe: { webhooks: { constructEvent: (...args: unknown[]) => constructEvent(...args) } },
+}));
+vi.mock("@/lib/automation-engine", () => ({
+  confirmCompletionPayment: (...args: unknown[]) => confirmCompletionPayment(...args),
+}));
+vi.mock("@/lib/aiStack", () => ({
+  isBackendConfigured: (...args: unknown[]) => isBackendConfigured(...args),
 }));
 
 const { POST } = await import("./route");
@@ -36,6 +44,7 @@ function queueDedupeOk() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  isBackendConfigured.mockReturnValue(true);
 });
 
 describe("POST /api/webhooks/stripe", () => {
@@ -157,6 +166,75 @@ describe("POST /api/webhooks/stripe", () => {
     // stripe_events, payment_records(lookup), payment_records(update), cases(update) <- index 3
     const caseUpdate = adminMock.from.mock.results[3].value.update as ReturnType<typeof vi.fn>;
     expect(caseUpdate).toHaveBeenCalledWith({ status: "paid" });
+  });
+
+  it("unlocks the engine's revised bill when the paid case has a negotiation", async () => {
+    // The success fee IS the engine's completion fee. Without this the
+    // client has paid and the bill they paid for stays locked.
+    queueDedupeOk();
+    constructEvent.mockReturnValue(makeEvent("payment_intent.succeeded", { id: "pi_2" }));
+    adminMock.queueResult("payment_records", { data: { id: "rec-2", type: "success_fee", case_id: "case-1", status: "pending" }, error: null });
+    adminMock.queueResult("payment_records", { data: null, error: null });
+    adminMock.queueResult("cases", { data: { negotiation_id: "neg-1" }, error: null });
+    confirmCompletionPayment.mockResolvedValue({ id: "neg-1", completion_paid: true });
+
+    const res = await POST(makeRequest("{}"));
+
+    expect(await res.json()).toEqual({ ok: true });
+    expect(confirmCompletionPayment).toHaveBeenCalledWith("neg-1", "pi_2");
+  });
+
+  it("does not call the engine for a case that has no negotiation", async () => {
+    // Most cases predate the engine, and it may not even be deployed.
+    queueDedupeOk();
+    constructEvent.mockReturnValue(makeEvent("payment_intent.succeeded", { id: "pi_2" }));
+    adminMock.queueResult("payment_records", { data: { id: "rec-2", type: "success_fee", case_id: "case-1", status: "pending" }, error: null });
+    adminMock.queueResult("payment_records", { data: null, error: null });
+    adminMock.queueResult("cases", { data: { negotiation_id: null }, error: null });
+
+    const res = await POST(makeRequest("{}"));
+
+    expect(await res.json()).toEqual({ ok: true });
+    expect(confirmCompletionPayment).not.toHaveBeenCalled();
+  });
+
+  it("accepts the payment but shouts when the engine is not configured at all", async () => {
+    // Stripe resending the event cannot conjure a base URL, so retrying
+    // forever is the wrong answer — unlike an engine that is deployed and
+    // merely refusing. The log has to carry everything needed to replay
+    // the unlock by hand.
+    queueDedupeOk();
+    constructEvent.mockReturnValue(makeEvent("payment_intent.succeeded", { id: "pi_2" }));
+    adminMock.queueResult("payment_records", { data: { id: "rec-2", type: "success_fee", case_id: "case-1", status: "pending" }, error: null });
+    adminMock.queueResult("payment_records", { data: null, error: null });
+    adminMock.queueResult("cases", { data: { negotiation_id: "neg-1" }, error: null });
+    isBackendConfigured.mockReturnValue(false);
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await POST(makeRequest("{}"));
+
+    expect(res.status).toBe(200);
+    expect(confirmCompletionPayment).not.toHaveBeenCalled();
+    const line = logged.mock.calls[0].join(" ");
+    expect(line).toContain("neg-1");
+    expect(line).toContain("case-1");
+    expect(line).toContain("pi_2");
+  });
+
+  it("asks Stripe to retry when the engine will not confirm the payment", async () => {
+    // A 200 here would end the retry window with the bill still locked,
+    // which is the one outcome nothing else in the system recovers from.
+    queueDedupeOk();
+    constructEvent.mockReturnValue(makeEvent("payment_intent.succeeded", { id: "pi_2" }));
+    adminMock.queueResult("payment_records", { data: { id: "rec-2", type: "success_fee", case_id: "case-1", status: "pending" }, error: null });
+    adminMock.queueResult("payment_records", { data: null, error: null });
+    adminMock.queueResult("cases", { data: { negotiation_id: "neg-1" }, error: null });
+    adminMock.queueResult("stripe_events", { data: null, error: null }); // claim released
+    confirmCompletionPayment.mockRejectedValue(new Error("engine down"));
+
+    const res = await POST(makeRequest("{}"));
+
+    expect(res.status).toBe(500);
   });
 
   it("marks the record failed on payment_intent.payment_failed", async () => {

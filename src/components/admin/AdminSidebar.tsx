@@ -16,6 +16,7 @@ import {
   UploadsIcon,
   SupportIcon,
   SettingsIcon,
+  AutomationIcon,
   TeamIcon,
   CaseIcon,
   CompletedCaseIcon,
@@ -56,6 +57,7 @@ const nav: NavItem[] = [
   },
   { label: "Case Detail", href: "/admin/cases", icon: CaseIcon, domain: "client_data" as Domain },
   { label: "User Management", href: "/admin/user-management", icon: TeamIcon, domain: "system" as Domain },
+  { label: "Automation Monitoring", href: "/admin/automation", icon: AutomationIcon, domain: "ai_pipeline" as Domain },
   { label: "Support", href: "/admin/support", icon: SupportIcon, domain: "client_data" as Domain },
   {
     label: "Settings",

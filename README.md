@@ -39,20 +39,28 @@ have legal authorization to act on behalf of.
 
 ## AI backend
 
-There is none in this repository. Two Python services used to live under
-`services/` — `ai-service` (ingestion, OCR, extraction, case analysis,
-draft generation) and `automation-engine` (audit rules and the negotiation
-autopilot) — along with the web app's clients for them. Both were removed
-on 2026-11-02; neither was ever deployed, so nothing in production
-changed.
+Two Python services under `services/`:
 
-They are not lost, and bringing the engine back is documented:
-`docs/AUTOMATION-ENGINE.md` summarises the author's handover — where the
-code is, how to deploy it, the lifecycle the web app has to drive, and
-what the handover gets wrong.
+- `ai-service` — ingestion, OCR, extraction, case analysis, draft
+  generation.
+- `automation-engine` — audit rules and the negotiation autopilot
+  (follow-ups, replies, settlement, the revised bill, the completion
+  fee).
 
-Nothing in the app reads a bill or negotiates automatically now. A case
-reaches `scanning` and waits for a person.
+The web app reaches both through one seam, `src/lib/aiStack.ts`, which
+answers what is configured, what is reachable, and where to look a
+hospital's billing contacts up. Everything else goes to whichever service
+owns it.
+
+**Neither is deployed.** No `AI_SERVICE_BASE_URL` or
+`AUTOMATION_ENGINE_BASE_URL` is set in any environment, so every AI path
+answers "unavailable" and no case advances on its own. Deploying them is
+the remaining work: see `docs/AUTOMATION-ENGINE.md`, which also covers the
+order it has to happen in — the engine cannot start a negotiation until
+something has extracted a bill.
+
+CI runs the TypeScript suite only. The Python suites (32 for the engine,
+41 for ai-service) have to be run by hand.
 
 ## How BillFixr is paid
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import WelcomeBanner from "@/components/dashboard/WelcomeBanner";
 import DashboardStats from "@/components/dashboard/DashboardStats";
@@ -59,10 +59,12 @@ export default function DashboardHome() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [billId, setBillId] = useState<string | null>(null);
   const [uploadedAt, setUploadedAt] = useState<string | null>(null);
+  const [caseId, setCaseId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentId, setIntentId] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [preparingFile, setPreparingFile] = useState(false);
   const [caseInformation, setCaseInformation] = useState<CaseInformation>(EMPTY_CASE_INFORMATION);
   const [dragActive, setDragActive] = useState(false);
@@ -211,14 +213,62 @@ export default function DashboardHome() {
       return;
     }
 
+    const supabase = createClient();
+    const { data: caseRow } = await supabase.from("cases").select("id").eq("bill_id", billId).maybeSingle();
+    if (caseRow) setCaseId(caseRow.id);
     setStage("scanning");
   }
 
-  // There is no automated analysis any more: the AI services were removed,
-  // so nothing advances a case past "scanning". The card below says so
-  // instead of spinning for ever or quietly moving the case on — the
-  // customer has paid, and the honest answer is that a person picks it up
-  // from here.
+  // Runs automatically as soon as the scanning stage is reached — this
+  // used to be gated behind a manually-clicked "(dev) run AI analysis"
+  // button, which meant a real user had no actual way to trigger it (the
+  // scan just sat at a static "40%" forever). The AI service call itself
+  // can genuinely take a while, so this shows an honest in-progress state
+  // rather than a fake percentage, and a real error/retry state if it
+  // fails instead of silently advancing anyway. `scanStartedRef` (not
+  // state) guards against double-firing so the effect body never calls
+  // setState synchronously — every setState here happens after the first
+  // `await`, i.e. genuinely async from React's perspective.
+  const scanStartedRef = useRef<string | null>(null);
+
+  async function runScan(forCaseId: string) {
+    const analysisRes = await fetch("/api/dev/process-with-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId: forCaseId }),
+    });
+    if (!analysisRes.ok) {
+      const body = await analysisRes.json().catch(() => ({}));
+      setScanError(body?.error ?? "We couldn't analyze your bill. Please try again.");
+      scanStartedRef.current = null;
+      return;
+    }
+
+    const advanceRes = await fetch("/api/dev/advance-case", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ caseId: forCaseId, toStatus: "awaiting_response" }),
+    });
+    if (!advanceRes.ok) {
+      console.error("Failed to advance case to awaiting_response:", await advanceRes.text());
+    }
+
+    setStage("negotiating");
+  }
+
+  useEffect(() => {
+    if (stage === "scanning" && caseId && scanStartedRef.current !== caseId) {
+      scanStartedRef.current = caseId;
+      runScan(caseId);
+    }
+  }, [stage, caseId]);
+
+  function handleRetryScan() {
+    if (!caseId) return;
+    setScanError(null);
+    scanStartedRef.current = caseId;
+    runScan(caseId);
+  }
 
   const hasFile = stage === "scanning" || stage === "negotiating";
   const stats = stage === "negotiating" ? finalStats : emptyStats;
@@ -242,22 +292,31 @@ export default function DashboardHome() {
         stage === "scanning" ? (
           <FlowCard>
             <p className="text-3xl font-bold leading-tight text-[#003322]">
-              We&apos;ve got your
+              We&apos;re scanning your
               <br />
               Medical Bill
             </p>
-            <span className="mt-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#4bd37b]">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M5 13l4 4L19 7" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-            {/* No spinner: nothing is running. A spinning ring on a case
-                that nothing is processing is a lie the customer cannot
-                see through. */}
-            <p className="mt-5 max-w-sm text-base text-[#a6b1bb]">
-              Our team is reviewing it. We&apos;ll email you as soon as there&apos;s an update — you don&apos;t need
-              to do anything else.
-            </p>
+            <div className="relative mt-6 flex h-28 w-28 items-center justify-center rounded-full border-[8px] border-[#d9d9d9]">
+              <div
+                className={`absolute inset-0 rounded-full border-[8px] border-transparent border-t-[#0f7545] border-r-[#0f7545] ${
+                  scanError ? "" : "animate-spin"
+                }`}
+              />
+            </div>
+            {scanError ? (
+              <>
+                <p className="mt-5 max-w-sm text-base text-danger">{scanError}</p>
+                <button
+                  type="button"
+                  onClick={handleRetryScan}
+                  className="mt-4 rounded-full bg-[#0f7545] px-8 py-3 text-base font-semibold text-white hover:opacity-90"
+                >
+                  Try again
+                </button>
+              </>
+            ) : (
+              <p className="mt-5 text-base text-[#a6b1bb]">Analyzing your bill — this can take a moment...</p>
+            )}
           </FlowCard>
         ) : (
           <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm">
