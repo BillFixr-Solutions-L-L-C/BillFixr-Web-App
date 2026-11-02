@@ -65,7 +65,7 @@ export default function ActiveCasePage() {
   const [chargeAmount, setChargeAmount] = useState<number | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
-  const [successFeePercentage, setSuccessFeePercentage] = useState(30);
+  const [successFeePercentage, setSuccessFeePercentage] = useState<number | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -99,11 +99,27 @@ export default function ActiveCasePage() {
 
   // Formats the same way admins enter it (e.g. "30" or "27.5"), never a
   // trailing ".00" for the common whole-number case.
-  const successFeeLabel = Number.isInteger(successFeePercentage)
-    ? String(successFeePercentage)
-    : successFeePercentage.toFixed(2);
+  const successFeeLabel =
+    successFeePercentage == null
+      ? null
+      : Number.isInteger(successFeePercentage)
+        ? String(successFeePercentage)
+        : successFeePercentage.toFixed(2);
+
 
   const selectedCase = cases.find((c) => c.id === selectedCaseId) ?? null;
+
+  // The fee is a share of the reduction, not of the corrected bill:
+  // $2,000 down to $500 is $1,500 saved, and the fee is that share of
+  // $1,500. Shown as a figure because the screen sits next to an
+  // "Adjusted Charges" card, and "% of the adjusted bill" next to $500
+  // reads as a fifth of $500 — which is not what gets charged.
+  const savingsFound =
+    selectedCase?.savings_found != null ? Number(selectedCase.savings_found) : null;
+  const successFeeAmount =
+    savingsFound != null && successFeePercentage != null
+      ? (savingsFound * successFeePercentage) / 100
+      : null;
 
   useEffect(() => {
     if (!selectedCase?.bills) return;
@@ -450,9 +466,21 @@ export default function ActiveCasePage() {
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-400">
-              Please note the {successFeeLabel}% of the adjusted bill will charged for services
-            </p>
+            {successFeeLabel && (
+              <p className="max-w-xs text-xs text-gray-400">
+                {successFeeAmount != null && savingsFound != null ? (
+                  <>
+                    Our fee is {successFeeLabel}% of the ${savingsFound.toLocaleString()} we saved you —{" "}
+                    <span className="font-semibold text-gray-600">
+                      ${successFeeAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </span>
+                    .
+                  </>
+                ) : (
+                  <>Our fee is {successFeeLabel}% of what we save you, never of the corrected bill.</>
+                )}
+              </p>
+            )}
             {paymentError && <p className="mt-2 max-w-xs text-xs text-danger">{paymentError}</p>}
             <button
               type="button"

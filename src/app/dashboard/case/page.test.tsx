@@ -81,3 +81,84 @@ describe("ActiveCasePage back navigation", () => {
     expect(screen.queryByText("Over Billed")).not.toBeInTheDocument();
   });
 });
+
+// The customer's example, verbatim: a $2,000 bill reduced to $500.
+// Savings are $1,500 and the fee is a share of that, never of the $500.
+async function openComparison(user: ReturnType<typeof userEvent.setup>) {
+  mock.queueResult("letter_events", { data: [], error: null });
+  mock.queueResult("case_documents", {
+    data: [
+      {
+        id: "doc-1",
+        type: "new_bill",
+        filename: "adjusted.pdf",
+        storage_url: "u/adjusted.pdf",
+        size_bytes: 1024,
+        received_on: null,
+        created_at: "2026-02-01T00:00:00Z",
+      },
+    ],
+    error: null,
+  });
+  await user.click(await screen.findByText("bill.pdf"));
+  await user.click(await screen.findByRole("button", { name: "Check and Proceed" }));
+  await screen.findByText("Over Billed");
+}
+
+describe("ActiveCasePage success fee", () => {
+  it("charges the fee on the saving, not on the corrected bill", async () => {
+    mock.reset();
+    mock.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    mock.queueResult("cases", {
+      data: [{ ...CASE_ROW, savings_found: 1500, adjusted_total: 500 }],
+      error: null,
+    });
+    mock.queueResult("app_settings", { data: { success_fee_percentage: 20 }, error: null });
+
+    const user = userEvent.setup();
+    render(<ActiveCasePage />);
+    await openComparison(user);
+
+    // 20% of the $1,500 saved is $300. 20% of the $500 corrected bill
+    // would be $100, which is what the old "% of the adjusted bill"
+    // wording told the customer to expect.
+    expect(await screen.findByText(/\$300/)).toBeInTheDocument();
+    expect(screen.getByText(/of the \$1,500 we saved you/)).toBeInTheDocument();
+    // "Adjusted Bill" is a legitimate heading on this screen; what must
+    // not come back is the fee being stated as a share of it.
+    expect(screen.queryByText(/% of the adjusted bill/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\$100/)).not.toBeInTheDocument();
+  });
+
+  it("states the basis when the saving is not known yet", async () => {
+    mock.reset();
+    mock.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    mock.queueResult("cases", { data: [{ ...CASE_ROW, adjusted_total: 500 }], error: null });
+    mock.queueResult("app_settings", { data: { success_fee_percentage: 20 }, error: null });
+
+    const user = userEvent.setup();
+    render(<ActiveCasePage />);
+    await openComparison(user);
+
+    expect(await screen.findByText(/never of the corrected bill/)).toBeInTheDocument();
+  });
+
+  it("says nothing about the fee when the percentage could not be read", async () => {
+    // It used to default to 30 in state, so a failed settings read put
+    // "30%" on screen while the server charged the real percentage.
+    mock.reset();
+    mock.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    mock.queueResult("cases", {
+      data: [{ ...CASE_ROW, savings_found: 1500, adjusted_total: 500 }],
+      error: null,
+    });
+    mock.queueResult("app_settings", { data: null, error: { message: "unavailable" } });
+
+    const user = userEvent.setup();
+    render(<ActiveCasePage />);
+    await openComparison(user);
+
+    expect(screen.queryByText(/Our fee is/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/30%/)).not.toBeInTheDocument();
+  });
+});
