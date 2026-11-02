@@ -17,7 +17,10 @@ COPY pyproject.toml README.md ./
 COPY app ./app
 COPY scripts ./scripts
 
-RUN pip install --no-cache-dir -e ".[dev]"
+# No [dev]: that extra is pytest and ruff, a test runner and a linter, and
+# nothing in app/ imports either. OCR stays on tesseract, installed above --
+# the [ocr] extra is paddleocr and is deliberately not installed.
+RUN pip install --no-cache-dir .
 
 EXPOSE 8000
 

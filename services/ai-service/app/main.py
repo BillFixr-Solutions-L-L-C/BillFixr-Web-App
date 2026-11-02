@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.ai.provider import ExtractionProvider
 from app.auth import Principal, ensure_owner_access, require_roles
+from app import readiness
 from app.casework import analyze_case, draft_communication
 from app.config import Settings, get_settings
 from app.contracts import (
@@ -54,6 +55,14 @@ app = FastAPI(
     version="0.1.0",
     description="AI ingestion, OCR, and structured extraction service for medical bill negotiation.",
 )
+
+
+@app.on_event("startup")
+def check_configuration() -> None:
+    """First thing on startup, so a misconfigured deploy says so in its log
+    instead of coming up healthy with its doors open."""
+    readiness.enforce(get_settings())
+
 configure_logging(get_settings())
 logger = logging.getLogger("billfixr.api")
 
@@ -120,6 +129,9 @@ def health(settings: Settings = Depends(get_settings)) -> dict[str, str | bool]:
         "ocr_engine": settings.ocr_engine,
         "database_configured": bool(settings.database_path),
         "auth_enabled": bool(settings.local_api_key),
+        # The verdict, so a deploy can be checked without reading the log.
+        "ready": readiness.check(settings).ready,
+        "storage_encrypted": bool(settings.storage_encryption_key),
         "malware_scan_enabled": settings.malware_scan_enabled,
         "clamav_enabled": settings.clamav_enabled,
     }

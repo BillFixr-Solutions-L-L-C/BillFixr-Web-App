@@ -65,6 +65,29 @@ services they would get two disks and two databases, and jobs would be
 enqueued into a file nothing was reading. `render-start.sh` runs both and
 exits if either stops.
 
+### It checks itself on startup, too
+
+Same bargain as the engine. The deploy log opens with:
+
+```
+BillFixr ai-service - configuration check
+  API key required      : yes
+  extraction configured : yes
+  bills encrypted at rest: yes
+  no problems found
+```
+
+**It refuses to start without `LOCAL_API_KEY`**, and exits non-zero so the
+deploy fails. That is not only about the key check: with it unset,
+`app/auth.py` hands back a principal marked unauthenticated, and the role
+checks and the per-document ownership checks then pass for everyone —
+anyone who could reach the service could read any uploaded bill.
+`AI_SERVICE_ALLOW_INCOMPLETE=1` overrides it, for local work only.
+
+Plaintext storage (no `STORAGE_ENCRYPTION_KEY`) is a warning rather than a
+refusal. `/health` reports `ready`, `auth_enabled` and `storage_encrypted`
+so a deploy can be checked without reading logs.
+
 **Check it worked:**
 
 1. The service is live and `/health` returns ok.
@@ -218,7 +241,7 @@ Then check, on one real case, in this order:
 
 ## Loose ends that are not blocking
 
-- **Nothing runs the Python tests automatically.** 46 engine tests and 41
+- **Nothing runs the Python tests automatically.** 66 engine tests and 55
   ai-service tests exist; CI runs neither. Worth adding before these
   services carry real cases.
 - **The `(dev) simulate provider response` button** is still live in
