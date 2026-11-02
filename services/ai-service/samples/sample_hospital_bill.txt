@@ -1,0 +1,14 @@
+North Valley Hospital
+Patient Statement
+
+Patient: Jordan Taylor
+Account Number: ABC12345
+Statement Date: 2026-08-01
+Date of Service: 2026-07-18
+
+Total Charges: $12,450.00
+Insurance Paid: $8,000.00
+Adjustments: $0.00
+Patient Responsibility: $4,450.00
+
+Please pay the amount due by 2026-08-31.

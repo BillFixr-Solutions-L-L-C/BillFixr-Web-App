@@ -1,0 +1,23 @@
+Send this from the hospital's address with demo_assets/revised_bill.pdf attached.
+
+To:      the BillFixr advocate inbox
+Subject: Re: Formal Billing Dispute & Settlement Offer [{TRACKING}]
+Attach:  revised_bill.pdf
+
+Dear Patient Advocate,
+
+As agreed, please find attached the revised itemized statement for Account #DEMO-000123.
+It reflects the settlement of $149.99 in full and final satisfaction of the account, with a
+remaining balance of $0.00 after settlement.
+
+Sincerely,
+Patient Financial Services
+Riverside Community Health Center
+
+---
+Before sending:
+1. Replace {TRACKING} in the subject with the case's real tracking code. The app finds the case by it.
+2. The amount in the PDF must match the amount the case settled at. If the case settled at a different
+   amount, regenerate the PDF:
+   python3 demo_assets/make_revised_bill_pdf.py --tracking <TRACKING> --settled <AMOUNT> --out demo_assets/revised_bill.pdf
+   and change the amount in this email to match.

@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BillFixr Review Queue</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f8fb;
+        --panel: #ffffff;
+        --ink: #172033;
+        --muted: #657184;
+        --line: #d9e0ea;
+        --accent: #0e7c66;
+        --accent-dark: #075f4d;
+        --danger: #9f2a2a;
+        --code: #101827;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        background: #ffffff;
+      }
+
+      .wrap {
+        width: min(1180px, calc(100vw - 32px));
+        margin: 0 auto;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 72px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.2;
+      }
+
+      main {
+        padding: 24px 0 40px;
+      }
+
+      a {
+        color: var(--accent);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .panel,
+      .job {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .panel {
+        margin-bottom: 16px;
+        padding: 16px;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 140px auto;
+        gap: 10px;
+        align-items: end;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 13px;
+        font-weight: 650;
+        color: #28364b;
+      }
+
+      input,
+      select {
+        width: 100%;
+        min-height: 40px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 0 10px;
+        background: #ffffff;
+        color: var(--ink);
+        font: inherit;
+      }
+
+      button {
+        appearance: none;
+        min-height: 40px;
+        border: 0;
+        border-radius: 6px;
+        padding: 0 14px;
+        background: var(--accent);
+        color: #ffffff;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+      }
+
+      button:hover {
+        background: var(--accent-dark);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+
+      .queue {
+        display: grid;
+        gap: 14px;
+      }
+
+      .job {
+        overflow: hidden;
+      }
+
+      .job-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .job-title {
+        font-weight: 800;
+        overflow-wrap: anywhere;
+      }
+
+      .meta {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+
+      .pill {
+        align-self: start;
+        border-radius: 999px;
+        padding: 5px 10px;
+        background: #eef3f8;
+        color: #28364b;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .pill.failed {
+        background: #fdecec;
+        color: var(--danger);
+      }
+
+      .doc {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .doc:last-child {
+        border-bottom: 0;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px;
+        background: #fbfcfe;
+      }
+
+      .metric span {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 15px;
+        overflow-wrap: anywhere;
+      }
+
+      pre {
+        margin: 0;
+        max-height: 320px;
+        overflow: auto;
+        border-radius: 8px;
+        padding: 12px;
+        background: var(--code);
+        color: #e8eef8;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .empty,
+      .error {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .error {
+        color: var(--danger);
+      }
+
+      @media (max-width: 860px) {
+        .topbar,
+        .controls {
+          align-items: stretch;
+          grid-template-columns: 1fr;
+        }
+
+        .topbar {
+          display: grid;
+          padding: 16px 0;
+        }
+
+        .summary,
+        .job-head {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap topbar">
+        <h1>BillFixr Review Queue</h1>
+        <a href="/">Demo Upload</a>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section class="panel">
+        <div class="controls">
+          <div>
+            <label for="apiKey">Local API key</label>
+            <input id="apiKey" type="password" autocomplete="off" placeholder="Only needed when enabled" />
+          </div>
+          <div>
+            <label for="userRole">Role</label>
+            <select id="userRole">
+              <option value="reviewer">reviewer</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+          <button id="refreshButton" type="button">Refresh Queue</button>
+        </div>
+      </section>
+
+      <section id="queue" class="queue">
+        <div class="empty">Loading review queue...</div>
+      </section>
+    </main>
+
+    <script>
+      const els = {
+        apiKey: document.getElementById("apiKey"),
+        userRole: document.getElementById("userRole"),
+        refreshButton: document.getElementById("refreshButton"),
+        queue: document.getElementById("queue"),
+      };
+
+      function authHeaders(extra = {}) {
+        const headers = { ...extra, "X-User-ID": "local-reviewer", "X-User-Role": els.userRole.value };
+        if (els.apiKey.value.trim()) headers["X-API-Key"] = els.apiKey.value.trim();
+        return headers;
+      }
+
+      function money(value) {
+        if (!value || value.amount === null || value.amount === undefined) return "-";
+        return new Intl.NumberFormat("en-US", { style: "currency", currency: value.currency || "USD" }).format(
+          value.amount,
+        );
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (char) => {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char];
+        });
+      }
+
+      function renderQueue(items) {
+        if (!items.length) {
+          els.queue.innerHTML = '<div class="empty">No jobs currently need review.</div>';
+          return;
+        }
+
+        els.queue.innerHTML = items
+          .map((item) => {
+            const docs = item.processed_documents
+              .map((doc) => {
+                const extraction = doc.extraction;
+                const validation = doc.validation || { quality_score: 0, findings: [] };
+                return `
+                  <div class="doc">
+                    <div class="summary">
+                      <div class="metric"><span>File</span><strong>${escapeHtml(doc.document.original_filename)}</strong></div>
+                      <div class="metric"><span>Patient Owes</span><strong>${escapeHtml(money(extraction.patient_responsibility))}</strong></div>
+                      <div class="metric"><span>Account</span><strong>${escapeHtml(extraction.account_number || "-")}</strong></div>
+                      <div class="metric"><span>Quality</span><strong>${escapeHtml(validation.quality_score)}</strong></div>
+                    </div>
+                    <pre>${escapeHtml(JSON.stringify({ extraction, validation, warnings: doc.warnings }, null, 2))}</pre>
+                  </div>`;
+              })
+              .join("");
+            return `
+              <article class="job">
+                <div class="job-head">
+                  <div>
+                    <div class="job-title">Job ${escapeHtml(item.job.job_id)}</div>
+                    <div class="meta">Case ${escapeHtml(item.job.case_id)} · attempts ${escapeHtml(item.job.attempts)}</div>
+                    ${item.job.error ? `<div class="meta error">${escapeHtml(item.job.error)}</div>` : ""}
+                  </div>
+                  <div>
+                    <div class="pill ${item.job.status === "failed" ? "failed" : ""}">${escapeHtml(item.job.status)}</div>
+                    <button data-job-id="${escapeHtml(item.job.job_id)}" type="button" style="margin-top: 10px">Approve</button>
+                  </div>
+                </div>
+                ${docs || '<div class="doc empty">No processed document payload is available for this job yet.</div>'}
+              </article>`;
+          })
+          .join("");
+      }
+
+      async function refreshQueue() {
+        els.refreshButton.disabled = true;
+        try {
+          const response = await fetch("/v1/review/queue", { headers: authHeaders() });
+          if (!response.ok) throw new Error(await response.text());
+          renderQueue(await response.json());
+        } catch (error) {
+          els.queue.innerHTML = `<div class="error">${error.message || String(error)}</div>`;
+        } finally {
+          els.refreshButton.disabled = false;
+        }
+      }
+
+      els.queue.addEventListener("click", async (event) => {
+        const button = event.target.closest("button[data-job-id]");
+        if (!button) return;
+        button.disabled = true;
+        try {
+          const response = await fetch(`/v1/review/jobs/${button.dataset.jobId}/approve`, {
+            method: "POST",
+            headers: authHeaders(),
+          });
+          if (!response.ok) throw new Error(await response.text());
+          await refreshQueue();
+        } catch (error) {
+          button.disabled = false;
+          alert(error.message || String(error));
+        }
+      });
+
+      els.refreshButton.addEventListener("click", refreshQueue);
+      refreshQueue();
+    </script>
+  </body>
+</html>

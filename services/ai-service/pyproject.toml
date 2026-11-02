@@ -1,0 +1,49 @@
+[project]
+name = "billfixr-ai"
+version = "0.1.0"
+description = "AI ingestion and extraction service for hospital bill negotiation workflows."
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "pydantic>=2.8.0",
+  "pydantic-settings>=2.4.0",
+  "python-multipart>=0.0.9",
+  "openai>=1.40.0",
+  "pdfplumber>=0.11.0",
+  "pypdfium2>=4.30.0",
+  "pypdf>=4.3.0",
+  "pillow>=10.4.0",
+  "pytesseract>=0.3.10",
+  "python-docx>=1.1.2",
+  "openpyxl>=3.1.5",
+  "cryptography>=42.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.0",
+  "ruff>=0.5.0",
+]
+ocr = [
+  "paddleocr>=3.0.0",
+  "paddlepaddle>=3.0.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+ignore = [
+  "B008",   # FastAPI intentionally uses Depends/File/Form/Query in defaults.
+  "BLE001", # Parser adapters must convert third-party failures into warnings.
+  "S112",   # Best-effort email part extraction intentionally skips malformed parts.
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["samples*", "workflows*", "docs*", "tests*"]

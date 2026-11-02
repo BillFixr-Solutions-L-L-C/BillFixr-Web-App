@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BillFixr Patient Preview</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f0e6;
+        --surface: #fffdf8;
+        --surface-soft: #f8f2e7;
+        --line: #d9d1c3;
+        --ink: #1f2937;
+        --muted: #68707d;
+        --accent: #0f766e;
+        --accent-soft: #dff2ed;
+        --warn: #8a5b1d;
+        --warn-soft: #faeccb;
+        --navy: #24364d;
+        --navy-soft: #e8eef7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.08), transparent 28%),
+          linear-gradient(180deg, #f8f3ea 0%, #f5f0e6 100%);
+        color: var(--ink);
+        font-family:
+          "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .shell {
+        width: min(1180px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 24px 0 40px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .brand {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .eyebrow {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .brand strong {
+        font-size: 22px;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .nav-link {
+        min-height: 38px;
+        padding: 0 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        background: rgba(255, 253, 248, 0.85);
+        font-weight: 700;
+        color: var(--navy);
+      }
+
+      .hero,
+      .panel,
+      .timeline-step {
+        background: rgba(255, 253, 248, 0.96);
+        border: 1px solid rgba(217, 209, 195, 0.92);
+        border-radius: 12px;
+        box-shadow: 0 8px 18px rgba(28, 34, 44, 0.05);
+      }
+
+      .hero {
+        padding: 26px;
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+        gap: 18px;
+        margin-bottom: 16px;
+      }
+
+      h1 {
+        margin: 12px 0 10px;
+        font-size: clamp(34px, 4vw, 48px);
+        line-height: 1.02;
+      }
+
+      .hero-copy {
+        color: #51606c;
+        font-size: 16px;
+        line-height: 1.55;
+        max-width: 760px;
+      }
+
+      .status-card {
+        padding: 18px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .status-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .status-title {
+        font-size: 28px;
+        line-height: 1.05;
+      }
+
+      .status-copy {
+        color: #56616c;
+        line-height: 1.55;
+      }
+
+      .pill-row,
+      .summary-grid,
+      .detail-grid,
+      .timeline {
+        display: grid;
+        gap: 14px;
+      }
+
+      .pill-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .pill {
+        min-height: 88px;
+        padding: 14px;
+        border-radius: 12px;
+        background: var(--surface-soft);
+        border: 1px solid var(--line);
+      }
+
+      .pill span {
+        display: block;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .pill strong {
+        display: block;
+        font-size: 22px;
+      }
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
+        gap: 16px;
+      }
+
+      .panel {
+        overflow: hidden;
+      }
+
+      .panel-head {
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .panel-title {
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .panel-body {
+        padding: 18px;
+      }
+
+      .message {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.35;
+      }
+
+      .message-support {
+        margin-top: 12px;
+        color: #5e6772;
+        line-height: 1.6;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .summary-card {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 14px;
+        background: #fff;
+      }
+
+      .summary-card span {
+        display: block;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .summary-card strong {
+        display: block;
+        font-size: 21px;
+      }
+
+      .detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .detail-item {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 14px;
+        background: #fff;
+      }
+
+      .detail-item span {
+        display: block;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+
+      .detail-item strong {
+        display: block;
+        font-size: 16px;
+      }
+
+      .alert {
+        border-radius: 12px;
+        padding: 16px;
+        border: 1px solid #eed6a6;
+        background: var(--warn-soft);
+      }
+
+      .alert strong {
+        display: block;
+        font-size: 16px;
+        margin-bottom: 8px;
+        color: #6e4516;
+      }
+
+      .alert ul {
+        margin: 0;
+        padding-left: 18px;
+        color: #6e4516;
+        line-height: 1.55;
+      }
+
+      .timeline-step {
+        padding: 14px;
+      }
+
+      .timeline-kicker {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .timeline-step strong {
+        display: block;
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+
+      .timeline-step p {
+        margin: 0;
+        color: #5b6572;
+        line-height: 1.55;
+      }
+
+      .draft {
+        padding: 16px;
+        border-radius: 10px;
+        background: #fbf8f1;
+        border: 1px solid var(--line);
+      }
+
+      .draft-subject {
+        font-weight: 800;
+        margin-bottom: 10px;
+      }
+
+      .draft-body {
+        margin: 0;
+        white-space: pre-wrap;
+        line-height: 1.6;
+        color: #334155;
+      }
+
+      .support-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .support-item {
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: #fff;
+        border: 1px solid var(--line);
+      }
+
+      .support-item strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .support-item p {
+        margin: 0;
+        color: #5f6975;
+        line-height: 1.5;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .badge.warn {
+        background: var(--warn-soft);
+        color: #754b17;
+      }
+
+      .badge.good {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      @media (max-width: 940px) {
+        .hero,
+        .content-grid,
+        .pill-row,
+        .summary-grid,
+        .detail-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="topbar">
+        <div class="brand">
+          <div class="eyebrow">BillFixr Patient Experience</div>
+          <strong>Milestone 1 completion preview</strong>
+        </div>
+        <div class="nav-links">
+          <a class="nav-link" href="/demo/story">Open demo walkthrough</a>
+          <a class="nav-link" href="/">Open operator demo</a>
+          <a class="nav-link" href="/review">Open review queue</a>
+        </div>
+      </div>
+
+      <section class="hero">
+        <div>
+          <div class="eyebrow">What the patient sees</div>
+          <h1 id="heroTitle">We found your hospital bill and prepared the next step.</h1>
+          <div id="heroCopy" class="hero-copy">
+            BillFixr recognized the uploaded document, pulled out the visible billing details, and identified what still
+            needs review before outreach continues.
+          </div>
+        </div>
+
+        <div class="status-card">
+          <div class="status-label">Current case status</div>
+          <div id="statusTitle" class="status-title">Needs review</div>
+          <div id="statusCopy" class="status-copy">
+            We found the bill and extracted the visible details, but one important billing identifier is still missing.
+          </div>
+          <div id="statusBadge" class="badge warn">Review before automatic outreach</div>
+        </div>
+      </section>
+
+      <section class="pill-row" style="margin-bottom: 16px">
+        <div class="pill">
+          <span>Provider</span>
+          <strong id="pillProvider">UVM Medical Center</strong>
+        </div>
+        <div class="pill">
+          <span>Amount currently visible</span>
+          <strong id="pillAmount">$28.03</strong>
+        </div>
+        <div class="pill">
+          <span>Next step</span>
+          <strong id="pillAction">Request itemized bill</strong>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <div class="stack" style="display: grid; gap: 16px">
+          <section class="panel">
+            <div class="panel-head">
+              <div class="panel-title">Clear case message</div>
+              <div class="badge warn">Milestone 1 delivered</div>
+            </div>
+            <div class="panel-body">
+              <p id="caseMessage" class="message">
+                We recognized this as a hospital bill and extracted the visible details. Before we continue automatically,
+                we still need the missing account number or a cleaner billing statement.
+              </p>
+              <div id="caseMessageSupport" class="message-support">
+                Your case is not blocked. It has already been organized into a reviewable billing record, and BillFixr
+                has prepared the next action to move the case forward.
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div class="panel-title">What we found</div>
+            </div>
+            <div class="panel-body">
+              <div class="summary-grid">
+                <div class="summary-card">
+                  <span>Document type</span>
+                  <strong id="summaryDocType">Hospital bill</strong>
+                </div>
+                <div class="summary-card">
+                  <span>Patient name</span>
+                  <strong id="summaryPatient">Kathryn A. McCurdy</strong>
+                </div>
+                <div class="summary-card">
+                  <span>Statement date</span>
+                  <strong id="summaryStatementDate">January 24, 2016</strong>
+                </div>
+                <div class="summary-card">
+                  <span>Due date</span>
+                  <strong id="summaryDueDate">February 18, 2016</strong>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div class="panel-title">Why this case is still reviewable</div>
+            </div>
+            <div class="panel-body">
+              <div class="alert">
+                <strong id="missingTitle">Some important billing details are still missing.</strong>
+                <ul id="missingList">
+                  <li>Account number</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div class="panel-title">Patient-visible bill summary</div>
+            </div>
+            <div class="panel-body">
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <span>Provider</span>
+                  <strong id="detailProvider">UVM Medical Center</strong>
+                </div>
+                <div class="detail-item">
+                  <span>Patient</span>
+                  <strong id="detailPatient">Kathryn A. McCurdy</strong>
+                </div>
+                <div class="detail-item">
+                  <span>Amount we can confirm</span>
+                  <strong id="detailAmount">$28.03</strong>
+                </div>
+                <div class="detail-item">
+                  <span>Account number</span>
+                  <strong id="detailAccount">Not visible yet</strong>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="stack" style="display: grid; gap: 16px">
+          <section class="panel">
+            <div class="panel-head">
+              <div class="panel-title">What happens next</div>
+            </div>
+            <div class="panel-body">
+              <div class="timeline">
+                <div class="timeline-step">
+                  <div class="timeline-kicker">Step 1</div>
+                  <strong>BillFixr recognizes the uploaded file</strong>
+                  <p id="stepOne">The document is classified as a hospital bill and the visible details are extracted.</p>
+                </div>
+                <div class="timeline-step">
+                  <div class="timeline-kicker">Step 2</div>
+                  <strong>BillFixr checks what is missing</strong>
+                  <p id="stepTwo">Important identifiers are still missing, so the case stays reviewable instead of failing.</p>
+                </div>
+                <div class="timeline-step">
+                  <div class="timeline-kicker">Step 3</div>
+                  <strong>BillFixr prepares the first action</strong>
+                  <p id="stepThree">A request for an itemized bill and complete account details is ready for review.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div class="panel-title">Potential savings opportunity</div>
+            </div>
+            <div class="panel-body">
+              <div class="summary-grid">
+                <div class="summary-card">
+                  <span>Estimated savings target</span>
+                  <strong id="savingsAmount">Not available yet</strong>
+                </div>
+                <div class="summary-card">
+                  <span>Why this matters</span>
+                  <strong id="savingsTitle">Review still needed</strong>
+                </div>
+              </div>
+              <div id="savingsCopy" class="message-support" style="margin-top: 14px">
+                BillFixr will show a supportable savings target when the document set contains enough evidence.
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div class="panel-title">Prepared draft</div>
+            </div>
+            <div class="panel-body">
+              <div class="draft">
+                <div id="draftSubject" class="draft-subject">Request for itemized medical bill</div>
+                <pre id="draftBody" class="draft-body"></pre>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div class="panel-title">What Milestone 2 adds</div>
+            </div>
+            <div class="panel-body">
+              <div class="support-list">
+                <div class="support-item">
+                  <strong>Case-level financial totals</strong>
+                  <p>BillFixr can roll document extraction into a balance summary the patient can understand.</p>
+                </div>
+                <div class="support-item">
+                  <strong>Evidence-backed issue detection</strong>
+                  <p>The AI layer can flag reconciliation gaps, duplicate balances, and hardship opportunities.</p>
+                </div>
+                <div class="support-item">
+                  <strong>Savings opportunities become visible</strong>
+                  <p>When the evidence supports it, BillFixr can estimate what amount may be disputed or reduced.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const fallbackCase = {
+        processed_documents: [
+          {
+            document: {
+              original_filename: "WhatsApp Image 2026-08-19 at 6.30.46 AM.jpeg",
+            },
+            extraction: {
+              document_type: "hospital_bill",
+              patient: { name: "MCCURDY KATHRYN A" },
+              provider: { name: "UVM MEDICAL CENTER" },
+              account_number: null,
+              statement_date: "2016-01-24",
+              due_date: "2016-02-18",
+              patient_responsibility: { amount: 28.03, currency: "USD" },
+              missing_fields: ["account_number"],
+            },
+            validation: {
+              needs_review: true,
+            },
+          },
+        ],
+        analysis: {
+          needs_human_review: true,
+          summary:
+            "Case includes 1 processed document: hospital bill. The hospital bill is missing an account number and should stay reviewable.",
+          recommended_action: {
+            title: "Request itemized bill and full account identifiers",
+          },
+        },
+        draft: {
+          subject: "Request for itemized medical bill",
+          body:
+            "Hello UVM MEDICAL CENTER,\n\nPlease provide an itemized bill and complete account details for MCCURDY KATHRYN A. I also need the service-level charges, adjustments, and remaining patient balance.",
+        },
+      };
+
+      const els = {
+        heroTitle: document.getElementById("heroTitle"),
+        heroCopy: document.getElementById("heroCopy"),
+        statusTitle: document.getElementById("statusTitle"),
+        statusCopy: document.getElementById("statusCopy"),
+        statusBadge: document.getElementById("statusBadge"),
+        pillProvider: document.getElementById("pillProvider"),
+        pillAmount: document.getElementById("pillAmount"),
+        pillAction: document.getElementById("pillAction"),
+        caseMessage: document.getElementById("caseMessage"),
+        caseMessageSupport: document.getElementById("caseMessageSupport"),
+        summaryDocType: document.getElementById("summaryDocType"),
+        summaryPatient: document.getElementById("summaryPatient"),
+        summaryStatementDate: document.getElementById("summaryStatementDate"),
+        summaryDueDate: document.getElementById("summaryDueDate"),
+        missingTitle: document.getElementById("missingTitle"),
+        missingList: document.getElementById("missingList"),
+        detailProvider: document.getElementById("detailProvider"),
+        detailPatient: document.getElementById("detailPatient"),
+        detailAmount: document.getElementById("detailAmount"),
+        detailAccount: document.getElementById("detailAccount"),
+        stepOne: document.getElementById("stepOne"),
+        stepTwo: document.getElementById("stepTwo"),
+        stepThree: document.getElementById("stepThree"),
+        savingsAmount: document.getElementById("savingsAmount"),
+        savingsTitle: document.getElementById("savingsTitle"),
+        savingsCopy: document.getElementById("savingsCopy"),
+        draftSubject: document.getElementById("draftSubject"),
+        draftBody: document.getElementById("draftBody"),
+      };
+
+      function formatMoney(field) {
+        if (!field || field.amount === null || field.amount === undefined) return "Not visible yet";
+        return new Intl.NumberFormat("en-US", { style: "currency", currency: field.currency || "USD" }).format(
+          field.amount,
+        );
+      }
+
+      function formatDate(value) {
+        if (!value) return "Not visible yet";
+        const date = new Date(`${value}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+      }
+
+      function titleCase(value) {
+        if (!value) return "Not visible yet";
+        return String(value)
+          .toLowerCase()
+          .split(/\s+/)
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(" ");
+      }
+
+      function loadCase() {
+        try {
+          const raw = localStorage.getItem("billfixr_last_case");
+          if (!raw) return fallbackCase;
+          return JSON.parse(raw);
+        } catch {
+          return fallbackCase;
+        }
+      }
+
+      function render() {
+        const payload = loadCase();
+        const first = payload.processed_documents?.[0] || {};
+        const extraction = first.extraction || {};
+        const analysis = payload.analysis || {};
+        const draft = payload.draft || {};
+        const savings = analysis.savings_opportunities?.[0] || null;
+        const missingFields = extraction.missing_fields || [];
+        const provider = titleCase(extraction.provider?.name || "Hospital provider");
+        const patient = titleCase(extraction.patient?.name || "Patient");
+        const amount = formatMoney(extraction.patient_responsibility);
+        const account = extraction.account_number || "Not visible yet";
+        const actionTitle = analysis.recommended_action?.title || "Request supporting billing details";
+        const needsReview = Boolean(first.validation?.needs_review || analysis.needs_human_review);
+
+        els.heroTitle.textContent = needsReview
+          ? "We found your hospital bill and prepared the next step."
+          : "We found your hospital bill and it is ready to move forward.";
+        els.heroCopy.textContent = needsReview
+          ? "BillFixr recognized the uploaded document, pulled out the visible billing details, and identified what still needs review before outreach continues."
+          : "BillFixr recognized the uploaded document, extracted the billing details, and prepared the next case action.";
+
+        els.statusTitle.textContent = needsReview ? "Needs review" : "Ready for outreach";
+        els.statusCopy.textContent = needsReview
+          ? "We found the bill and extracted the visible details, but one important billing identifier is still missing."
+          : "The bill was recognized, the key fields were extracted, and the case is ready for the next action.";
+        els.statusBadge.textContent = needsReview ? "Review before automatic outreach" : "Ready for next action";
+        els.statusBadge.className = `badge ${needsReview ? "warn" : "good"}`;
+
+        els.pillProvider.textContent = provider;
+        els.pillAmount.textContent = amount;
+        els.pillAction.textContent = actionTitle.replace(" and full account identifiers", "");
+
+        els.caseMessage.textContent = needsReview
+          ? `We recognized this as a hospital bill and extracted the visible details. Before we continue automatically, we still need ${missingFields.includes("account_number") ? "the missing account number or a cleaner billing statement." : "one more review step."}`
+          : "We recognized this as a hospital bill and extracted the visible details. The case is ready for the next workflow step.";
+        els.caseMessageSupport.textContent =
+          analysis.summary ||
+          "Your case has already been organized into a usable billing record, and BillFixr has prepared the next action.";
+
+        els.summaryDocType.textContent = titleCase((extraction.document_type || "hospital_bill").replaceAll("_", " "));
+        els.summaryPatient.textContent = patient;
+        els.summaryStatementDate.textContent = formatDate(extraction.statement_date);
+        els.summaryDueDate.textContent = formatDate(extraction.due_date);
+
+        els.missingTitle.textContent = needsReview
+          ? "Some important billing details are still missing."
+          : "The extracted billing details are complete enough to continue.";
+        els.missingList.innerHTML = needsReview
+          ? missingFields.map((field) => `<li>${field.replaceAll("_", " ")}</li>`).join("") || "<li>Manual review requested</li>"
+          : "<li>No critical billing field is missing.</li>";
+
+        els.detailProvider.textContent = provider;
+        els.detailPatient.textContent = patient;
+        els.detailAmount.textContent = amount;
+        els.detailAccount.textContent = account;
+
+        els.stepOne.textContent = `The uploaded file is classified as ${titleCase((extraction.document_type || "hospital_bill").replaceAll("_", " "))} and the visible details are extracted.`;
+        els.stepTwo.textContent = needsReview
+          ? "Important identifiers are still missing, so the case stays reviewable instead of failing."
+          : "The key details are present, so the case can continue automatically.";
+        els.stepThree.textContent = `${actionTitle} is ready as the first case action.`;
+
+        els.savingsAmount.textContent = savings ? formatMoney(savings.estimated_savings) : "Not available yet";
+        els.savingsTitle.textContent = savings?.title || "Review still needed";
+        els.savingsCopy.textContent =
+          savings?.rationale ||
+          "BillFixr will show a supportable savings target when the uploaded bills and supporting documents contain enough evidence.";
+
+        els.draftSubject.textContent = draft.subject || "Request for itemized medical bill";
+        els.draftBody.textContent = draft.body || "No draft is available yet.";
+      }
+
+      render();
+    </script>
+  </body>
+</html>

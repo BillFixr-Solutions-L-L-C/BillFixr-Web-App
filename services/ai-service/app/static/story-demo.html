@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BillFixr Milestone Demo Walkthrough</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe6;
+        --surface: #fffdf8;
+        --surface-soft: #f7f1e7;
+        --line: #dad1c4;
+        --ink: #1f2937;
+        --muted: #66707b;
+        --accent: #0f766e;
+        --accent-soft: #def1eb;
+        --navy: #22364d;
+        --navy-soft: #e7eef7;
+        --warn: #815118;
+        --warn-soft: #faecc9;
+        --code: #162234;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.08), transparent 28%),
+          linear-gradient(180deg, #f8f3ea 0%, #f4efe6 100%);
+        color: var(--ink);
+        font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      }
+      a { color: inherit; text-decoration: none; }
+      .shell { width: min(1320px, calc(100vw - 32px)); margin: 0 auto; padding: 24px 0 40px; }
+      .topbar, .hero, .panel, .chip, .summary-card, .code-card, .step {
+        background: rgba(255,253,248,0.96);
+        border: 1px solid rgba(218,209,196,0.94);
+        border-radius: 12px;
+      }
+      .topbar {
+        padding: 14px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .eyebrow {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        font-weight: 800;
+      }
+      .title {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .title strong { font-size: 22px; }
+      .nav-links { display: flex; gap: 10px; flex-wrap: wrap; }
+      .nav-link {
+        min-height: 38px;
+        padding: 0 14px;
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        background: rgba(255,253,248,0.84);
+        font-weight: 700;
+      }
+      .hero {
+        padding: 24px;
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.8fr);
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      h1 {
+        margin: 12px 0 10px;
+        font-size: clamp(34px, 4vw, 48px);
+        line-height: 1.03;
+      }
+      .hero-copy { color: #50606e; line-height: 1.6; max-width: 780px; }
+      .hero-chips { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+      .chip { padding: 12px 14px; font-size: 13px; font-weight: 800; color: var(--navy); }
+      .status-card { padding: 18px; display: grid; gap: 14px; }
+      .status-title { font-size: 28px; line-height: 1.05; }
+      .status-copy { color: #56626f; line-height: 1.55; }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .badge.warn { background: var(--warn-soft); color: var(--warn); }
+      .badge.good { background: var(--accent-soft); color: var(--accent); }
+      .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+      .panel { overflow: hidden; }
+      .panel-head {
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+      .panel-title { font-size: 15px; font-weight: 800; }
+      .panel-body { padding: 18px; }
+      .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .summary-card { padding: 14px; background: #fff; }
+      .summary-card span {
+        display: block; margin-bottom: 8px; font-size: 12px; text-transform: uppercase;
+        letter-spacing: 0.04em; color: var(--muted); font-weight: 800;
+      }
+      .summary-card strong { display: block; font-size: 20px; }
+      .message { margin: 0; font-size: 20px; line-height: 1.38; }
+      .message-support { margin-top: 12px; color: #5e6875; line-height: 1.6; }
+      .steps { display: grid; gap: 12px; }
+      .step { padding: 14px; }
+      .step span {
+        display: block; margin-bottom: 8px; font-size: 12px; text-transform: uppercase;
+        letter-spacing: 0.05em; color: var(--muted); font-weight: 800;
+      }
+      .step strong { display: block; margin-bottom: 8px; font-size: 16px; }
+      .step p { margin: 0; color: #5d6672; line-height: 1.55; }
+      .code-grid { display: grid; gap: 12px; }
+      .code-card { overflow: hidden; }
+      .code-head {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface-soft);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        font-weight: 800;
+      }
+      pre {
+        margin: 0;
+        padding: 14px;
+        overflow: auto;
+        background: #fbfaf7;
+        color: var(--code);
+        font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      }
+      .callout {
+        padding: 16px;
+        border-radius: 12px;
+        background: var(--warn-soft);
+        border: 1px solid #ecd3a0;
+        color: #734b19;
+      }
+      .callout strong { display: block; margin-bottom: 8px; }
+      .list { display: grid; gap: 10px; }
+      .item {
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: #fff;
+        border: 1px solid var(--line);
+      }
+      .item strong { display: block; margin-bottom: 6px; }
+      .item p { margin: 0; color: #5e6875; line-height: 1.52; }
+      @media (max-width: 980px) {
+        .hero, .grid, .summary-grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="topbar">
+        <div class="title">
+          <div class="eyebrow">BillFixr Milestone Demo</div>
+          <strong>Milestone 1 and 2 walkthrough</strong>
+        </div>
+        <div class="nav-links">
+          <a class="nav-link" href="/">Operator demo</a>
+          <a class="nav-link" href="/demo/patient">Patient preview</a>
+          <a class="nav-link" href="/review">Review queue</a>
+        </div>
+      </div>
+
+      <section class="hero">
+        <div>
+          <div class="eyebrow">One case, two perspectives</div>
+          <h1>Show what the user sees, and what the backend receives.</h1>
+          <div class="hero-copy">
+            This page lets you demo the patient-facing outcome for Milestone 1 and 2 while also showing the machine-usable
+            request and response shapes that make the workflow real.
+          </div>
+          <div class="hero-chips">
+            <div class="chip">Milestone 1: Intake, OCR, Extraction</div>
+            <div class="chip">Milestone 2: Audit, Savings, Next Action</div>
+            <div class="chip">Patient view + API payloads</div>
+          </div>
+        </div>
+        <div class="status-card">
+          <div class="eyebrow">Current case</div>
+          <div id="statusTitle" class="status-title">Needs review</div>
+          <div id="statusCopy" class="status-copy">
+            The bill was recognized and structured, and the audit engine prepared the next action.
+          </div>
+          <div id="statusBadge" class="badge warn">Reviewable but usable</div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">What the user sees</div>
+            <div class="badge good">Product language</div>
+          </div>
+          <div class="panel-body">
+            <p id="userMessage" class="message">
+              We found your hospital bill, pulled out the visible details, and prepared the next step.
+            </p>
+            <div id="userSupport" class="message-support">
+              BillFixr recognized the document, extracted what it could, flagged what is still missing, and prepared a draft action.
+            </div>
+
+            <div class="summary-grid" style="margin-top: 16px">
+              <div class="summary-card">
+                <span>Provider</span>
+                <strong id="providerName">-</strong>
+              </div>
+              <div class="summary-card">
+                <span>Patient</span>
+                <strong id="patientName">-</strong>
+              </div>
+              <div class="summary-card">
+                <span>Visible balance</span>
+                <strong id="patientOwes">-</strong>
+              </div>
+              <div class="summary-card">
+                <span>Next action</span>
+                <strong id="recommendedAction">-</strong>
+              </div>
+              <div class="summary-card">
+                <span>Estimated savings target</span>
+                <strong id="estimatedSavings">-</strong>
+              </div>
+              <div class="summary-card">
+                <span>Review state</span>
+                <strong id="reviewState">-</strong>
+              </div>
+            </div>
+
+            <div class="steps" style="margin-top: 16px">
+              <div class="step">
+                <span>Milestone 1</span>
+                <strong>Ingestion and OCR completed</strong>
+                <p id="stepOne">The uploaded file was normalized into a supported billing artifact and converted into structured fields.</p>
+              </div>
+              <div class="step">
+                <span>Milestone 2</span>
+                <strong>Audit and savings review completed</strong>
+                <p id="stepTwo">The case was analyzed for missing billing details, balance issues, and negotiation opportunities.</p>
+              </div>
+              <div class="step">
+                <span>Next move</span>
+                <strong>Prepared action is ready</strong>
+                <p id="stepThree">The product has already decided the best next action and drafted the first outreach.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">What the backend receives</div>
+            <div class="badge good">Machine-usable</div>
+          </div>
+          <div class="panel-body">
+            <div class="code-grid">
+              <div class="code-card">
+                <div class="code-head">Request: POST /v1/cases/process</div>
+                <pre id="requestJson"></pre>
+              </div>
+              <div class="code-card">
+                <div class="code-head">Response: Case analysis summary</div>
+                <pre id="responseJson"></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="grid" style="margin-top: 16px">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">What this proves in the demo</div>
+          </div>
+          <div class="panel-body">
+            <div class="list">
+              <div class="item">
+                <strong>Milestone 1 is real</strong>
+                <p>The backend receives the uploaded artifact, extracts text, classifies the document, and returns structured bill fields.</p>
+              </div>
+              <div class="item">
+                <strong>Milestone 2 is real</strong>
+                <p>The backend assembles the case, computes financial totals, detects issues, and returns a supportable savings signal.</p>
+              </div>
+              <div class="item">
+                <strong>The product story is continuous</strong>
+                <p>The same case powers the patient explanation, the review workflow, and the machine-readable API output.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">Talk track for the demo</div>
+          </div>
+          <div class="panel-body">
+            <div class="callout">
+              <strong>Suggested narration</strong>
+              “First, the system ingests a hospital bill and extracts the visible fields. That is Milestone 1. Then the same case moves into audit logic, where we detect missing identifiers, balance problems, and savings opportunities. That is Milestone 2. On this side is what the patient sees. On this side is exactly what our backend receives and returns.”
+            </div>
+          </div>
+        </section>
+      </section>
+    </div>
+
+    <script>
+      const fallbackCase = {
+        processed_documents: [
+          {
+            document: {
+              original_filename: "WhatsApp Image 2026-08-19 at 6.30.46 AM.jpeg",
+              content_type: "image/jpeg",
+            },
+            extraction: {
+              document_type: "hospital_bill",
+              patient: { name: "MCCURDY KATHRYN A" },
+              provider: { name: "UVM MEDICAL CENTER" },
+              account_number: null,
+              statement_date: "2016-01-24",
+              due_date: "2016-02-18",
+              patient_responsibility: { amount: 28.03, currency: "USD" },
+              missing_fields: ["account_number"],
+            },
+            validation: { needs_review: true, quality_score: 0.85 },
+            warnings: ["text_extraction_method=image_ocr"],
+          },
+        ],
+        analysis: {
+          needs_human_review: true,
+          confidence_score: 0.35,
+          summary:
+            "Case includes 1 processed document: hospital bill. Primary issue: The hospital bill is missing an account number and should stay reviewable. Next action: Request itemized bill and full account identifiers.",
+          financial_summary: {
+            total_charges: { amount: null, currency: "USD" },
+            insurance_paid: { amount: null, currency: "USD" },
+            adjustments: { amount: null, currency: "USD" },
+            patient_responsibility: { amount: 28.03, currency: "USD" },
+            outstanding_balance: { amount: 28.03, currency: "USD" },
+            document_count_with_amounts: 1,
+          },
+          savings_opportunities: [],
+          recommended_action: {
+            title: "Request itemized bill and full account identifiers",
+            action_type: "request_itemized_bill",
+            automation_ready: true,
+          },
+        },
+        draft: {
+          subject: "Request for itemized medical bill",
+          body:
+            "Hello UVM MEDICAL CENTER,\n\nPlease provide an itemized bill and complete account details for MCCURDY KATHRYN A. I need the service-level charges, adjustments, and remaining patient balance.",
+        },
+      };
+
+      const els = {
+        statusTitle: document.getElementById("statusTitle"),
+        statusCopy: document.getElementById("statusCopy"),
+        statusBadge: document.getElementById("statusBadge"),
+        userMessage: document.getElementById("userMessage"),
+        userSupport: document.getElementById("userSupport"),
+        providerName: document.getElementById("providerName"),
+        patientName: document.getElementById("patientName"),
+        patientOwes: document.getElementById("patientOwes"),
+        recommendedAction: document.getElementById("recommendedAction"),
+        estimatedSavings: document.getElementById("estimatedSavings"),
+        reviewState: document.getElementById("reviewState"),
+        stepOne: document.getElementById("stepOne"),
+        stepTwo: document.getElementById("stepTwo"),
+        stepThree: document.getElementById("stepThree"),
+        requestJson: document.getElementById("requestJson"),
+        responseJson: document.getElementById("responseJson"),
+      };
+
+      function money(field) {
+        if (!field || field.amount === null || field.amount === undefined) return "Not visible yet";
+        return new Intl.NumberFormat("en-US", { style: "currency", currency: field.currency || "USD" }).format(field.amount);
+      }
+
+      function titleCase(value) {
+        if (!value) return "Not visible yet";
+        return String(value).toLowerCase().split(/\s+/).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+      }
+
+      function loadCase() {
+        try {
+          const raw = localStorage.getItem("billfixr_last_case");
+          if (!raw) return fallbackCase;
+          return JSON.parse(raw);
+        } catch {
+          return fallbackCase;
+        }
+      }
+
+      function buildRequestPreview(payload) {
+        const first = payload.processed_documents?.[0] || {};
+        return {
+          endpoint: "/v1/cases/process",
+          method: "POST",
+          content_type: "multipart/form-data",
+          input_shape: {
+            files: [
+              {
+                filename: first.document?.original_filename || "uploaded-bill.jpg",
+                content_type: first.document?.content_type || "application/octet-stream",
+              },
+            ],
+            use_ai: true,
+          },
+        };
+      }
+
+      function buildResponsePreview(payload) {
+        const first = payload.processed_documents?.[0] || {};
+        const extraction = first.extraction || {};
+        const analysis = payload.analysis || {};
+        return {
+          processed_document: {
+            document_type: extraction.document_type,
+            provider: extraction.provider?.name || null,
+            patient: extraction.patient?.name || null,
+            account_number: extraction.account_number,
+            statement_date: extraction.statement_date,
+            due_date: extraction.due_date,
+            patient_responsibility: extraction.patient_responsibility,
+            missing_fields: extraction.missing_fields || [],
+          },
+          analysis: {
+            needs_human_review: analysis.needs_human_review,
+            financial_summary: analysis.financial_summary || {},
+            savings_opportunities: analysis.savings_opportunities || [],
+            recommended_action: analysis.recommended_action || {},
+          },
+          draft: payload.draft || null,
+        };
+      }
+
+      function render() {
+        const payload = loadCase();
+        const first = payload.processed_documents?.[0] || {};
+        const extraction = first.extraction || {};
+        const analysis = payload.analysis || {};
+        const savings = analysis.savings_opportunities?.[0] || null;
+        const reviewable = Boolean(first.validation?.needs_review || analysis.needs_human_review);
+
+        els.statusTitle.textContent = reviewable ? "Needs review" : "Ready for outreach";
+        els.statusCopy.textContent = analysis.summary || "The case is available for downstream workflow.";
+        els.statusBadge.textContent = reviewable ? "Reviewable but usable" : "Ready for next action";
+        els.statusBadge.className = `badge ${reviewable ? "warn" : "good"}`;
+
+        els.userMessage.textContent = reviewable
+          ? "We found your hospital bill, extracted the visible details, and prepared the next step before outreach continues."
+          : "We found your hospital bill, extracted the key details, and prepared the next action.";
+        els.userSupport.textContent = analysis.summary || "The same case powers both the patient explanation and the backend workflow.";
+
+        els.providerName.textContent = titleCase(extraction.provider?.name || "Hospital provider");
+        els.patientName.textContent = titleCase(extraction.patient?.name || "Patient");
+        els.patientOwes.textContent = money(extraction.patient_responsibility);
+        els.recommendedAction.textContent = analysis.recommended_action?.title || "Await supporting documents";
+        els.estimatedSavings.textContent = savings ? money(savings.estimated_savings) : "No supportable target yet";
+        els.reviewState.textContent = reviewable ? "Reviewable" : "Clear";
+
+        els.stepOne.textContent = "The file is ingested, text is extracted, the document is classified, and billing fields are returned in a stable schema.";
+        els.stepTwo.textContent = "The case is assembled into totals, issues, and savings opportunities with evidence-backed reasoning.";
+        els.stepThree.textContent = `${analysis.recommended_action?.title || "The next action"} is already prepared from the structured case output.`;
+
+        els.requestJson.textContent = JSON.stringify(buildRequestPreview(payload), null, 2);
+        els.responseJson.textContent = JSON.stringify(buildResponsePreview(payload), null, 2);
+      }
+
+      render();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,68 @@
+{
+  "name": "BillFixr Milestone 1 - Email Ingestion to OCR Extraction",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "billfixr/email-ingestion",
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-inbound-email",
+      "name": "Inbound Email Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BILLFIXR_AI_BASE_URL}}/v1/ingestion/email/sync",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"lookback_days\":7,\"max_messages\":25,\"dry_run\":false}"
+      },
+      "id": "sync-email-attachments",
+      "name": "Sync Email Attachments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.BILLFIXR_AI_BASE_URL}}/v1/pricing/sources"
+      },
+      "id": "load-pricing-sources",
+      "name": "Load Pricing Sources",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { emailSync: $('Sync Email Attachments').item.json, pricingSources: $('Load Pricing Sources').item.json } }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1080, 300]
+    }
+  ],
+  "connections": {
+    "Inbound Email Webhook": {
+      "main": [[{ "node": "Sync Email Attachments", "type": "main", "index": 0 }]]
+    },
+    "Sync Email Attachments": {
+      "main": [[{ "node": "Load Pricing Sources", "type": "main", "index": 0 }]]
+    },
+    "Load Pricing Sources": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+

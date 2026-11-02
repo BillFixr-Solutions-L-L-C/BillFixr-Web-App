@@ -1,0 +1,1351 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BillFixr Ingestion Console</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f766e'/%3E%3Cpath d='M10 8h12v16H10z' fill='white'/%3E%3Cpath d='M13 13h6M13 17h6M13 21h4' stroke='%230f766e' stroke-width='2'/%3E%3C/svg%3E"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3efe7;
+        --surface: #fffdf8;
+        --surface-muted: #f7f2e8;
+        --surface-strong: #f1ebe0;
+        --ink: #1e2430;
+        --muted: #6d736f;
+        --line: #d7d0c4;
+        --line-strong: #c7beaf;
+        --accent: #0f766e;
+        --accent-soft: #deefec;
+        --navy: #20324b;
+        --navy-soft: #e6edf8;
+        --warn: #8a5b1d;
+        --warn-soft: #fceecf;
+        --danger: #9f3b32;
+        --danger-soft: #fae5df;
+        --success: #17624e;
+        --success-soft: #deefe8;
+        --code: #132033;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.09), transparent 28%),
+          radial-gradient(circle at top right, rgba(32, 50, 75, 0.08), transparent 25%),
+          linear-gradient(180deg, #f7f2e8 0%, #f3efe7 100%);
+        color: var(--ink);
+        font-family:
+          "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        min-height: 42px;
+        border: 0;
+        border-radius: 8px;
+        padding: 0 16px;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+        font-weight: 700;
+        transition: transform 140ms ease, background 140ms ease;
+      }
+
+      button:hover {
+        background: #0d6760;
+        transform: translateY(-1px);
+      }
+
+      button:disabled {
+        transform: none;
+        cursor: wait;
+        opacity: 0.62;
+      }
+
+      button.secondary {
+        background: var(--navy-soft);
+        color: var(--navy);
+      }
+
+      button.secondary:hover {
+        background: #d8e3f4;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .shell {
+        width: min(1420px, calc(100vw - 40px));
+        margin: 0 auto;
+        padding: 22px 0 36px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .hero-panel,
+      .surface {
+        background: rgba(255, 253, 248, 0.96);
+        border: 1px solid rgba(199, 190, 175, 0.9);
+        border-radius: 12px;
+        box-shadow: 0 8px 20px rgba(44, 45, 51, 0.05);
+      }
+
+      .hero-panel {
+        padding: 22px 24px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero-panel::after {
+        content: "";
+        position: absolute;
+        inset: auto -60px -70px auto;
+        width: 180px;
+        height: 180px;
+        border-radius: 999px;
+        background: rgba(15, 118, 110, 0.08);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 6px 10px;
+        background: var(--surface-strong);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .hero h1 {
+        margin: 16px 0 10px;
+        font-size: clamp(32px, 4vw, 46px);
+        line-height: 1.02;
+        letter-spacing: 0;
+        color: #1b2734;
+      }
+
+      .hero-copy {
+        max-width: 720px;
+        color: #4f595f;
+        font-size: 15px;
+        line-height: 1.55;
+      }
+
+      .hero-chips,
+      .runtime-chips {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .hero-chips {
+        margin-top: 18px;
+      }
+
+      .chip,
+      .runtime-chip {
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .chip {
+        background: #fff;
+        border: 1px solid var(--line);
+        color: #314154;
+      }
+
+      .runtime-card {
+        padding: 20px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .runtime-label {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+      }
+
+      .runtime-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .runtime-row strong {
+        font-size: 15px;
+      }
+
+      .runtime-chip {
+        background: var(--surface-strong);
+        color: #3f4d5c;
+      }
+
+      .runtime-chip.ok {
+        background: var(--success-soft);
+        color: var(--success);
+      }
+
+      .main-grid {
+        display: grid;
+        grid-template-columns: 360px minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .surface {
+        overflow: hidden;
+      }
+
+      .section-head {
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: center;
+      }
+
+      .section-title {
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .section-meta {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .input-body {
+        padding: 18px;
+      }
+
+      .field {
+        margin-bottom: 14px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 7px;
+        color: #39465a;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      input[type="password"],
+      input[type="file"],
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--ink);
+      }
+
+      input[type="password"],
+      select {
+        min-height: 42px;
+        padding: 0 12px;
+      }
+
+      input[type="file"] {
+        padding: 12px;
+      }
+
+      textarea {
+        min-height: 220px;
+        padding: 12px;
+        resize: vertical;
+        line-height: 1.5;
+      }
+
+      .auth-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 110px;
+        gap: 10px;
+      }
+
+      .toggle-bar {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 10px;
+        background: var(--surface-strong);
+        margin-bottom: 14px;
+      }
+
+      .toggle {
+        min-width: 120px;
+        background: transparent;
+        color: #445161;
+        min-height: 38px;
+      }
+
+      .toggle.active {
+        background: #fff;
+        color: var(--navy);
+        box-shadow: inset 0 0 0 1px var(--line);
+      }
+
+      .support-note {
+        padding: 14px;
+        border-radius: 10px;
+        background: var(--surface-muted);
+        border: 1px solid var(--line);
+        color: #566169;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .support-note strong {
+        color: #223043;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      .workspace {
+        display: grid;
+        gap: 16px;
+      }
+
+      .milestones {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .milestone {
+        padding: 14px;
+        border-right: 0;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .milestone-kicker {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .milestone h3 {
+        margin: 10px 0 6px;
+        font-size: 15px;
+      }
+
+      .milestone p {
+        margin: 0;
+        color: #58636a;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .state-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .state-pill.pending {
+        background: var(--surface-strong);
+        color: #55636f;
+      }
+
+      .state-pill.active {
+        background: var(--navy-soft);
+        color: var(--navy);
+      }
+
+      .state-pill.good {
+        background: var(--success-soft);
+        color: var(--success);
+      }
+
+      .state-pill.warn {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+
+      .state-pill.bad {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .empty-state {
+        min-height: 460px;
+        display: grid;
+        place-items: center;
+        padding: 28px;
+        text-align: center;
+        color: var(--muted);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(247, 242, 232, 0.88));
+      }
+
+      .empty-state strong {
+        display: block;
+        color: #1d2b3a;
+        margin-bottom: 8px;
+      }
+
+      .case-layout {
+        display: grid;
+        gap: 16px;
+      }
+
+      .notice {
+        margin: 18px;
+        padding: 15px 16px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: var(--surface-muted);
+      }
+
+      .notice strong {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .notice p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .notice.good {
+        background: var(--success-soft);
+        border-color: #bcd8cb;
+      }
+
+      .notice.warn {
+        background: var(--warn-soft);
+        border-color: #ead295;
+      }
+
+      .notice.bad {
+        background: var(--danger-soft);
+        border-color: #efbeb7;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 0 18px 18px;
+      }
+
+      .metric {
+        padding: 14px;
+        border-radius: 12px;
+        background: #fff;
+        border: 1px solid var(--line);
+      }
+
+      .metric span {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 22px;
+        line-height: 1.1;
+        overflow-wrap: anywhere;
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 320px;
+        gap: 16px;
+        padding: 0 18px 18px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 16px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        overflow: hidden;
+      }
+
+      .card-head {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .card-title {
+        font-size: 13px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #2f3947;
+      }
+
+      .card-body {
+        padding: 16px;
+      }
+
+      .summary-copy {
+        color: #41505f;
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .issue-list,
+      .doc-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .issue,
+      .doc-row {
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--surface-muted);
+      }
+
+      .issue-head,
+      .doc-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .issue-title,
+      .doc-title {
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      .issue-copy,
+      .doc-meta,
+      .evidence-list {
+        margin-top: 6px;
+        color: #5a666d;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .evidence-list {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .evidence {
+        border-radius: 999px;
+        padding: 5px 9px;
+        background: #fff;
+        border: 1px solid var(--line);
+        color: #465566;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .kv {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .kv th,
+      .kv td {
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .kv th {
+        width: 150px;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .draft-box {
+        padding: 14px;
+        border-radius: 10px;
+        background: var(--surface-muted);
+        border: 1px solid var(--line);
+      }
+
+      .draft-subject {
+        font-size: 15px;
+        font-weight: 800;
+        margin-bottom: 10px;
+      }
+
+      .draft-body {
+        margin: 0;
+        white-space: pre-wrap;
+        color: #41505f;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      details {
+        margin: 0 18px 18px;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      summary {
+        cursor: pointer;
+        padding: 14px 16px;
+        font-weight: 800;
+      }
+
+      pre {
+        margin: 0;
+        padding: 16px;
+        overflow: auto;
+        max-height: 360px;
+        background: var(--code);
+        color: #ebf1f8;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .review-link {
+        color: var(--navy);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      @media (max-width: 1120px) {
+        .hero,
+        .main-grid,
+        .detail-grid,
+        .milestones {
+          grid-template-columns: 1fr;
+        }
+
+        .metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 720px) {
+        .shell {
+          width: min(100vw - 20px, 1420px);
+          padding-top: 10px;
+        }
+
+        .hero-panel,
+        .runtime-card,
+        .input-body,
+        .card-body {
+          padding-left: 14px;
+          padding-right: 14px;
+        }
+
+        .metrics,
+        .detail-grid,
+        .milestones,
+        .auth-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .hero h1 {
+          font-size: 30px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <section class="hero">
+        <div class="hero-panel">
+          <div class="eyebrow">BillFixr Ingestion Console</div>
+          <h1>Demo the full BillFixr AI flow, one case at a time.</h1>
+          <div class="hero-copy">
+            Upload a bill, screenshot, email text, or scanned document. The app runs Milestone 1 extraction, then
+            continues into case analysis and draft generation so the product story feels continuous instead of split
+            across internal tools.
+          </div>
+          <div class="hero-chips">
+            <div class="chip">Intake & OCR</div>
+            <div class="chip">Audit & Savings Prep</div>
+            <div class="chip">Action Drafting</div>
+            <div class="chip">Automation Ready</div>
+          </div>
+        </div>
+
+        <div class="runtime-card hero-panel">
+          <div>
+            <div class="runtime-label">Runtime</div>
+            <div class="runtime-row">
+              <strong id="runtimeStatus">Checking API</strong>
+              <span id="runtimePill" class="runtime-chip">Pending</span>
+            </div>
+          </div>
+          <div class="runtime-chips">
+            <span id="authChip" class="runtime-chip">Auth</span>
+            <span id="aiChip" class="runtime-chip">AI</span>
+            <span id="ocrChip" class="runtime-chip">OCR</span>
+          </div>
+          <div class="support-note">
+            <strong>Unsupported document</strong> handling stays visible in this demo so wrong uploads still prove the
+            pipeline is robust.
+          </div>
+        </div>
+      </section>
+
+      <section class="main-grid">
+        <aside class="surface">
+          <div class="section-head">
+            <div>
+              <div class="section-title">Case Intake</div>
+              <div class="section-meta">Primary demo path: `POST /v1/cases/process`</div>
+            </div>
+          </div>
+          <div class="input-body">
+            <div class="auth-grid">
+              <div class="field">
+                <label for="apiKey">Local API key</label>
+                <input id="apiKey" type="password" autocomplete="off" placeholder="billfixr-demo" />
+              </div>
+              <div class="field">
+                <label for="userRole">Role</label>
+                <select id="userRole">
+                  <option value="admin">admin</option>
+                  <option value="patient">patient</option>
+                  <option value="reviewer">reviewer</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="toggle-bar" role="tablist">
+              <button id="fileTab" class="toggle active" type="button">Upload file</button>
+              <button id="textTab" class="toggle" type="button">Paste text</button>
+            </div>
+
+            <form id="fileForm">
+              <div class="field">
+                <label for="billFile">Medical billing artifact</label>
+                <input id="billFile" name="files" type="file" multiple />
+              </div>
+            </form>
+
+            <form id="textForm" class="hidden">
+              <div class="field">
+                <label for="billText">Email body, OCR text, or copied statement</label>
+                <textarea id="billText" spellcheck="false"></textarea>
+              </div>
+            </form>
+
+            <div class="actions">
+              <button id="processButton" type="button">Run full case flow</button>
+              <button id="sampleButton" class="secondary" type="button">Load sample case</button>
+            </div>
+
+            <p class="support-note" style="margin-top: 16px">
+              The demo uses one continuous workflow: extract documents, assemble a case, surface issues, and return the
+              next draft action. Upload a real bill to show the product path. Upload a wrong file to show graceful
+              review routing.
+            </p>
+          </div>
+        </aside>
+
+        <section class="workspace">
+          <div class="milestones">
+            <div class="milestone">
+              <div class="milestone-kicker">Milestone 1</div>
+              <h3>Ingestion & OCR</h3>
+              <p>Files and pasted text are normalized into supported billing artifacts with extraction evidence.</p>
+              <div id="stageIngestion" class="state-pill pending" style="margin-top: 12px">Waiting</div>
+            </div>
+            <div class="milestone">
+              <div class="milestone-kicker">Milestone 2</div>
+              <h3>Audit & Savings</h3>
+              <p>Case analysis converts extracted documents into issues, evidence, and the next decision.</p>
+              <div id="stageAudit" class="state-pill pending" style="margin-top: 12px">Waiting</div>
+            </div>
+            <div class="milestone">
+              <div class="milestone-kicker">Milestone 3</div>
+              <h3>Drafted Action</h3>
+              <p>The system prepares the first outbound action or an internal review note for the case.</p>
+              <div id="stageDraft" class="state-pill pending" style="margin-top: 12px">Waiting</div>
+            </div>
+            <div class="milestone">
+              <div class="milestone-kicker">Milestone 4</div>
+              <h3>Automation Ready</h3>
+              <p>Structured outputs remain stable for worker orchestration, review queues, and retries.</p>
+              <div id="stageAutomation" class="state-pill pending" style="margin-top: 12px">Waiting</div>
+            </div>
+          </div>
+
+          <section class="surface">
+            <div class="section-head">
+              <div>
+                <div class="section-title">Case Outcome</div>
+                <div class="section-meta">Structured extraction, case analysis, and draft output</div>
+              </div>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap">
+                <a class="review-link" href="/demo/story">Open demo walkthrough</a>
+                <a class="review-link" href="/demo/patient">Open patient preview</a>
+                <a class="review-link" href="/review">Open review queue</a>
+              </div>
+            </div>
+
+            <div id="emptyState" class="empty-state">
+              <div>
+                <strong>Start with one document or one text block.</strong>
+                The result panel will show milestone progression, extracted evidence, analysis, and the first draft
+                action for the case.
+              </div>
+            </div>
+
+            <div id="caseResult" class="case-layout hidden">
+              <div id="caseNotice" class="notice">
+                <strong>Case pending</strong>
+                <p>Run a case to see the extracted and recommended workflow.</p>
+              </div>
+
+              <div class="metrics">
+                <div class="metric">
+                  <span>Document Type</span>
+                  <strong id="docType">-</strong>
+                </div>
+                <div class="metric">
+                  <span>Patient Owes</span>
+                  <strong id="patientOwes">-</strong>
+                </div>
+                <div class="metric">
+                  <span>Recommended Action</span>
+                  <strong id="recommendedAction">-</strong>
+                </div>
+                <div class="metric">
+                  <span>Review State</span>
+                  <strong id="reviewState">-</strong>
+                </div>
+              </div>
+
+              <div class="detail-grid">
+                <div class="stack">
+                  <div class="card">
+                    <div class="card-head">
+                      <div class="card-title">Case Summary</div>
+                      <span id="confidencePill" class="state-pill pending">Confidence</span>
+                    </div>
+                    <div class="card-body">
+                      <div id="caseSummary" class="summary-copy">-</div>
+                    </div>
+                  </div>
+
+                  <div class="card">
+                    <div class="card-head">
+                      <div class="card-title">Detected Issues</div>
+                    </div>
+                    <div class="card-body">
+                      <div id="issueList" class="issue-list">
+                        <div class="issue">No issues yet.</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="card">
+                    <div class="card-head">
+                      <div class="card-title">Financial Summary & Savings</div>
+                    </div>
+                    <div class="card-body">
+                      <table class="kv">
+                        <tbody>
+                          <tr><th>Total Charges</th><td id="caseTotalCharges">-</td></tr>
+                          <tr><th>Insurance Paid</th><td id="caseInsurancePaid">-</td></tr>
+                          <tr><th>Adjustments</th><td id="caseAdjustments">-</td></tr>
+                          <tr><th>Patient Responsibility</th><td id="casePatientResponsibility">-</td></tr>
+                          <tr><th>Estimated Savings</th><td id="estimatedSavings">-</td></tr>
+                          <tr><th>Savings Rationale</th><td id="savingsRationale">-</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div class="card">
+                    <div class="card-head">
+                      <div class="card-title">Evidence & Extracted Fields</div>
+                    </div>
+                    <div class="card-body">
+                      <table class="kv">
+                        <tbody>
+                          <tr><th>Provider</th><td id="providerName">-</td></tr>
+                          <tr><th>Patient</th><td id="patientName">-</td></tr>
+                          <tr><th>Account</th><td id="accountNumber">-</td></tr>
+                          <tr><th>Statement Date</th><td id="statementDate">-</td></tr>
+                          <tr><th>Due Date</th><td id="dueDate">-</td></tr>
+                          <tr><th>Total Charges</th><td id="totalCharges">-</td></tr>
+                          <tr><th>Insurance Paid</th><td id="insurancePaid">-</td></tr>
+                          <tr><th>Text Method</th><td id="textMethod">-</td></tr>
+                          <tr><th>Warnings</th><td id="warnings">-</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="stack">
+                  <div class="card">
+                    <div class="card-head">
+                      <div class="card-title">Recommended Draft</div>
+                    </div>
+                    <div class="card-body">
+                      <div class="draft-box">
+                        <div id="draftSubject" class="draft-subject">-</div>
+                        <pre id="draftBody" class="draft-body">-</pre>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="card">
+                    <div class="card-head">
+                      <div class="card-title">Processed Documents</div>
+                    </div>
+                    <div class="card-body">
+                      <div id="docList" class="doc-list">
+                        <div class="doc-row">No documents yet.</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <details>
+                <summary>Raw JSON Response</summary>
+                <pre id="rawJson"></pre>
+              </details>
+            </div>
+          </section>
+        </section>
+      </section>
+    </div>
+
+    <script>
+      const sampleText = `North Valley Hospital
+Patient Statement
+
+Patient: Jordan Taylor
+Account Number: ABC12345
+Statement Date: 2026-08-01
+Date of Service: 2026-07-18
+
+Total Charges: $12,450.00
+Insurance Paid: $8,000.00
+Adjustments: $0.00
+Patient Responsibility: $4,450.00
+
+Please pay the amount due by 2026-08-31.`;
+
+      const els = {
+        apiKey: document.getElementById("apiKey"),
+        userRole: document.getElementById("userRole"),
+        fileTab: document.getElementById("fileTab"),
+        textTab: document.getElementById("textTab"),
+        fileForm: document.getElementById("fileForm"),
+        textForm: document.getElementById("textForm"),
+        billFile: document.getElementById("billFile"),
+        billText: document.getElementById("billText"),
+        processButton: document.getElementById("processButton"),
+        sampleButton: document.getElementById("sampleButton"),
+        runtimeStatus: document.getElementById("runtimeStatus"),
+        runtimePill: document.getElementById("runtimePill"),
+        authChip: document.getElementById("authChip"),
+        aiChip: document.getElementById("aiChip"),
+        ocrChip: document.getElementById("ocrChip"),
+        emptyState: document.getElementById("emptyState"),
+        caseResult: document.getElementById("caseResult"),
+        caseNotice: document.getElementById("caseNotice"),
+        docType: document.getElementById("docType"),
+        patientOwes: document.getElementById("patientOwes"),
+        recommendedAction: document.getElementById("recommendedAction"),
+        reviewState: document.getElementById("reviewState"),
+        confidencePill: document.getElementById("confidencePill"),
+        caseSummary: document.getElementById("caseSummary"),
+        issueList: document.getElementById("issueList"),
+        caseTotalCharges: document.getElementById("caseTotalCharges"),
+        caseInsurancePaid: document.getElementById("caseInsurancePaid"),
+        caseAdjustments: document.getElementById("caseAdjustments"),
+        casePatientResponsibility: document.getElementById("casePatientResponsibility"),
+        estimatedSavings: document.getElementById("estimatedSavings"),
+        savingsRationale: document.getElementById("savingsRationale"),
+        providerName: document.getElementById("providerName"),
+        patientName: document.getElementById("patientName"),
+        accountNumber: document.getElementById("accountNumber"),
+        statementDate: document.getElementById("statementDate"),
+        dueDate: document.getElementById("dueDate"),
+        totalCharges: document.getElementById("totalCharges"),
+        insurancePaid: document.getElementById("insurancePaid"),
+        textMethod: document.getElementById("textMethod"),
+        warnings: document.getElementById("warnings"),
+        draftSubject: document.getElementById("draftSubject"),
+        draftBody: document.getElementById("draftBody"),
+        docList: document.getElementById("docList"),
+        rawJson: document.getElementById("rawJson"),
+        stageIngestion: document.getElementById("stageIngestion"),
+        stageAudit: document.getElementById("stageAudit"),
+        stageDraft: document.getElementById("stageDraft"),
+        stageAutomation: document.getElementById("stageAutomation"),
+      };
+
+      function money(value) {
+        if (!value || value.amount === null || value.amount === undefined) return "-";
+        return new Intl.NumberFormat("en-US", { style: "currency", currency: value.currency || "USD" }).format(
+          value.amount,
+        );
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (char) => {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char];
+        });
+      }
+
+      function authHeaders(extra = {}) {
+        const headers = { ...extra, "X-User-ID": "local-demo-user", "X-User-Role": els.userRole.value };
+        if (els.apiKey.value.trim()) headers["X-API-Key"] = els.apiKey.value.trim();
+        return headers;
+      }
+
+      function setBusy(button, busy, label) {
+        button.disabled = busy;
+        button.textContent = busy ? "Running case..." : label;
+      }
+
+      function setStage(element, label, tone) {
+        element.className = `state-pill ${tone}`;
+        element.textContent = label;
+      }
+
+      function setCaseNotice(kind, title, copy) {
+        els.caseNotice.className = `notice ${kind}`;
+        els.caseNotice.innerHTML = `<strong>${escapeHtml(title)}</strong><p>${escapeHtml(copy)}</p>`;
+      }
+
+      function showTab(name) {
+        const useText = name === "text";
+        els.textForm.classList.toggle("hidden", !useText);
+        els.fileForm.classList.toggle("hidden", useText);
+        els.textTab.classList.toggle("active", useText);
+        els.fileTab.classList.toggle("active", !useText);
+      }
+
+      function buildTextUpload() {
+        const blob = new Blob([els.billText.value], { type: "text/plain" });
+        return new File([blob], "pasted-billfixr-input.txt", { type: "text/plain" });
+      }
+
+      function updateMilestones(payload) {
+        const processed = payload.processed_documents || [];
+        const analysis = payload.analysis || null;
+        const draft = payload.draft || null;
+        const first = processed[0] || null;
+        const validation = first?.validation || null;
+
+        setStage(els.stageIngestion, first ? "Completed" : "Waiting", first ? "good" : "pending");
+
+        if (analysis) {
+          setStage(
+            els.stageAudit,
+            analysis.needs_human_review ? "Needs review" : "Completed",
+            analysis.needs_human_review ? "warn" : "good",
+          );
+        } else {
+          setStage(els.stageAudit, "Waiting", "pending");
+        }
+
+        if (draft?.body) {
+          setStage(els.stageDraft, "Draft ready", "good");
+        } else {
+          setStage(els.stageDraft, "Waiting", "pending");
+        }
+
+        if (validation || analysis) {
+          setStage(els.stageAutomation, "Structured output", "active");
+        } else {
+          setStage(els.stageAutomation, "Waiting", "pending");
+        }
+      }
+
+      function renderIssues(analysis) {
+        const issues = analysis?.issues || [];
+        if (!issues.length) {
+          els.issueList.innerHTML = '<div class="issue">No major audit issue was detected for this case.</div>';
+          return;
+        }
+
+        els.issueList.innerHTML = issues
+          .map((issue) => {
+            const evidence = (issue.evidence || [])
+              .map((item) => `<span class="evidence">${escapeHtml(item)}</span>`)
+              .join("");
+            return `
+              <div class="issue">
+                <div class="issue-head">
+                  <div class="issue-title">${escapeHtml(issue.summary)}</div>
+                  <span class="state-pill ${issue.severity === "error" ? "bad" : issue.severity === "warning" ? "warn" : "active"}">${escapeHtml(issue.severity)}</span>
+                </div>
+                <div class="issue-copy">${escapeHtml(issue.category)}</div>
+                ${evidence ? `<div class="evidence-list">${evidence}</div>` : ""}
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      function renderDocuments(processedDocuments) {
+        if (!processedDocuments.length) {
+          els.docList.innerHTML = '<div class="doc-row">No documents processed.</div>';
+          return;
+        }
+
+        els.docList.innerHTML = processedDocuments
+          .map((item) => {
+            const warnings = item.warnings?.length ? item.warnings.join(", ") : "No warnings";
+            return `
+              <div class="doc-row">
+                <div class="doc-head">
+                  <div class="doc-title">${escapeHtml(item.document.original_filename)}</div>
+                  <span class="state-pill ${item.validation?.needs_review ? "warn" : "good"}">${escapeHtml(item.document.malware_scan_status || "clean")}</span>
+                </div>
+                <div class="doc-meta">
+                  ${escapeHtml(item.extraction.document_type)} · ${escapeHtml(warnings)}
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      function renderDraft(draft, analysis) {
+        if (!draft) {
+          els.draftSubject.textContent = "No draft available";
+          els.draftBody.textContent = "The case did not produce a draft yet.";
+          return;
+        }
+
+        els.draftSubject.textContent = draft.subject || analysis?.recommended_action?.title || "-";
+        els.draftBody.textContent = draft.body || "-";
+      }
+
+      function renderSavings(analysis) {
+        const summary = analysis?.financial_summary || {};
+        const opportunity = analysis?.savings_opportunities?.[0] || null;
+        els.caseTotalCharges.textContent = money(summary.total_charges);
+        els.caseInsurancePaid.textContent = money(summary.insurance_paid);
+        els.caseAdjustments.textContent = money(summary.adjustments);
+        els.casePatientResponsibility.textContent = money(summary.patient_responsibility);
+        els.estimatedSavings.textContent = opportunity ? money(opportunity.estimated_savings) : "-";
+        els.savingsRationale.textContent = opportunity?.rationale || "No supportable savings target was produced yet.";
+      }
+
+      function renderResult(payload) {
+        const processedDocuments = payload.processed_documents || [];
+        const analysis = payload.analysis || null;
+        const draft = payload.draft || null;
+        const first = processedDocuments[0] || null;
+        const extraction = first?.extraction || {};
+        const validation = first?.validation || null;
+        const warnings = first?.warnings || [];
+        const textMethod = warnings.find((warning) => warning.startsWith("text_extraction_method="));
+
+        els.emptyState.classList.add("hidden");
+        els.caseResult.classList.remove("hidden");
+
+        updateMilestones(payload);
+
+        if (extraction.document_type === "unknown") {
+          setCaseNotice(
+            "bad",
+            "Unsupported document",
+            validation?.findings?.[0]?.message ||
+              "The file was readable, but it does not look like a supported medical billing document.",
+          );
+        } else if (analysis?.needs_human_review || validation?.needs_review) {
+          setCaseNotice(
+            "warn",
+            "Needs review",
+            "The case is usable, but it is still missing something important or should stay reviewable before automation continues.",
+          );
+        } else {
+          setCaseNotice(
+            "good",
+            "Case ready for next action",
+            "The extracted documents, case analysis, and first draft are ready to demo as one product flow.",
+          );
+        }
+
+        els.docType.textContent = extraction.document_type || "-";
+        els.patientOwes.textContent = money(extraction.patient_responsibility);
+        els.recommendedAction.textContent = analysis?.recommended_action?.title || "-";
+        els.reviewState.textContent = analysis?.needs_human_review || validation?.needs_review ? "Reviewable" : "Clear";
+        els.caseSummary.textContent = analysis?.summary || "No case summary available.";
+
+        els.providerName.textContent = extraction.provider?.name || "-";
+        els.patientName.textContent = extraction.patient?.name || "-";
+        els.accountNumber.textContent = extraction.account_number || "-";
+        els.statementDate.textContent = extraction.statement_date || "-";
+        els.dueDate.textContent = extraction.due_date || "-";
+        els.totalCharges.textContent = money(extraction.total_charges);
+        els.insurancePaid.textContent = money(extraction.insurance_paid);
+        els.textMethod.textContent = textMethod ? textMethod.replace("text_extraction_method=", "") : "-";
+        els.warnings.textContent = warnings.length ? warnings.join(", ") : "-";
+
+        const confidence = analysis?.confidence_score ?? validation?.quality_score ?? 0;
+        els.confidencePill.className = `state-pill ${confidence >= 0.85 ? "good" : confidence >= 0.7 ? "warn" : "bad"}`;
+        els.confidencePill.textContent = `Confidence ${confidence}`;
+
+        renderIssues(analysis);
+        renderSavings(analysis);
+        renderDocuments(processedDocuments);
+        renderDraft(draft, analysis);
+        els.rawJson.textContent = JSON.stringify(payload, null, 2);
+        localStorage.setItem("billfixr_last_case", JSON.stringify(payload));
+      }
+
+      function renderError(error) {
+        els.emptyState.classList.add("hidden");
+        els.caseResult.classList.remove("hidden");
+        setCaseNotice("bad", "Processing failed", error.message || String(error));
+        setStage(els.stageIngestion, "Failed", "bad");
+        setStage(els.stageAudit, "Blocked", "bad");
+        setStage(els.stageDraft, "Blocked", "bad");
+        setStage(els.stageAutomation, "Blocked", "bad");
+        els.rawJson.textContent = error.message || String(error);
+      }
+
+      async function checkHealth() {
+        try {
+          const response = await fetch("/health");
+          const body = await response.json();
+          els.runtimeStatus.textContent = "API online";
+          els.runtimePill.className = "runtime-chip ok";
+          els.runtimePill.textContent = "Live";
+          els.authChip.textContent = body.auth_enabled ? "Auth enabled" : "Auth disabled";
+          els.authChip.className = `runtime-chip ${body.auth_enabled ? "ok" : ""}`;
+          els.aiChip.textContent = body.ai_configured ? `${body.ai_provider} · ${body.ai_model}` : "Deterministic AI layer";
+          els.aiChip.className = `runtime-chip ${body.ai_configured ? "ok" : ""}`;
+          els.ocrChip.textContent = body.ocr_enabled ? `${body.ocr_engine} OCR` : "OCR disabled";
+          els.ocrChip.className = `runtime-chip ${body.ocr_enabled ? "ok" : ""}`;
+        } catch {
+          els.runtimeStatus.textContent = "API unavailable";
+          els.runtimePill.className = "runtime-chip";
+          els.runtimePill.textContent = "Offline";
+        }
+      }
+
+      async function runCase() {
+        setBusy(els.processButton, true, "Run full case flow");
+        try {
+          const form = new FormData();
+          if (els.textForm.classList.contains("hidden")) {
+            if (!els.billFile.files.length) {
+              throw new Error("Choose at least one document to process.");
+            }
+            for (const file of els.billFile.files) form.append("files", file);
+          } else {
+            if (!els.billText.value.trim()) {
+              throw new Error("Paste some document text before running the case.");
+            }
+            form.append("files", buildTextUpload());
+          }
+          form.append("use_ai", "true");
+
+          const response = await fetch("/v1/cases/process", {
+            method: "POST",
+            headers: authHeaders(),
+            body: form,
+          });
+          if (!response.ok) {
+            throw new Error(await response.text());
+          }
+          renderResult(await response.json());
+        } catch (error) {
+          renderError(error);
+        } finally {
+          setBusy(els.processButton, false, "Run full case flow");
+        }
+      }
+
+      els.fileTab.addEventListener("click", () => showTab("file"));
+      els.textTab.addEventListener("click", () => showTab("text"));
+      els.sampleButton.addEventListener("click", () => {
+        showTab("text");
+        els.billText.value = sampleText;
+      });
+      els.processButton.addEventListener("click", runCase);
+
+      checkHealth();
+    </script>
+  </body>
+</html>
