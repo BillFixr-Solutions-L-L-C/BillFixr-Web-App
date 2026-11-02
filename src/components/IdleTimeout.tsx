@@ -6,14 +6,25 @@ import { createClient } from "@/lib/supabase/client";
 import { signOutAndRecord } from "@/lib/signOut";
 import ConfirmModal from "@/components/ConfirmModal";
 
-// Admin sessions get a real idle timeout — a stolen/forgotten-open admin
-// tab shouldn't stay valid indefinitely. Supabase's own [auth.sessions]
-// config is project-wide (applies to customers too), so this is enforced
-// at the app layer instead, scoped to just the admin shell.
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+// Idle timeout for a signed-in session: a forgotten-open or stolen tab
+// should not stay valid indefinitely. Supabase's own [auth.sessions]
+// config is project-wide and cannot differ per role, so this is enforced
+// at the app layer, mounted by each shell with its own duration.
+//
+// Admins are held to a much shorter window than customers because of
+// what an admin tab can reach — every customer's bills, payments and
+// personal details — whereas a customer's own session only ever exposes
+// their own case.
+export const ADMIN_IDLE_MS = 30 * 60 * 1000;
+export const CUSTOMER_IDLE_MS = 90 * 60 * 1000;
+
+// Long enough to notice and react, short enough that it is not a second
+// idle period of its own. Counted inside the timeout, not added to it:
+// the warning appears at timeoutMs - WARNING_MS so a 90-minute timeout
+// signs out at 90 minutes, not 91.
 const WARNING_MS = 60 * 1000;
 
-export default function AdminIdleTimeout() {
+export default function IdleTimeout({ timeoutMs }: { timeoutMs: number }) {
   const router = useRouter();
   const [showWarning, setShowWarning] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(WARNING_MS / 1000);
@@ -36,8 +47,8 @@ export default function AdminIdleTimeout() {
       await signOutAndRecord(supabase);
     } catch {
       // Best-effort — e.g. no network (a laptop woken up offline after
-      // sitting idle overnight, past the 30-minute threshold, is exactly
-      // when this fires). Without this, the failed signOut() call would
+      // sitting idle overnight, past the threshold, is exactly when this
+      // fires). Without this, the failed signOut() call would
       // throw before ever reaching the redirect below, leaving the
       // warning modal stuck open indefinitely instead of routing to
       // login once connectivity (or just the next navigation) works.
@@ -58,7 +69,7 @@ export default function AdminIdleTimeout() {
 
   function scheduleIdleCheck() {
     clearTimeout(idleTimer.current);
-    idleTimer.current = setTimeout(startWarning, IDLE_TIMEOUT_MS - WARNING_MS);
+    idleTimer.current = setTimeout(startWarning, timeoutMs - WARNING_MS);
   }
 
   function stayLoggedIn() {
@@ -86,7 +97,7 @@ export default function AdminIdleTimeout() {
       clearAllTimers();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [timeoutMs]);
 
   return (
     <ConfirmModal

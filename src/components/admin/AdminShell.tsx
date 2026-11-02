@@ -1,6 +1,6 @@
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminTopbar from "@/components/admin/AdminTopbar";
-import AdminIdleTimeout from "@/components/admin/AdminIdleTimeout";
+import IdleTimeout, { ADMIN_IDLE_MS } from "@/components/IdleTimeout";
 import AdminPresenceHeartbeat from "@/components/admin/AdminPresenceHeartbeat";
 import type { AccessLevel, Domain } from "@/lib/domainAccess";
 
@@ -19,7 +19,7 @@ export default function AdminShell({
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-white md:flex-row">
-      <AdminIdleTimeout />
+      <IdleTimeout timeoutMs={ADMIN_IDLE_MS} />
       <AdminPresenceHeartbeat />
       <AdminSidebar domainAccess={domainAccess} />
       <div className="min-w-0 flex-1">
