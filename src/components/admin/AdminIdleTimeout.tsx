@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { signOutAndRecord } from "@/lib/signOut";
 import ConfirmModal from "@/components/ConfirmModal";
 
 // Admin sessions get a real idle timeout — a stolen/forgotten-open admin
@@ -32,7 +33,7 @@ export default function AdminIdleTimeout() {
     setShowWarning(false);
     const supabase = createClient();
     try {
-      await supabase.auth.signOut();
+      await signOutAndRecord(supabase);
     } catch {
       // Best-effort — e.g. no network (a laptop woken up offline after
       // sitting idle overnight, past the 30-minute threshold, is exactly

@@ -35,6 +35,7 @@ type AdminProfile = {
   status: "active" | "suspended";
   role_id: string | null;
   roles: { name: string } | null;
+  last_logout_at: string | null;
 };
 
 export default async function UserManagementPage() {
@@ -51,7 +52,10 @@ export default async function UserManagementPage() {
   } = await supabase.auth.getUser();
 
   const [{ data: adminProfiles }, { data: roles }, { data: domainAccess }, { data: activityLog }] = await Promise.all([
-    supabase.from("profiles").select("id, name, email, status, role_id, roles(name)").eq("role", "admin"),
+    supabase
+      .from("profiles")
+      .select("id, name, email, status, role_id, roles(name), last_logout_at")
+      .eq("role", "admin"),
     supabase.from("roles").select("id, name").order("name"),
     supabase.from("role_domain_access").select("role_id, domain, access_level"),
     supabase
@@ -91,6 +95,18 @@ export default async function UserManagementPage() {
             year: "numeric",
           })
         : "Never",
+      // Supabase Auth has no sign-out equivalent to last_sign_in_at, so
+      // this is only the sign-outs the app was told about. A session
+      // that ended with a closed browser or an expired token never
+      // reaches the server, which is why "Not recorded" is the wording
+      // rather than anything implying the account is still signed in.
+      lastLogout: p.last_logout_at
+        ? new Date(p.last_logout_at).toLocaleDateString("en-US", {
+            month: "short",
+            day: "2-digit",
+            year: "numeric",
+          })
+        : "Not recorded",
       status,
     };
   });

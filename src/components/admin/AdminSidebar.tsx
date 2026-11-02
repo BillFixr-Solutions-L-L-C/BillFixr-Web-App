@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
+import { signOutAndRecord } from "@/lib/signOut";
 import { hasDomainAccess, type AccessLevel, type Domain } from "@/lib/domainAccess";
 import {
   DashboardIcon,
@@ -199,8 +200,7 @@ export default function AdminSidebar({
         <button
           type="button"
           onClick={async () => {
-            const supabase = createClient();
-            await supabase.auth.signOut();
+            await signOutAndRecord(createClient());
             router.push("/");
             router.refresh();
           }}

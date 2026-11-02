@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getBillDocuments } from "@/lib/billDocuments";
 import { type AdminCaseAnalysis } from "@/lib/adminCaseAnalysis";
 import { buildNegotiationTimeline, describeNextStep } from "@/lib/negotiationTimeline";
+import { caseProgress, endedEarly } from "@/lib/caseProgress";
+import TextStepper from "@/components/dashboard/TextStepper";
 import type { LetterEvent } from "@/lib/letterTracking";
 import { isCaseCompleted } from "@/lib/caseStatus";
 import BillDocumentCard from "@/components/admin/BillDocumentCard";
@@ -72,6 +74,11 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   });
   const nextStep = describeNextStep({ letterSentAt: caseRow.letter_sent_at, entries: timeline });
 
+  // The same five stages the customer sees on their dashboard, placed
+  // where an admin was previously able to tell a case was finished only
+  // by its absence from here and its presence under Completed Cases.
+  const progress = caseProgress(caseRow.status);
+
   return (
     <div>
       <Link href="/admin" className="mb-4 inline-block text-sm font-medium text-primary-600 hover:text-primary-700">
@@ -81,6 +88,21 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="flex flex-col gap-6">
+          <div className="rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-gray-900">Progress</h2>
+            {progress.step == null ? (
+              <p className="text-sm text-danger">{progress.detail}</p>
+            ) : (
+              <>
+                <TextStepper activeStep={progress.step} />
+                <p className="mt-4 text-center text-xs text-gray-500">
+                  {progress.detail}
+                  {endedEarly(caseRow.status) && " It never reached a negotiation."}
+                </p>
+              </>
+            )}
+          </div>
+
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">Case Overview</h2>
             <div className="flex flex-wrap items-center justify-between gap-4">

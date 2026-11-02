@@ -12,6 +12,7 @@ export type AccountRow = {
   email: string;
   roleName: string;
   lastLogin: string;
+  lastLogout: string;
   status: "Active" | "Suspended" | "Invited";
 };
 
@@ -175,6 +176,7 @@ export default function UserManagementTable({
                 <th className="py-2 pr-4">Email</th>
                 <th className="py-2 pr-4">Role</th>
                 <th className="py-2 pr-4">Last Login</th>
+                <th className="py-2 pr-4">Last Logout</th>
                 <th className="py-2 pr-4">Status</th>
                 <th className="py-2">Actions</th>
               </tr>
@@ -189,6 +191,16 @@ export default function UserManagementTable({
                   <td className="py-2.5 pr-4 text-gray-500">{a.email}</td>
                   <td className="py-2.5 pr-4 text-gray-800">{a.roleName}</td>
                   <td className="py-2.5 pr-4 text-gray-500">{a.lastLogin}</td>
+                  <td
+                    className={`py-2.5 pr-4 ${a.lastLogout === "Not recorded" ? "text-gray-300" : "text-gray-500"}`}
+                    title={
+                      a.lastLogout === "Not recorded"
+                        ? "No sign-out has been recorded. Sessions that end by closing the browser or timing out are not reported."
+                        : undefined
+                    }
+                  >
+                    {a.lastLogout}
+                  </td>
                   <td className={`py-2.5 pr-4 font-medium ${statusTone[a.status]}`}>{a.status}</td>
                   <td className="py-2.5">
                     {a.status === "Active" && (

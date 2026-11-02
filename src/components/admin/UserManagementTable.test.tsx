@@ -25,13 +25,13 @@ const ROLES: RoleOption[] = [
 ];
 
 const INVITED: AccountRow[] = [
-  { id: "acct-1", name: "Pending Admin", email: "pending@example.com", roleName: "Support Admin", lastLogin: "—", status: "Invited" },
+  { id: "acct-1", name: "Pending Admin", email: "pending@example.com", roleName: "Support Admin", lastLogin: "—", lastLogout: "Not recorded", status: "Invited" },
 ];
 
 const MIXED: AccountRow[] = [
-  { id: "acct-1", name: "Alice Active", email: "alice@example.com", roleName: "Support Admin", lastLogin: "Jan 1, 2026", status: "Active" },
-  { id: "acct-2", name: "Bob Suspended", email: "bob@example.com", roleName: "Finance Admin", lastLogin: "Jan 2, 2026", status: "Suspended" },
-  { id: "acct-3", name: "Carol Invited", email: "carol@example.com", roleName: "Support Admin", lastLogin: "—", status: "Invited" },
+  { id: "acct-1", name: "Alice Active", email: "alice@example.com", roleName: "Support Admin", lastLogin: "Jan 1, 2026", lastLogout: "Not recorded", status: "Active" },
+  { id: "acct-2", name: "Bob Suspended", email: "bob@example.com", roleName: "Finance Admin", lastLogin: "Jan 2, 2026", lastLogout: "Not recorded", status: "Suspended" },
+  { id: "acct-3", name: "Carol Invited", email: "carol@example.com", roleName: "Support Admin", lastLogin: "—", lastLogout: "Not recorded", status: "Invited" },
 ];
 
 describe("UserManagementTable", () => {
@@ -67,7 +67,7 @@ describe("UserManagementTable", () => {
 
   it("hides Reactivate for a suspended account when canWrite is false", () => {
     const SUSPENDED: AccountRow[] = [
-      { id: "acct-1", name: "Suspended Admin", email: "s@example.com", roleName: "Support Admin", lastLogin: "—", status: "Suspended" },
+      { id: "acct-1", name: "Suspended Admin", email: "s@example.com", roleName: "Support Admin", lastLogin: "—", lastLogout: "Not recorded", status: "Suspended" },
     ];
     render(
       <UserManagementTable accounts={SUSPENDED} roles={ROLES} canDelete={false} currentUserId="someone-else" canWrite={false} />,

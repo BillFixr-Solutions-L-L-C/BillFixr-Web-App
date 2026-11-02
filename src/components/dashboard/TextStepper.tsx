@@ -1,4 +1,9 @@
-const steps = ["Upload", "Scan", "Negotiation", "Response", "Complete"];
+import { CASE_STEPS } from "@/lib/caseProgress";
+
+// The five stages, shown to the customer on their dashboard and to an
+// admin on Case Detail. The labels come from lib/caseProgress so the two
+// screens cannot drift apart.
+const steps = CASE_STEPS;
 
 export default function TextStepper({ activeStep }: { activeStep: number }) {
   return (

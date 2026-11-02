@@ -23,6 +23,8 @@ export default function DeleteMyAccount() {
       return;
     }
 
+    // The account is already gone, so there is no profile row left
+    // to stamp — plain sign-out, not signOutAndRecord.
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/");

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { signOutAndRecord } from "@/lib/signOut";
 
 // Signs out against Supabase directly, the same way the dashboard's logout
 // page does — nothing goes through our own API, which matters on the
@@ -13,7 +14,7 @@ export default function LogOutButton() {
 
   async function handleLogOut() {
     setLoading(true);
-    await createClient().auth.signOut();
+    await signOutAndRecord(createClient());
     router.push("/");
     router.refresh();
   }

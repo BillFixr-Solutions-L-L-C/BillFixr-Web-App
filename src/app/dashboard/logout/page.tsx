@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { signOutAndRecord } from "@/lib/signOut";
 
 export default function LogoutPage() {
   const router = useRouter();
@@ -11,8 +12,7 @@ export default function LogoutPage() {
 
   async function handleLogOut() {
     setLoading(true);
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await signOutAndRecord(createClient());
     router.push("/");
     router.refresh();
   }
