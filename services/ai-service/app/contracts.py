@@ -1,9 +1,74 @@
 from datetime import UTC, date, datetime
 from enum import StrEnum
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, BeforeValidator, Field, HttpUrl
+
+# Formats seen on real statements, in the order they are tried. Pydantic
+# itself accepts only ISO-8601, and a bill writes "3/20/22".
+_DATE_FORMATS = (
+    "%m/%d/%Y",
+    "%m/%d/%y",
+    "%m-%d-%Y",
+    "%m-%d-%y",
+    "%d/%m/%Y",
+    "%Y/%m/%d",
+    "%B %d, %Y",
+    "%b %d, %Y",
+    "%d %B %Y",
+    "%d %b %Y",
+)
+
+
+def _parse_loose_date(value: Any) -> Any:
+    """Accept the date formats a document actually uses, drop the rest.
+
+    An unparseable date must cost us that one field and nothing more. The
+    extraction model returns dates as they appear on the page -- and on a
+    redacted sample it returns the redaction itself, "XXXXXX". Raising
+    there would fail validation for the whole document, and the service
+    would silently fall back to the regex pass, discarding a complete and
+    correct read over one bad date. That happened in production on
+    2026-11-04: eight such errors threw away a full claim table.
+    """
+    if value is None or isinstance(value, date):
+        return value
+    if not isinstance(value, str):
+        return value
+
+    text = value.strip()
+    if not text:
+        return None
+
+    try:
+        return date.fromisoformat(text)
+    except ValueError:
+        pass
+
+    for fmt in _DATE_FORMATS:
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+
+    # Not a date in any form we recognise -- a redaction placeholder, a
+    # date range, a footnote marker. Treat it as absent.
+    return None
+
+
+def _default_zero(value: Any) -> Any:
+    """`null` means "no opinion", and the field's default says 0.0.
+
+    The model omits a confidence score more often than it supplies one,
+    and sends an explicit null when it does. A null here used to fail
+    validation and take the rest of the extraction down with it.
+    """
+    return 0.0 if value is None else value
+
+
+LooseDate = Annotated[date | None, BeforeValidator(_parse_loose_date)]
+Confidence = Annotated[float, BeforeValidator(_default_zero)]
 
 
 class DocumentType(StrEnum):
@@ -51,11 +116,11 @@ class MoneyAmount(BaseModel):
 class BillLineItem(BaseModel):
     description: str | None = None
     service_code: str | None = Field(default=None, description="CPT, HCPCS, revenue code, or local code.")
-    service_date: date | None = None
+    service_date: LooseDate = None
     quantity: float | None = None
     charge: MoneyAmount = Field(default_factory=MoneyAmount)
     patient_responsibility: MoneyAmount = Field(default_factory=MoneyAmount)
-    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    confidence: Confidence = Field(default=0.0, ge=0.0, le=1.0)
 
 
 class Party(BaseModel):
@@ -72,10 +137,10 @@ class MedicalBillExtraction(BaseModel):
     insurer: Party = Field(default_factory=Party)
     account_number: str | None = None
     claim_number: str | None = None
-    statement_date: date | None = None
-    due_date: date | None = None
-    date_of_service_start: date | None = None
-    date_of_service_end: date | None = None
+    statement_date: LooseDate = None
+    due_date: LooseDate = None
+    date_of_service_start: LooseDate = None
+    date_of_service_end: LooseDate = None
     total_charges: MoneyAmount = Field(default_factory=MoneyAmount)
     insurance_paid: MoneyAmount = Field(default_factory=MoneyAmount)
     adjustments: MoneyAmount = Field(default_factory=MoneyAmount)
@@ -83,7 +148,7 @@ class MedicalBillExtraction(BaseModel):
     line_items: list[BillLineItem] = Field(default_factory=list)
     detected_issues: list[str] = Field(default_factory=list)
     missing_fields: list[str] = Field(default_factory=list)
-    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    confidence: Confidence = Field(default=0.0, ge=0.0, le=1.0)
     raw_text_excerpt: str | None = Field(default=None, max_length=4000)
 
 
@@ -261,7 +326,7 @@ class SavingsOpportunity(BaseModel):
     title: str
     rationale: str
     estimated_savings: MoneyAmount = Field(default_factory=MoneyAmount)
-    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    confidence: Confidence = Field(default=0.0, ge=0.0, le=1.0)
     evidence: list[str] = Field(default_factory=list)
 
 
