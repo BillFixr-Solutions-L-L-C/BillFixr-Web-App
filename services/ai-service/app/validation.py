@@ -9,6 +9,13 @@ from app.contracts import (
 )
 
 
+# The document types that are expected to state money. A collection
+# letter or a financial assistance form is not, so neither is held to it.
+_CHARGE_BEARING_TYPES = frozenset(
+    {DocumentType.hospital_bill, DocumentType.explanation_of_benefits}
+)
+
+
 def validate_extraction(extraction: MedicalBillExtraction) -> ValidationReport:
     findings: list[ValidationFinding] = []
 
@@ -33,6 +40,27 @@ def validate_extraction(extraction: MedicalBillExtraction) -> ValidationReport:
             "patient_responsibility.amount",
             "Patient responsibility is missing.",
         )
+
+    # Charges and line items, on every document type that should carry
+    # them. Without these the report scored a 1.0 for an extraction that
+    # held no money at all -- and since the engine negotiates from
+    # line_items, "nothing found" is the one result that must not pass
+    # quietly. An EOB used to be checked for nothing whatsoever.
+    if extraction.document_type in _CHARGE_BEARING_TYPES:
+        _require(
+            findings,
+            extraction.total_charges.amount,
+            "total_charges.amount",
+            "Total charges are missing.",
+        )
+        if not extraction.line_items:
+            findings.append(
+                _finding(
+                    "line_items",
+                    "No billed line items were found, so there is nothing to check a charge against.",
+                    "warning",
+                )
+            )
 
     if extraction.total_charges.amount is not None and extraction.total_charges.amount < 0:
         findings.append(_finding("total_charges.amount", "Total charges cannot be negative.", "error"))

@@ -18,7 +18,20 @@ class Settings(BaseSettings):
     openai_extraction_model: str = "gpt-5-mini"
     openrouter_api_key: str | None = None
     openrouter_extraction_model: str = "openai/gpt-4o-mini"
-    ai_fallback_on_validation_failure: bool = True
+    # When True, the model is called only if the regex extractor's output
+    # fails validation -- which sounds like a cost saving and is in fact a
+    # way of never calling the model at all. The regex extractor has no
+    # line-item parsing, and validate_extraction() checks at most three
+    # fields on a hospital bill and nothing whatsoever on an EOB, so its
+    # output routinely scores 1.0 while carrying no charges and no line
+    # items. Observed in production on 2026-11-04: both uploaded bills
+    # came back with model_used=null and "AI extraction skipped because
+    # deterministic extraction passed validation", while the same model on
+    # the same text returned the full claim table when called directly.
+    # Default False: the model is the extractor, and the regex pass is the
+    # fallback for when it fails. Set True only to deliberately re-enter
+    # the cheap-path-first mode.
+    ai_fallback_on_validation_failure: bool = False
 
     imap_host: str | None = None
     imap_port: int = 993

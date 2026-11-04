@@ -29,5 +29,9 @@ def test_worker_processes_queued_jobs(tmp_path: Path) -> None:
     processed_documents = repository.list_processed_documents(job.job_id)
 
     assert processed_count == 1
-    assert updated.status == ProcessingStatus.succeeded
+    # use_ai=False, so the regex pass did the reading and it has no
+    # line-item parsing -- the job is routed to review rather than
+    # finishing clean. The worker picking the job up and storing a result
+    # is what this test covers.
+    assert updated.status == ProcessingStatus.needs_review
     assert processed_documents[0].extraction.account_number == "ABC12345"

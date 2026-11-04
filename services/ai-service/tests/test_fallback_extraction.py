@@ -162,3 +162,82 @@ def test_pipeline_uses_ai_fallback_when_deterministic_extraction_needs_review() 
     assert response.model_used == "test/model"
     assert response.extraction.account_number == "AI12345"
     assert "ai_provider=openrouter" in response.warnings
+
+
+def test_pipeline_calls_ai_even_when_deterministic_extraction_passes_validation() -> None:
+    """The model is the extractor, not a rescue path.
+
+    Regression test for the production behaviour on 2026-11-04: the regex
+    extractor happened to find the three fields validate_extraction()
+    checks on a hospital bill, scored 1.0, and the model was skipped -- so
+    every bill was read by the regex pass and model_used came back null.
+    """
+
+    class FakeProvider:
+        is_configured = True
+        provider_name = "openrouter"
+        model = "test/model"
+        called = False
+
+        def extract_bill(self, text: str) -> MedicalBillExtraction:
+            FakeProvider.called = True
+            extraction = MedicalBillExtraction(document_type=DocumentType.hospital_bill)
+            extraction.provider.name = "MERCY GENERAL HOSPITAL"
+            extraction.account_number = "AI99999"
+            extraction.patient_responsibility.amount = 145.67
+            return extraction
+
+    # Text the regex extractor reads cleanly: provider, account number and
+    # amount due are all present, so the old gate would have stopped here.
+    text = (
+        "Mercy General Hospital\n"
+        "Thank you for choosing Mercy General Hospital\n"
+        "ACCOUNT NUMBER: REGEX123\n"
+        "AMOUNT DUE: $145.67\n"
+    )
+    deterministic = parse_bill_text_fallback(text)
+    assert deterministic.account_number == "REGEX123"
+
+    response = ExtractionPipeline(Settings(), FakeProvider()).extract_from_text(
+        case_id=uuid4(),
+        text=text,
+        use_ai=True,
+    )
+
+    assert FakeProvider.called is True
+    assert response.model_used == "test/model"
+    assert response.extraction.account_number == "AI99999"
+    assert "ai_extraction_used=true" in response.warnings
+
+
+def test_pipeline_keeps_the_cheap_path_when_explicitly_asked_for_it() -> None:
+    class FakeProvider:
+        is_configured = True
+        provider_name = "openrouter"
+        model = "test/model"
+        called = False
+
+        def extract_bill(self, text: str) -> MedicalBillExtraction:
+            FakeProvider.called = True
+            return MedicalBillExtraction(document_type=DocumentType.hospital_bill)
+
+    settings = Settings(ai_fallback_on_validation_failure=True)
+    text = (
+        "Mercy General Hospital\n"
+        "Thank you for choosing Mercy General Hospital\n"
+        "ACCOUNT NUMBER: REGEX123\n"
+        "AMOUNT DUE: $145.67\n"
+    )
+    response = ExtractionPipeline(settings, FakeProvider()).extract_from_text(
+        case_id=uuid4(),
+        text=text,
+        use_ai=True,
+    )
+
+    # With no line items and no total charges the deterministic output now
+    # needs review, so even the gated mode reaches the model. The setting
+    # still has an effect -- it is the validation report that decides --
+    # and this records that the gate is no longer a way to skip the model
+    # on a bill that carries no money.
+    assert FakeProvider.called is True
+    assert response.model_used == "test/model"

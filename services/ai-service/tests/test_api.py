@@ -53,7 +53,17 @@ def test_ingest_and_process_documents_endpoint() -> None:
     body = response.json()
     assert body["processed_documents"][0]["extraction"]["account_number"] == "ABC12345"
     assert body["processed_documents"][0]["extraction"]["patient_responsibility"]["amount"] == 300.0
-    assert body["processed_documents"][0]["validation"]["quality_score"] >= 0.7
+
+    # use_ai=false, so this is the regex pass, which has no line-item
+    # parsing at all. It reads the account number and the amount due
+    # correctly and that is all it can do, so the read is flagged for a
+    # human rather than scored as complete. It used to score 0.85 and pass.
+    validation = body["processed_documents"][0]["validation"]
+    assert validation["needs_review"] is True
+    assert {finding["field"] for finding in validation["findings"]} >= {
+        "total_charges.amount",
+        "line_items",
+    }
 
 
 def test_wrong_document_upload_returns_graceful_unsupported_state() -> None:
@@ -115,7 +125,10 @@ def test_case_processing_returns_analysis_and_draft() -> None:
     body = response.json()
     assert body["analysis"]["recommended_action"]["action_type"] == "request_payment_plan"
     assert body["draft"]["recipient_type"] == "hospital_billing"
-    assert body["job"]["status"] == "succeeded"
+    # A regex-only read carries no line items, so the job lands in the
+    # review queue rather than finishing clean. The analysis and the draft
+    # are still produced, which is what this test is about.
+    assert body["job"]["status"] == "needs_review"
 
 
 def test_case_analysis_and_draft_endpoints_use_processed_case_records() -> None:
