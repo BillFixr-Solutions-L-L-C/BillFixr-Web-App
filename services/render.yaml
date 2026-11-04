@@ -110,12 +110,11 @@ services:
       # untracked SMTP.
       - key: ADVOCATE_EMAIL
         value: advocate@billfixr.com
-      # The mail host is Postfix + Dovecot on Ubuntu at
-      # mailserver.businessidentity.llc, which offers IMAP on 993 and SMTP
-      # on implicit TLS 465 only — 587 is closed. Both ports are set
-      # explicitly because the defaults in code are the Gmail ones:
-      # SMTP_PORT defaults to 587, and the dispatcher only reaches 465
-      # after an 8-second connection timeout on its STARTTLS attempt.
+      # The mailbox is hosted on Purelymail, which documents IMAP on 993
+      # and SMTP on implicit TLS 465. Both ports are set explicitly because
+      # the defaults in code are the Gmail ones: SMTP_PORT defaults to 587,
+      # and the dispatcher only reaches 465 after an 8-second connection
+      # timeout on its STARTTLS attempt.
       - key: SMTP_PORT
         value: "465"
       - key: IMAP_PORT
@@ -126,18 +125,24 @@ services:
       # Note the names: the inbound poller authenticates to IMAP with
       # SMTP_USER and SMTP_PASSWORD. There is no IMAP_USER — setting one
       # does nothing and the poller stays silently unconfigured.
-      # Both hosts are the domain's existing mail server, confirmed from
-      # the live MX record for billfixr.com. A hostname is not a secret,
-      # and leaving these to be typed by hand is how the poller ends up
-      # silently unconfigured — so they are set here and only the
-      # credentials are entered at approval time.
+      # A hostname is not a secret, and leaving these to be typed by hand
+      # is how the poller ends up silently unconfigured — so they are set
+      # here and only the credentials are entered at approval time.
+      #
+      # These are correct only once billfixr.com's MX points at Purelymail.
+      # Until then the mailbox does not exist and the poller authenticates
+      # against nothing. SMTP_USER is the full address, advocate@billfixr.com,
+      # not a bare local part.
       - key: IMAP_HOST
-        value: mailserver.businessidentity.llc
+        value: imap.purelymail.com
       # The same credentials also arm the SMTP fallback used when Resend
       # is unavailable. The code's default is smtp.gmail.com, which would
-      # fail for this mailbox.
+      # fail for this mailbox. Note that billfixr.com publishes DMARC
+      # p=quarantine, so a send over this fallback is quarantined unless
+      # Purelymail's three DKIM records are live and its SPF include has
+      # been merged into the domain's single SPF record.
       - key: SMTP_HOST
-        value: mailserver.businessidentity.llc
+        value: smtp.purelymail.com
       - key: SMTP_USER
         sync: false
       - key: SMTP_PASSWORD

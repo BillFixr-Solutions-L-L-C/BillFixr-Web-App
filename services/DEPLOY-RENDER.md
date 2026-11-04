@@ -24,7 +24,7 @@ Have these to hand. Three of them are decisions, not lookups.
 | --- | --- |
 | OpenRouter API key | The AI provider account. Both services use it. |
 | Resend API key | **The web app's existing key**, from Vercel. See "Resend" below. |
-| `advocate@billfixr.com` mailbox | A real mailbox at the mail host, with IMAP. See "The advocate mailbox". |
+| `advocate@billfixr.com` mailbox | A real mailbox on Purelymail, with IMAP, plus the MX/SPF/DKIM change that implies. See "The advocate mailbox". |
 | Two API keys you invent | `LOCAL_API_KEY` and `ENGINE_API_KEY`. Any long random string. |
 | A storage encryption key | `STORAGE_ENCRYPTION_KEY` for ai-service. |
 
@@ -119,43 +119,183 @@ on one address:
   poller reads them over IMAP, and the negotiation does not advance
   without them.
 
-So `advocate@billfixr.com` needs to be a real mailbox at
-businessidentity.llc (the mail host — note that the registrar, Northwest
-Registered Agent, is a different company), with IMAP credentials.
+So `advocate@billfixr.com` needs to be a real mailbox with IMAP
+credentials.
 
-### What is already in place
+### Where the mailbox is going: Purelymail
 
-**No DNS change is needed.** Checked live:
+**Decision (2026-11-04):** the mailbox is being created on
+**Purelymail**, not on the current mail host. This supersedes an earlier
+version of this section which said *no DNS change is needed* — that was
+true only while the mailbox was going to live at businessidentity.llc.
+**It now requires a DNS change, and that change moves the whole domain's
+inbound mail.**
 
-- `billfixr.com` MX already points to `mailserver.businessidentity.llc`,
-  so the domain's mail is already hosted there. Nothing in the zone needs
-  editing — which matters, because that zone has a wildcard `*` A record
-  that has silently masked a missing record before.
-- SPF is already `v=spf1 a mx include:spf.postal.businessidentity.llc
-  include:amazonses.com ~all`. The `amazonses.com` include is what Resend
-  sends through.
-- `billfixr.com` is **verified** in Resend (region `us-east-1`), so
-  sending as `advocate@billfixr.com` works the moment the mailbox exists.
-  No new Resend domain or webhook.
+What is unaffected: `billfixr.com` is **verified** in Resend (region
+`us-east-1`) and its DKIM sits at the `resend._domainkey` selector.
+Purelymail uses different selectors, so the two coexist. Resend still
+sends; Purelymail only receives, plus arms the SMTP fallback. No new
+Resend domain and no webhook change.
 
-The whole task is therefore one thing: **have a mailbox created on that
-server.** It is Postfix + Dovecot on Ubuntu (from the service banners),
-i.e. a hand-administered mail server with no self-service panel — so this
-is a request to whoever administers businessidentity.llc, not something
-that can be done from the registrar's DNS panel.
+### Google Workspace — closed, not resolved
 
-### The settings, confirmed by probing the server
+**Closed by the user 2026-11-04.** The user raised that Google Workspace
+is still in use, then directed that it not gate this work. Recorded here
+because the facts are evidence, not an open action:
+
+- `billfixr.com` MX pointed at `mailserver.businessidentity.llc`; a
+  Workspace domain would publish `aspmx.l.google.com` plus four `alt*`
+  records
+- no `google._domainkey`, no Google site-verification TXT, no
+  `include:_spf.google.com` in SPF
+
+On that evidence `@billfixr.com` mail was never delivered to Google, so
+the Workspace account is most likely on another domain and untouched by
+any of this. Weak corroboration: MX was switched to Purelymail and
+reverted the same day, and no mail breakage was reported in that window.
+
+The residual risk, if it turns out to be wrong, is that `@billfixr.com`
+mail was being collected into Gmail from the old host — in which case
+that collection stops when MX moves, with no error, and the fix is to
+repoint it at Purelymail. **The MX switch is no longer gated on this.**
+
+### Who can actually edit the zone
+
+**Not us, and not the registrar.** Checked 2026-11-04, `billfixr.com`
+delegates to:
+
+```
+ns1.hosting.businessidentity.llc
+ns2.hosting.businessidentity.llc
+```
+
+So the zone is hosted by **businessidentity.llc**. Northwest Registered
+Agent is only the registrar — it controls which nameservers the domain
+delegates to, not the records themselves. There is no record to edit in
+the registrar's DNS panel, and looking for one there is a dead end.
+
+Every record below is therefore a **request to whoever administers
+businessidentity.llc** — the same party the mailbox is being moved away
+from. They are not obstructing anything; they simply hold the zone.
+
+If being blocked on a third party for every DNS change becomes a
+problem, the fix is to move DNS hosting (to Cloudflare, or to the
+registrar's own DNS) by changing the nameservers at Northwest. That is
+a deliberate migration, not a quick win: **the entire existing zone must
+be replicated at the new provider before the nameservers are flipped**,
+or the website and all mail break at once. Ask them for a zone export
+first rather than trying to enumerate it from outside — and note the
+zone contains a wildcard `*` A record, which makes an omission look
+like a working record instead of an error.
+
+### The DNS change, and what it takes with it
+
+Live state of the zone, checked 2026-11-04:
+
+| Record | Current value |
+| --- | --- |
+| MX | `mailserver.businessidentity.llc`, priority 10 |
+| SPF (TXT) | `v=spf1 a mx include:spf.postal.businessidentity.llc include:amazonses.com ~all` |
+| DMARC | `v=DMARC1; p=quarantine; rua=mailto:bounce@dmarc.businessidentity.llc; ruf=...; fo=1` |
+
+Four things follow, in order of how badly they fail:
+
+**1. The MX move takes every `@billfixr.com` address with it.** MX is
+per-domain, not per-mailbox. Pointing it at Purelymail moves *all*
+inbound mail for `billfixr.com` off the current host. **Confirm what
+other addresses are live there before flipping it** — they stop
+receiving the moment it changes. Remove the old MX rather than leaving
+both: two MX records across two providers means some mail is delivered
+to the host nobody is polling, with no error anywhere.
+
+**2. DMARC is `p=quarantine`, not `p=none`.** Mail from the domain that
+fails both SPF and DKIM alignment gets quarantined, not merely flagged.
+So Purelymail's DKIM — **three CNAME records**, not TXT — must be live
+and verified *before* anything sends through it. Add the ownership TXT,
+the merged SPF and the three DKIM CNAMEs first; all four are inert while
+MX still points elsewhere. Flip MX last.
+
+Purelymail also requires a **`purelymail_ownership_proof` TXT record**
+before the domain can be added to the account at all. It is unrelated to
+mail routing and safe to add at any time, so it is the natural first
+step.
+
+**3. SPF must be merged, not added, and the bare `mx` mechanism changes
+meaning on its own.** Only one `v=spf1` record is allowed per domain, so
+Purelymail's include goes into the existing record:
+
+```
+v=spf1 a mx include:_spf.purelymail.com include:spf.postal.businessidentity.llc include:amazonses.com ~all
+```
+
+Keep `include:spf.postal.businessidentity.llc` only if something still
+sends through the old host; drop it otherwise. Note that the bare `mx`
+mechanism authorizes whatever MX points at, so moving MX silently
+re-points part of this record at Purelymail's *inbound* servers, which
+are not necessarily its outbound ones — that is why the explicit include
+is needed and the `mx` mechanism is not a substitute.
+
+Lookup budget is fine: all three includes resolve to flat `ip4` lists
+with no nesting, so the merged record costs **5 of the 10** permitted
+DNS lookups. No `permerror` risk.
+
+**4. The DMARC failure reports go to the host being moved away from.**
+`rua` and `ruf` both point at `dmarc.businessidentity.llc`, with
+`fo=1`. If alignment breaks after the move, the reports that would say
+so are delivered to the other party and you see nothing. Worth adding
+your own address to `rua` as part of this change.
+
+The zone also has a wildcard `*` A record that has silently masked a
+missing record before — so verify each new record resolves by querying
+it directly, rather than trusting the registrar's panel.
+
+### The settings
 
 | Setting | Value |
 | --- | --- |
-| IMAP host | `mailserver.businessidentity.llc`, port **993**, implicit TLS |
-| SMTP host | `mailserver.businessidentity.llc`, port **465**, implicit TLS |
-| Auth | `AUTH=PLAIN` / `AUTH=LOGIN` over TLS |
-| Username | expected to be the full address, `advocate@billfixr.com` |
+| IMAP host | `imap.purelymail.com`, port **993**, implicit TLS |
+| SMTP host | `smtp.purelymail.com`, port **465**, implicit TLS |
+| MX target | `mailserver.purelymail.com` — **confirm the exact value and priority in the Purelymail admin portal**, which issues it per domain |
+| Username | the full address, `advocate@billfixr.com` |
 
-Port **587 is closed** on this host, and plain IMAP **143 is closed** too.
-Both hosts and both ports are now set in `render.yaml`; only `SMTP_USER`
-and `SMTP_PASSWORD` are entered at approval time.
+The records Purelymail asks for, by type: ownership `TXT`
+(`purelymail_ownership_proof`), `MX`, SPF `TXT` (merged into the
+domain's single SPF record), and DKIM as **three `CNAME` records**
+(`purelymail1/2/3._domainkey` → `key1/2/3.dkimroot.purelymail.com.`).
+
+### Two of Purelymail's suggested records must NOT be used as given
+
+Their setup page offers each record as though the domain were new. Two
+of them would break what is already live:
+
+**SPF — do not paste their value.** They give
+`v=spf1 include:_spf.purelymail.com ~all`. Pasting that as the domain's
+SPF record drops `include:amazonses.com`, which is Resend's send path —
+so every letter the engine sends would begin failing SPF, and with
+DMARC at `p=quarantine` would be quarantined. Their include must be
+merged into the existing record instead:
+
+```
+v=spf1 a mx include:_spf.purelymail.com include:spf.postal.businessidentity.llc include:amazonses.com ~all
+```
+
+**DMARC — do not add their CNAME.** They offer
+`CNAME _dmarc → dmarcroot.purelymail.com.`. This domain already
+publishes a DMARC `TXT` at `_dmarc` with `p=quarantine`. DNS forbids a
+CNAME coexisting with any other record at the same name, so adding it
+either fails outright or clobbers the existing policy — and it would
+hand DMARC policy and report delivery to Purelymail. Keep the existing
+TXT record.
+
+The AutoConfig `CNAME` and AutoDiscover `SRV` records are optional
+client-convenience records. The engine connects to explicit hostnames
+from `render.yaml`, so neither is needed; skip both.
+
+
+Both hosts and both ports are set in `render.yaml` and
+`render-free.yaml`; only `SMTP_USER` and `SMTP_PASSWORD` are entered at
+approval time. Purelymail documents 993/465, which is what the code
+already wanted — the 587-vs-465 note below is unchanged by the move.
 
 That the code copes with 465 is not luck but it is close: the dispatcher
 uses `SMTP_SSL` when `SMTP_PORT` is 465, and otherwise tries STARTTLS and
@@ -173,16 +313,21 @@ unconfigured — no error, just a negotiation that never sees a reply.
 Plain wording, since the mailbox request may be relayed by someone
 non-technical:
 
-> Please create a new mailbox on the billfixr.com mail server:
-> **advocate@billfixr.com**. We need a real mailbox that can receive mail
-> and be read over IMAP, not a forwarder or an alias — an alias cannot be
-> logged into, and our system has to sign in to read replies. Please send
-> the username and password.
+> Please create **advocate@billfixr.com** as a real mailbox on
+> Purelymail — one with its own password that can be signed into, not a
+> forwarder or an alias. Our system has to sign in to read the replies,
+> and an alias cannot be signed into. Please send the password, and the
+> DNS records Purelymail gives you for the domain.
 
 An alias or forward is the likely wrong turn: it would deliver mail
 somewhere readable by a person while leaving the poller with nothing to
 log into, which looks like a working mailbox right up until no reply is
 ever picked up.
+
+On a shared Purelymail account, note that whoever holds the account can
+read this mailbox. Hospital replies quote patient names, account numbers
+and dates of service, so who has account access is worth settling
+deliberately rather than by default.
 
 ### Checking it before the engine goes anywhere near it
 

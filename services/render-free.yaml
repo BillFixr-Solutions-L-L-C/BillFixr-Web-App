@@ -125,16 +125,16 @@ services:
         sync: false
       - key: ADVOCATE_EMAIL
         value: advocate@billfixr.com
-      # The mail host for billfixr.com, from its live MX record. The
-      # poller will not run long enough to use them on this plan, but a
-      # wrong value here is the kind that fails silently, so they stay
-      # correct rather than absent.
+      # The Purelymail host for the advocate mailbox. The poller will not
+      # run long enough to use these on this plan, but a wrong value here
+      # is the kind that fails silently, so they stay correct rather than
+      # absent.
       - key: IMAP_HOST
-        value: mailserver.businessidentity.llc
+        value: imap.purelymail.com
       - key: IMAP_PORT
         value: "993"
       - key: SMTP_HOST
-        value: mailserver.businessidentity.llc
+        value: smtp.purelymail.com
       - key: SMTP_PORT
         value: "465"
       - key: SMTP_USER

@@ -1,0 +1,56 @@
+# Render blueprint for the FIRST deploy — ai-service on its own, free tier.
+#
+#   render ea blueprints create --path services/render-ai-only.yaml
+#
+# Why this file exists rather than applying `render-free.yaml`:
+# neither image has ever been built anywhere, and the engine negotiates
+# from `bill_extractions`, which stays empty until ai-service fills it. So
+# the engine has nothing to do until this service works, and bringing it
+# up at the same time means two first-ever Docker builds and nine secrets
+# to get right instead of one build and three. Apply `render-free.yaml`
+# once a bill has been read correctly here — it defines both services and
+# will adopt this one rather than duplicate it.
+#
+# Everything in `render-free.yaml`'s header about the free tier applies
+# here too: web rather than pserv, no disk, spin-down after 15 idle
+# minutes. The one that bites during testing: an extraction job in flight
+# dies with the service, so do not walk away mid-job.
+
+services:
+  - type: web
+    name: billfixr-ai-service-test
+    runtime: docker
+    repo: https://github.com/BillFixr-Solutions-L-L-C/BillFixr-Web-App
+    branch: main
+    rootDir: services/ai-service
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    # render-start.sh runs the API and the job worker together and honours
+    # $PORT, which Render sets and which the Dockerfile's own CMD hardcodes
+    # to 8000 — so this command is required, not just preferred.
+    dockerCommand: ./render-start.sh
+    # /health is outside the API key gate and reports readiness without
+    # saying what anything is set to.
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      # Ephemeral on this plan — no disk. Kept pointing at the same paths
+      # as the paid blueprint so nothing else has to change later.
+      - key: DATABASE_PATH
+        value: /app/.billfixr-data/billfixr.sqlite3
+      - key: STORAGE_DIR
+        value: /app/.billfixr-data
+      - key: CACHE_DIR
+        value: /app/.billfixr-cache
+      - key: ENABLE_OCR
+        value: "true"
+      - key: OCR_ENGINE
+        value: tesseract
+      - key: LOCAL_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: STORAGE_ENCRYPTION_KEY
+        sync: false
