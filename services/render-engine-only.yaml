@@ -1,0 +1,79 @@
+# Render blueprint for the automation engine on its own, free tier.
+#
+#   render ea blueprints create --path services/render-engine-only.yaml
+#
+# Why this is not just `render-free.yaml`: ai-service is already live,
+# and Render gave it a suffixed name (`billfixr-ai-service-test-e92h`,
+# because the name it was asked for was taken). A two-service blueprint
+# matches existing resources by name, so applying `render-free.yaml` now
+# would not adopt the running service -- it would build a second copy of
+# it. This file touches only the engine.
+#
+# `render-free.yaml` remains the definition of both services for when
+# they are brought up together from nothing.
+#
+# Free tier, so: internet-facing rather than private, no disk, and a
+# spin-down after 15 idle minutes. The consequence that matters here is
+# that the inbox poller stops with the service, so a hospital's reply is
+# not picked up -- reply handling cannot be tested on this plan. Letters
+# can be sent and tracked. Everything under /app/data (the engine
+# database and the revised-bill PDFs) is lost on each spin-down.
+
+services:
+  - type: web
+    name: billfixr-automation-engine-test
+    runtime: docker
+    repo: https://github.com/BillFixr-Solutions-L-L-C/BillFixr-Web-App
+    branch: main
+    rootDir: services/automation-engine
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENABLE_DEMO_UI
+        value: "0"
+      - key: ENGINE_CORS_ORIGINS
+        value: ""
+      - key: AUTOPILOT_HOLD_FOR_REVIEW
+        value: "1"
+      # server.py binds os.getenv("HOST") and defaults to 127.0.0.1, which
+      # would make the service unreachable. The Dockerfile sets it, but it
+      # is set here too so the binding does not depend on reading it.
+      - key: HOST
+        value: 0.0.0.0
+      # The engine's own fallback rate is 0.10, which disagrees with
+      # docs/FEES.md and with what the site tells customers (20% of the
+      # saving). In normal operation the web app passes the rate per case
+      # from app_settings.success_fee_percentage, so this is only the
+      # fallback for when it does not -- and a fallback that quietly
+      # charges half the documented fee is not one to leave in place.
+      # The basis is already correct: the fee is a share of the saving,
+      # never of the corrected bill.
+      - key: COMPLETION_FEE_RATE
+        value: "0.20"
+      - key: ENGINE_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: ADVOCATE_EMAIL
+        value: advocate@billfixr.com
+      # Purelymail, where the advocate mailbox lives. Verified working on
+      # 2026-11-04: IMAP and SMTP both authenticate and mail from outside
+      # arrives with spf, dkim and dmarc all passing.
+      - key: IMAP_HOST
+        value: imap.purelymail.com
+      - key: IMAP_PORT
+        value: "993"
+      - key: SMTP_HOST
+        value: smtp.purelymail.com
+      - key: SMTP_PORT
+        value: "465"
+      # The poller authenticates to IMAP with this same pair -- there is
+      # no IMAP_USER. SMTP_USER is the full address, not a local part.
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
