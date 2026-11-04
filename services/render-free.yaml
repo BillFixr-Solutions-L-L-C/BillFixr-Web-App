@@ -1,0 +1,143 @@
+# Render blueprint for the TESTING PHASE ONLY — no cost.
+#
+# `render.yaml` beside this file is the real one. This is the same two
+# services cut down to fit Render's free tier, to prove the pipeline works
+# before paying for it. Apply ONE of the two, not both.
+#
+#   render ea blueprints create --path services/render-free.yaml
+#
+# What the free tier forces, and what each thing costs us:
+#
+# 1. `type: web`, not `pserv`. Free instances are available for web
+#    services only. So both services are reachable from the internet
+#    instead of sitting on an internal hostname.
+#
+#    This is survivable only because neither service ever trusted the
+#    network: ai-service refuses to start without LOCAL_API_KEY, and the
+#    engine's routes are all behind ENGINE_API_KEY except /api/health.
+#    That was built on the principle that a private network is not an
+#    authentication story — which is exactly what makes this swap safe.
+#    Set long random keys here; they are now the only thing in front of
+#    these services.
+#
+# 2. No disk. Free web services cannot have one, and a disk requires a
+#    paid instance. Everything written to the filesystem is lost whenever
+#    the service spins down, so DATABASE_PATH/STORAGE_DIR and the engine's
+#    /app/data are ephemeral here.
+#
+# 3. Spin-down after 15 minutes with no inbound traffic, and about a
+#    minute to come back on the next request. Two consequences that matter
+#    more than the cold start:
+#
+#    - The engine's IMAP poller stops when the service is down, so a
+#      hospital's reply is not picked up. Reply handling cannot be tested
+#      on this blueprint. That is step 4 of DEPLOY-RENDER.md, already the
+#      step most likely to fail — test it locally or on the paid plan.
+#    - An ai-service extraction job in flight dies with the service.
+#      During hands-on testing you are making requests, so it stays awake;
+#      leave it idle mid-job and the job is gone.
+#
+# 4. 750 free instance hours per month for the whole workspace, shared by
+#    both services. Spun-down time does not count, so intermittent testing
+#    fits easily; two services left running continuously would not.
+#
+# Nothing here is a judgement about whether the paid plan is worth it —
+# this exists so that question can be answered after seeing a real bill
+# read correctly, rather than before.
+
+services:
+  # ---------------------------------------------------------------------
+  # ai-service — reads bills. Test this first and on its own: the engine
+  # negotiates from its extraction, and `bill_extractions` is empty until
+  # this service fills it.
+  # ---------------------------------------------------------------------
+  - type: web
+    name: billfixr-ai-service-test
+    runtime: docker
+    repo: https://github.com/BillFixr-Solutions-L-L-C/BillFixr-Web-App
+    branch: main
+    rootDir: services/ai-service
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    # render-start.sh runs the API and the job worker together and honours
+    # $PORT, which Render sets and which the Dockerfile's own CMD hardcodes
+    # to 8000 — so this command is required, not just preferred.
+    dockerCommand: ./render-start.sh
+    # Free web services do get a health check, unlike pserv. /health is
+    # outside the API key gate and reports readiness without saying what
+    # anything is set to.
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      # Ephemeral on this plan. Kept pointing at the same paths as the
+      # paid blueprint so nothing else has to change when switching over.
+      - key: DATABASE_PATH
+        value: /app/.billfixr-data/billfixr.sqlite3
+      - key: STORAGE_DIR
+        value: /app/.billfixr-data
+      - key: CACHE_DIR
+        value: /app/.billfixr-cache
+      - key: ENABLE_OCR
+        value: "true"
+      - key: OCR_ENGINE
+        value: tesseract
+      - key: LOCAL_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: STORAGE_ENCRYPTION_KEY
+        sync: false
+
+  # ---------------------------------------------------------------------
+  # automation-engine — can send letters here and have Resend track them.
+  # It cannot read replies on this plan (see note 3 above), and it loses
+  # every negotiation and revised-bill PDF on each spin-down.
+  # ---------------------------------------------------------------------
+  - type: web
+    name: billfixr-automation-engine-test
+    runtime: docker
+    repo: https://github.com/BillFixr-Solutions-L-L-C/BillFixr-Web-App
+    branch: main
+    rootDir: services/automation-engine
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENABLE_DEMO_UI
+        value: "0"
+      - key: ENGINE_CORS_ORIGINS
+        value: ""
+      - key: AUTOPILOT_HOLD_FOR_REVIEW
+        value: "1"
+      # server.py binds os.getenv("HOST") and defaults to 127.0.0.1, which
+      # would make the service unreachable. The Dockerfile sets HOST, but
+      # it is set here too so the binding does not depend on reading it.
+      - key: HOST
+        value: 0.0.0.0
+      - key: ENGINE_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: ADVOCATE_EMAIL
+        value: advocate@billfixr.com
+      # The mail host for billfixr.com, from its live MX record. The
+      # poller will not run long enough to use them on this plan, but a
+      # wrong value here is the kind that fails silently, so they stay
+      # correct rather than absent.
+      - key: IMAP_HOST
+        value: mailserver.businessidentity.llc
+      - key: IMAP_PORT
+        value: "993"
+      - key: SMTP_HOST
+        value: mailserver.businessidentity.llc
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
