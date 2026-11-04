@@ -147,3 +147,62 @@ def test_a_priced_bill_does_not_trip_the_unpriced_check():
     issue_types = [issue["type"] for issue in result["issues"]]
     assert "line_items_not_priced" not in issue_types
     assert "summary_bill_restriction" not in issue_types
+
+
+def _audit_lines(lines):
+    return BillAuditor().audit_bill({
+        "provider_name": "Mercy General Hospital",
+        "total_billed": 1000.0,
+        "patient_due": 1000.0,
+        "is_itemized": True,
+        "line_items": lines,
+    })
+
+
+def test_same_description_different_amounts_is_not_called_a_duplicate():
+    """Two services an extraction labelled identically are not a duplicate.
+
+    An EOB's description column says "Medical care" for every line, so
+    without a procedure code two unrelated services collide. Asserting
+    that to a hospital's dispute team is the costly error here.
+    """
+    result = _audit_lines([
+        {"description": "Medical care", "cpt_code": "", "date": "2022-03-20",
+         "quantity": 1, "charge_amount": 31.60},
+        {"description": "Medical care", "cpt_code": "", "date": "2022-03-20",
+         "quantity": 1, "charge_amount": 375.00},
+    ])
+
+    assert [i["type"] for i in result["issues"] if i["type"] == "duplicate_charge"] == []
+
+
+def test_a_description_only_match_is_raised_but_needs_review():
+    """Same words, same money, no code: worth asking about, not asserting."""
+    result = _audit_lines([
+        {"description": "Medical care", "cpt_code": "", "date": "2022-03-20",
+         "quantity": 1, "charge_amount": 375.00},
+        {"description": "Medical care", "cpt_code": "", "date": "2022-03-20",
+         "quantity": 1, "charge_amount": 375.00},
+    ])
+
+    dupes = [i for i in result["issues"] if i["type"] == "duplicate_charge"]
+    assert len(dupes) == 1
+    # The convention at the top of audit_engine.py: a keyword match is
+    # "needs_review", never "high".
+    assert dupes[0]["confidence"] == "needs_review"
+    assert result["needs_review_count"] >= 1
+
+
+def test_a_coded_duplicate_is_still_high_confidence():
+    """The same code twice on one date is evidence, whatever the amounts."""
+    result = _audit_lines([
+        {"description": "Emergency department visit, level 4", "cpt_code": "99284",
+         "date": "2026-06-18", "quantity": 1, "charge_amount": 1850.00},
+        {"description": "Emergency department visit, level 4", "cpt_code": "99284",
+         "date": "2026-06-18", "quantity": 1, "charge_amount": 136.38},
+    ])
+
+    dupes = [i for i in result["issues"] if i["type"] == "duplicate_charge"]
+    assert len(dupes) == 1
+    assert dupes[0]["confidence"] == "high"
+    assert dupes[0]["disputed_amount"] == pytest.approx(136.38)

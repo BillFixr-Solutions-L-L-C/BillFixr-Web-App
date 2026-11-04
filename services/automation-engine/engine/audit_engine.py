@@ -176,6 +176,23 @@ class BillAuditor:
             flagged_amount += patient_due
 
         # 2. Duplicate Detection
+        #
+        # Two lines match either on their procedure code or, when there is
+        # no code, on their description. Those are not the same quality of
+        # evidence, and this used to assert both as "high" confidence.
+        #
+        # A description-only match is a keyword match, which by the
+        # convention at the top of this file is "needs_review". It also
+        # has to clear a second bar: the same amount. An extraction that
+        # returns a generic description for every line -- "Medical care"
+        # on an EOB, which is what the column actually says -- makes two
+        # unrelated services collide, and billing a hospital's own
+        # dispute team for a $375 duplicate that is really two different
+        # services at $31.60 and $375.00 is the one error here with a
+        # real cost. Seen on 2026-11-04 against the CMS sample EOB.
+        #
+        # A code match keeps its existing weight: the same code on the
+        # same date, charged twice, is worth raising whatever the amounts.
         seen_items = {}
         for idx, item in enumerate(line_items):
             cpt = (item.get("cpt_code") or "").strip()
@@ -184,27 +201,48 @@ class BillAuditor:
             charge = float(item.get("charge_amount", 0) or 0)
 
             # Key for duplicate matching
+            matched_on_code = bool(cpt)
             key = f"{date}_{cpt}" if cpt else f"{date}_{desc[:20]}"
 
-            if key in seen_items and charge > 0:
-                prev_idx = seen_items[key]
-                issues.append({
-                    "id": f"ISSUE-DUP-{idx}",
-                    "type": "duplicate_charge",
-                    "severity": "critical",
-                    "confidence": "high",
-                    "line_id": item.get("line_id", f"L{idx+1}"),
-                    "cpt_code": cpt,
-                    "title": f"Possible Duplicate Charge: {item.get('description')}",
-                    "description": f"The same service appears more than once on {date}, on lines {prev_idx+1} and {idx+1} (${charge:,.2f}). Please check whether this was billed twice.",
-                    "disputed_amount": charge,
-                    "recommendation": f"Ask the billing office to confirm or remove the duplicate ${charge:,.2f}.",
-                    "remedy": f"Remove the duplicate ${charge:,.2f} charge.",
-                    "statute": CITATIONS["duplicate"],
-                })
-                flagged_amount += charge
+            previous = seen_items.get(key)
+            if previous is None:
+                seen_items[key] = (idx, charge)
+                continue
+            if charge <= 0:
+                continue
+
+            prev_idx, prev_charge = previous
+            same_charge = abs(prev_charge - charge) < 0.01
+            if not matched_on_code and not same_charge:
+                # Same words, different money, no code to confirm it by.
+                # Not evidence of anything.
+                continue
+
+            if matched_on_code:
+                confidence = "high"
+                evidence = f"code {cpt} appears on lines {prev_idx + 1} and {idx + 1}"
             else:
-                seen_items[key] = idx
+                confidence = "needs_review"
+                evidence = (
+                    f"lines {prev_idx + 1} and {idx + 1} carry no procedure code and are "
+                    f"matched on their description alone, both at ${charge:,.2f}"
+                )
+
+            issues.append({
+                "id": f"ISSUE-DUP-{idx}",
+                "type": "duplicate_charge",
+                "severity": "critical",
+                "confidence": confidence,
+                "line_id": item.get("line_id", f"L{idx+1}"),
+                "cpt_code": cpt,
+                "title": f"Possible Duplicate Charge: {item.get('description')}",
+                "description": f"The same service appears more than once on {date} ({evidence}, ${charge:,.2f}). Please check whether this was billed twice.",
+                "disputed_amount": charge,
+                "recommendation": f"Ask the billing office to confirm or remove the duplicate ${charge:,.2f}.",
+                "remedy": f"Remove the duplicate ${charge:,.2f} charge.",
+                "statute": CITATIONS["duplicate"],
+            })
+            flagged_amount += charge
 
         # 3. Unbundling Detection
         for idx, item in enumerate(line_items):
