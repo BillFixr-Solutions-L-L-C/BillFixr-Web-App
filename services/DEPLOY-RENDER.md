@@ -26,7 +26,7 @@ Have these to hand. Three of them are decisions, not lookups.
 | Resend API key | **The web app's existing key**, from Vercel. See "Resend" below. |
 | `advocate@billfixr.com` mailbox | A real mailbox on Purelymail, with IMAP, plus the MX/SPF/DKIM change that implies. See "The advocate mailbox". |
 | Two API keys you invent | `LOCAL_API_KEY` and `ENGINE_API_KEY`. Any long random string. |
-| A storage encryption key | `STORAGE_ENCRYPTION_KEY` for ai-service. |
+| A storage encryption key | `STORAGE_ENCRYPTION_KEY` for ai-service. **Must be a Fernet key, not any random string** — see Step 1. |
 
 Both services are deployed as **private services** (`type: pserv`): they
 get an internal hostname and are not reachable from the internet. They
@@ -43,6 +43,15 @@ Render only supports automatic health checks on web services, so there is
 no `healthCheckPath` in the blueprint. Check `/health` and `/api/health`
 by hand after each deploy.
 
+**This paragraph and the two above it describe `render.yaml`, the paid
+blueprint.** The testing-phase blueprints beside it —
+`render-free.yaml` (both services) and `render-ai-only.yaml` (the first
+deploy, ai-service alone) — differ on all three points: free instances
+are web-only, so the services are internet-facing and do get a
+`healthCheckPath`, and they cannot have a disk, so everything written to
+the filesystem is lost on each spin-down. Their own headers explain what
+that costs. ai-service is currently running on `render-ai-only.yaml`.
+
 ---
 
 ## Step 1 — ai-service
@@ -53,9 +62,39 @@ Apply the blueprint, then set the three secrets in the Render dashboard:
 | --- | --- |
 | `LOCAL_API_KEY` | What the web app sends as `X-API-Key`. Invent it here, then set the same value as `AI_SERVICE_API_KEY` on Vercel. |
 | `OPENROUTER_API_KEY` | |
-| `STORAGE_ENCRYPTION_KEY` | Without it, stored bills sit in plaintext on the disk. |
+| `STORAGE_ENCRYPTION_KEY` | Without it, stored bills sit in plaintext on the disk. **Not any random string — see below.** |
 
 Everything else is in the blueprint.
+
+### `STORAGE_ENCRYPTION_KEY` must be a Fernet key
+
+The table above used to call this "a storage encryption key", and the two
+invented API keys beside it are genuinely "any long random string". This
+one is not. `app/storage.py` passes the value straight to `Fernet()`,
+which accepts only 32 url-safe base64-encoded bytes — 44 characters
+ending in `=`. Generate it, do not invent it:
+
+```
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+**Why this matters more than it looks.** A 64-character hex string — the
+obvious thing to generate, and what was very nearly deployed on
+2026-11-04 — fails in the worst available way:
+
+- `app/readiness.py` only tests the value for truthiness, so the startup
+  banner prints `bills encrypted at rest: yes`
+- `/health` reports `storage_encrypted: true` for the same reason
+- nothing fails until the first upload, when `Fernet()` raises
+  `ValueError: Fernet key must be 32 url-safe base64-encoded bytes`
+
+So every check you would think to run says the service is healthy and
+encrypting, while in fact no bill can be stored at all. Confirmed by
+running `Fernet()` against a hex key before deploying rather than after.
+
+If you ever rotate this key, bills encrypted with the old one cannot be
+read back. On the free tier that is moot — there is no disk and storage
+is wiped on every spin-down.
 
 **Why the API and the worker run in one container.** `docker-compose.yml`
 runs them as two services sharing a volume. A Render disk attaches to
@@ -99,6 +138,47 @@ so a deploy can be checked without reading logs.
    negotiate from it.
 
 Do not go on until a real bill has been read correctly.
+
+### What the first real deploy found — 2026-11-04
+
+ai-service is now deployed, on the free tier via `render-ai-only.yaml`:
+`billfixr-ai-service-test-e92h`, workspace `tea-dagro66k1f9s73dlsd10`.
+A real bill has been read correctly through it (Children's Colorado
+sample statement — provider, account number, statement and due dates and
+the $82.30 balance all correct, stored `.enc`, malware scan clean). Four
+things that only showed up by doing it:
+
+**The Dockerfile did not contain the start command.** It copied `app/`
+and `scripts/` but never `render-start.sh`, while both blueprints set
+`dockerCommand: ./render-start.sh`. The image built fine and the
+container exited with **status 128** immediately. Fixed in `e420969`.
+Worth knowing because the build log is entirely clean — the failure is
+one line at the very end, after a successful push to the registry.
+
+**Pushes do not deploy themselves.** `autoDeploy` is `yes` with trigger
+`commit`, but pushing the fix to `main` triggered nothing; the deploy had
+to be started by hand (`render deploys create <srv-id>`). The GitHub
+webhook is not connected to this workspace. Until it is, treat every
+deploy as manual — a pushed fix that appears to do nothing has not
+necessarily failed, it may simply not have been built.
+
+**Blueprints are read from the repository, not from disk.** `--path` is
+repo-relative, so a blueprint change has to be committed and pushed
+before it can be applied. There is no way to try a local edit.
+
+**Extraction is thin on the money fields.** That first bill came back
+with `confidence: 0.35`, `total_charges: null` and `line_items: []`,
+having read all five pages. The balance and the identifiers were right.
+This is the thing to watch, because the engine negotiates from line
+items — and it is the AI/ML workstream, not this one. Re-test with a bill
+that has a real itemized charge table before drawing any conclusion about
+whether the app layer is losing the data or the model is not finding it.
+
+**The Render CLI needs installing properly.** The npm package's shim is
+broken on this machine, and the CLI token it saved in `~/.render/cli.yaml`
+is rejected by the public REST API (401), so neither route works. The
+official Windows binary from
+`github.com/render-oss/cli/releases` does work and is self-contained.
 
 ---
 
