@@ -1,9 +1,10 @@
 from datetime import UTC, date, datetime
 from enum import StrEnum
-from typing import Annotated, Any
+from types import UnionType
+from typing import Annotated, Any, Union, get_args, get_origin
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, BeforeValidator, Field, HttpUrl
+from pydantic import BaseModel, BeforeValidator, Field, HttpUrl, model_validator
 
 # Formats seen on real statements, in the order they are tried. Pydantic
 # itself accepts only ISO-8601, and a bill writes "3/20/22".
@@ -57,18 +58,58 @@ def _parse_loose_date(value: Any) -> Any:
     return None
 
 
-def _default_zero(value: Any) -> Any:
-    """`null` means "no opinion", and the field's default says 0.0.
-
-    The model omits a confidence score more often than it supplies one,
-    and sends an explicit null when it does. A null here used to fail
-    validation and take the rest of the extraction down with it.
-    """
-    return 0.0 if value is None else value
-
-
 LooseDate = Annotated[date | None, BeforeValidator(_parse_loose_date)]
-Confidence = Annotated[float, BeforeValidator(_default_zero)]
+
+
+def _allows_none(annotation: Any) -> bool:
+    if annotation is None or annotation is type(None):
+        return True
+    origin = get_origin(annotation)
+    if origin is Annotated:
+        return _allows_none(get_args(annotation)[0])
+    if origin in (Union, UnionType):
+        return any(_allows_none(arg) for arg in get_args(annotation))
+    return False
+
+
+class ModelOutput(BaseModel):
+    """A model that tolerates an explicit `null` where it has a default.
+
+    The extraction model fills the schema it is given and writes `null`
+    for anything it has no answer for -- including fields that are not
+    optional but do have a default, like `currency: str = "USD"` and
+    `confidence: float = 0.0`. Pydantic rejects those nulls, and the
+    pipeline catches the error and falls back to the regex pass, so one
+    stray null discards an otherwise complete read of a bill.
+
+    Fixing such fields one at a time does not hold: on 2026-11-04 the
+    same document failed first on four dates and three confidences, and
+    then, once those were handled, on a single `"currency": null` the
+    model had not sent the time before. Treating null as "no value
+    supplied" wherever a default exists is the rule that covers the next
+    field too.
+
+    A null on a genuinely optional field still means null, and a null on
+    a required field with no default is still an error.
+    """
+
+    @model_validator(mode="before")
+    @classmethod
+    def _null_means_default(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        dropped = {}
+        for name, field in cls.model_fields.items():
+            for key in {name, field.alias} - {None}:
+                if data.get(key, ...) is None and not _allows_none(field.annotation):
+                    if field.is_required():
+                        continue
+                    dropped[key] = None
+
+        if not dropped:
+            return data
+        return {key: value for key, value in data.items() if key not in dropped}
 
 
 class DocumentType(StrEnum):
@@ -108,29 +149,29 @@ class ValidationSeverity(StrEnum):
     error = "error"
 
 
-class MoneyAmount(BaseModel):
+class MoneyAmount(ModelOutput):
     amount: float | None = None
     currency: str = "USD"
 
 
-class BillLineItem(BaseModel):
+class BillLineItem(ModelOutput):
     description: str | None = None
     service_code: str | None = Field(default=None, description="CPT, HCPCS, revenue code, or local code.")
     service_date: LooseDate = None
     quantity: float | None = None
     charge: MoneyAmount = Field(default_factory=MoneyAmount)
     patient_responsibility: MoneyAmount = Field(default_factory=MoneyAmount)
-    confidence: Confidence = Field(default=0.0, ge=0.0, le=1.0)
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
-class Party(BaseModel):
+class Party(ModelOutput):
     name: str | None = None
     phone: str | None = None
     email: str | None = None
     address: str | None = None
 
 
-class MedicalBillExtraction(BaseModel):
+class MedicalBillExtraction(ModelOutput):
     document_type: DocumentType = DocumentType.unknown
     patient: Party = Field(default_factory=Party)
     provider: Party = Field(default_factory=Party)
@@ -148,7 +189,7 @@ class MedicalBillExtraction(BaseModel):
     line_items: list[BillLineItem] = Field(default_factory=list)
     detected_issues: list[str] = Field(default_factory=list)
     missing_fields: list[str] = Field(default_factory=list)
-    confidence: Confidence = Field(default=0.0, ge=0.0, le=1.0)
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     raw_text_excerpt: str | None = Field(default=None, max_length=4000)
 
 
@@ -314,19 +355,19 @@ class RecommendedActionType(StrEnum):
     await_supporting_documents = "await_supporting_documents"
 
 
-class AuditIssue(BaseModel):
+class AuditIssue(ModelOutput):
     category: AuditIssueCategory
     severity: ValidationSeverity
     summary: str
     evidence: list[str] = Field(default_factory=list)
 
 
-class SavingsOpportunity(BaseModel):
+class SavingsOpportunity(ModelOutput):
     category: AuditIssueCategory
     title: str
     rationale: str
     estimated_savings: MoneyAmount = Field(default_factory=MoneyAmount)
-    confidence: Confidence = Field(default=0.0, ge=0.0, le=1.0)
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     evidence: list[str] = Field(default_factory=list)
 
 

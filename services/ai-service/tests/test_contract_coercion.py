@@ -90,3 +90,53 @@ def test_the_payload_the_model_actually_sent_now_validates() -> None:
     assert extraction.total_charges.amount == 406.60
     assert extraction.line_items[0].service_date == date(2022, 3, 20)
     assert extraction.statement_date is None
+
+
+def test_a_null_currency_does_not_discard_the_extraction() -> None:
+    """The failure the second production attempt hit, after the dates.
+
+    `currency: str = "USD"` is not optional but has a default, and the
+    model sent null for it -- failing the whole document over a field it
+    had an answer for by default.
+    """
+    extraction = MedicalBillExtraction.model_validate(
+        {
+            "total_charges": {"amount": 406.60, "currency": None},
+            "adjustments": {"amount": None, "currency": None},
+        }
+    )
+
+    assert extraction.total_charges.amount == 406.60
+    assert extraction.total_charges.currency == "USD"
+    assert extraction.adjustments.currency == "USD"
+
+
+def test_a_null_on_a_genuinely_optional_field_is_still_null() -> None:
+    extraction = MedicalBillExtraction.model_validate(
+        {"account_number": None, "claim_number": None}
+    )
+
+    assert extraction.account_number is None
+    assert extraction.claim_number is None
+
+
+def test_nulls_across_the_whole_payload_are_survivable() -> None:
+    """Belt and braces: every defaulted scalar sent as null at once."""
+    extraction = MedicalBillExtraction.model_validate(
+        {
+            "document_type": None,
+            "confidence": None,
+            "detected_issues": None,
+            "missing_fields": None,
+            "line_items": [
+                {"description": "Medical care", "confidence": None, "quantity": None,
+                 "charge": {"amount": 31.60, "currency": None}},
+            ],
+            "patient": {"name": None},
+        }
+    )
+
+    assert extraction.document_type.value == "unknown"
+    assert extraction.confidence == 0.0
+    assert extraction.detected_issues == []
+    assert extraction.line_items[0].charge.amount == 31.60
