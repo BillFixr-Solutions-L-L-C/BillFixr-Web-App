@@ -16,6 +16,34 @@ export type AutomationEngineFees = {
   completion_fee_rate: number;
 };
 
+// What POST /api/audit reads out of `bill_data`. These names are the
+// engine's, not the AI service's — see src/lib/engineBillData.ts for the
+// translation and why it has to exist. Every field here is read with a
+// default on the engine side, so a wrong name is not an error, it is a
+// zero.
+export type EngineBillLineItem = {
+  description: string;
+  cpt_code: string;
+  date: string;
+  quantity: number;
+  charge_amount: number;
+};
+
+export type EngineBillData = {
+  provider_name: string;
+  patient_name: string;
+  account_number: string;
+  statement_date: string;
+  date_of_service: string;
+  total_billed: number;
+  patient_due: number;
+  // False makes the engine raise "Summary Bill Detected" and demand an
+  // itemized UB-04, which is the right outcome for a bill whose line
+  // charges could not be read.
+  is_itemized: boolean;
+  line_items: EngineBillLineItem[];
+};
+
 // A finding from the audit. `confidence` is "high" for structural, fully sourced rules and
 // "needs_review" for keyword rules, estimates, or unverified benchmark rates.
 // A hospital's billing contacts. Every field except the notes can be null: the engine never guesses, and

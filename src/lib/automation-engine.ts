@@ -5,6 +5,7 @@ import type {
   AutomationEngineHealth,
   AutomationNegotiation,
   AutomationProviderContact,
+  EngineBillData,
   StartNegotiationInput,
 } from "@/types/automation-engine";
 
@@ -92,7 +93,11 @@ export async function findProviderContact(provider: {
 // POST /api/audit — runs the audit rules over extracted bill data. Every finding carries a source,
 // a confidence level, and a citation from the engine's approved list.
 export async function auditBill(
-  billData: Record<string, unknown>,
+  // Typed as the engine's own shape, not Record<string, unknown>: every
+  // field is read with a default on the engine side, so a payload with
+  // the wrong field names audits as a $0 bill and reports no issues
+  // rather than failing. Use toEngineBillData() to build it.
+  billData: EngineBillData,
   userContext?: { household_income: number; household_size: number },
 ): Promise<AutomationAuditResult> {
   const response = await automationEngineFetch(

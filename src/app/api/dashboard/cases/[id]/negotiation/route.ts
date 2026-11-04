@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { auditBill, getNegotiation, startNegotiation } from "@/lib/automation-engine";
+import { toEngineBillData } from "@/lib/engineBillData";
+import type { AiMedicalBillExtraction } from "@/types/ai";
 import { isBackendConfigured } from "@/lib/aiStack";
 
 // The web app's end of the automation engine's negotiation lifecycle.
@@ -130,7 +132,11 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   const feeRate = Number(settings?.success_fee_percentage);
 
   try {
-    const audit = await auditBill(extraction.result as Record<string, unknown>);
+    // Translated, not passed through: the engine reads flat `total_billed`
+    // and `cpt_code`, the extraction nests `total_charges.amount` and
+    // names it `service_code`. Untranslated it audits as a $0 bill with
+    // no charges and reports nothing wrong. See src/lib/engineBillData.ts.
+    const audit = await auditBill(toEngineBillData(extraction.result as AiMedicalBillExtraction));
     const negotiation = await startNegotiation({
       auditResult: audit,
       // The opening position, not the one we expect to settle at — the

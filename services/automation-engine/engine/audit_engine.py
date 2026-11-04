@@ -143,6 +143,38 @@ class BillAuditor:
             })
             flagged_amount += patient_due
 
+        # 1b. Line items present, but none of them priced.
+        #
+        # Every field below is read with a default, so a caller sending a
+        # bill under the wrong field names does not fail here -- it audits
+        # as a $0 bill with no charges, finds nothing, and reports that
+        # the bill is fine. That is exactly what happened between the web
+        # app and this engine until 2026-11-04: the AI service nests money
+        # as {"charge": {"amount": n}} and names the code "service_code",
+        # this reads "charge_amount" and "cpt_code", and nothing
+        # translated. The same bill scored 2 issues one way and 0 the
+        # other, both HTTP 200.
+        #
+        # A list of line items that carries no charge at all is not a
+        # bill we have read. Say so rather than return a clean audit.
+        elif not any(float(item.get("charge_amount", 0) or 0) > 0 for item in line_items):
+            issues.append({
+                "id": "ISSUE-UNPRICED",
+                "type": "line_items_not_priced",
+                "severity": "critical",
+                "confidence": "high",
+                "title": "Bill Charges Could Not Be Read",
+                "description": (
+                    f"This bill lists {len(line_items)} line item(s), but no charge could be read "
+                    "from any of them, so no pricing or duplicate check could run. The audit below "
+                    "is not evidence that the bill is correct."
+                ),
+                "disputed_amount": patient_due,
+                "recommendation": "Re-read the bill before relying on this audit, and request an itemized UB-04 or CMS-1500 statement.",
+                "statute": CITATIONS["itemized_statement"],
+            })
+            flagged_amount += patient_due
+
         # 2. Duplicate Detection
         seen_items = {}
         for idx, item in enumerate(line_items):

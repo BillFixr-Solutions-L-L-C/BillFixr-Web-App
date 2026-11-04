@@ -25,12 +25,46 @@ const OWN_CASE = { id: "case-1", user_id: USER.id, bill_id: "bill-1", negotiatio
 const AUDIT = {
   settlement_options: { aggressive_offer: 1200, fair_market_offer: 1500, potential_savings: 800 },
 };
+// A real extraction, in the AI service's shape. The engine reads other
+// field names entirely, so a fixture that is not shaped like this cannot
+// catch the translation going wrong.
+const EXTRACTION = {
+  document_type: "hospital_bill",
+  patient: { name: "Ada Patient", phone: null, email: null, address: null },
+  provider: { name: "Mercy General Hospital", phone: null, email: null, address: null },
+  insurer: { name: null, phone: null, email: null, address: null },
+  account_number: "ACC-77",
+  claim_number: null,
+  statement_date: "2026-07-01",
+  due_date: null,
+  date_of_service_start: "2026-06-18",
+  date_of_service_end: null,
+  total_charges: { amount: 5000, currency: "USD" },
+  insurance_paid: { amount: 0, currency: "USD" },
+  adjustments: { amount: 0, currency: "USD" },
+  patient_responsibility: { amount: 4500, currency: "USD" },
+  line_items: [
+    {
+      description: "ER visit",
+      service_code: "99284",
+      service_date: "2026-06-18",
+      quantity: 1,
+      charge: { amount: 500, currency: "USD" },
+      patient_responsibility: { amount: 100, currency: "USD" },
+      confidence: 0.8,
+    },
+  ],
+  detected_issues: [],
+  missing_fields: [],
+  confidence: 0.9,
+};
+
 const request = () => new Request("http://localhost/api/dashboard/cases/case-1/negotiation", { method: "POST" });
 
 function readyToStart({
   caseRow = OWN_CASE,
   fee = { processor_ref: "pi_1" },
-  extraction = { result: { total: 5000 } },
+  extraction = { result: EXTRACTION },
 }: {
   caseRow?: typeof OWN_CASE;
   fee?: { processor_ref: string } | null;
@@ -123,7 +157,22 @@ describe("POST /api/dashboard/cases/[id]/negotiation", () => {
     const res = await POST(request(), { params });
 
     expect(res.status).toBe(200);
-    expect(auditBill).toHaveBeenCalledWith({ total: 5000 });
+    // The engine's field names, not the extraction's. Passed through
+    // untranslated this audits as a $0 bill with no charges and reports
+    // no issues, which is how the mismatch went unnoticed.
+    expect(auditBill).toHaveBeenCalledWith({
+      provider_name: "Mercy General Hospital",
+      patient_name: "Ada Patient",
+      account_number: "ACC-77",
+      statement_date: "2026-07-01",
+      date_of_service: "2026-06-18",
+      total_billed: 5000,
+      patient_due: 4500,
+      is_itemized: true,
+      line_items: [
+        { description: "ER visit", cpt_code: "99284", date: "2026-06-18", quantity: 1, charge_amount: 500 },
+      ],
+    });
     expect(startNegotiation).toHaveBeenCalledWith(
       expect.objectContaining({
         initialOffer: 1200,

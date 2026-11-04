@@ -98,3 +98,52 @@ def test_fallback_letter_generation():
     assert "MGH-982410-A" in letter
     assert "$1,655.40" in letter
     assert "Duplicate Charge" in letter
+
+
+def test_unreadable_line_charges_are_flagged_not_passed_as_clean():
+    """A bill whose charges could not be read must not audit clean.
+
+    Every field in audit_bill is read with a default, so a caller using
+    the wrong field names produces a $0 bill with unpriced line items and
+    no findings. That is how the web app and this engine disagreed until
+    2026-11-04 -- the AI service sends {"charge": {"amount": n}} and
+    "service_code", this reads "charge_amount" and "cpt_code", and the
+    same bill audited as 2 issues one way and 0 the other, both HTTP 200.
+    """
+    auditor = BillAuditor()
+
+    result = auditor.audit_bill({
+        "provider_name": "Mercy General Hospital",
+        "total_billed": 2461.38,
+        "patient_due": 2461.38,
+        "is_itemized": True,
+        # The AI service's shape, which this engine cannot read.
+        "line_items": [
+            {"description": "ER visit", "service_code": "99284", "charge": {"amount": 1850.0}},
+            {"description": "CT head", "service_code": "70450", "charge": {"amount": 475.0}},
+        ],
+    })
+
+    issue_types = [issue["type"] for issue in result["issues"]]
+    assert "line_items_not_priced" in issue_types
+    assert result["issues_count"] >= 1
+    assert result["flagged_amount"] == pytest.approx(2461.38)
+
+
+def test_a_priced_bill_does_not_trip_the_unpriced_check():
+    auditor = BillAuditor()
+
+    result = auditor.audit_bill({
+        "provider_name": "Mercy General Hospital",
+        "total_billed": 2461.38,
+        "patient_due": 2461.38,
+        "is_itemized": True,
+        "line_items": [
+            {"description": "ER visit", "cpt_code": "99284", "date": "2026-06-18",
+             "quantity": 1, "charge_amount": 1850.0},
+        ],
+    })
+
+    issue_types = [issue["type"] for issue in result["issues"]]
+    assert "line_items_not_priced" not in issue_types
+    assert "summary_bill_restriction" not in issue_types
