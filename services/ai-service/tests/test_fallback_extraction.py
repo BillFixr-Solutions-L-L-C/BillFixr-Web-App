@@ -241,3 +241,31 @@ def test_pipeline_keeps_the_cheap_path_when_explicitly_asked_for_it() -> None:
     # on a bill that carries no money.
     assert FakeProvider.called is True
     assert response.model_used == "test/model"
+
+
+def test_ai_extraction_keeps_a_record_of_the_text_it_read() -> None:
+    """The model does not fill raw_text_excerpt; the pipeline must.
+
+    Without it an AI-read document carries no evidence of what was on the
+    page, so a misread cannot be told apart from a document that simply
+    did not say it.
+    """
+
+    class FakeProvider:
+        is_configured = True
+        provider_name = "openrouter"
+        model = "test/model"
+
+        def extract_bill(self, text: str) -> MedicalBillExtraction:
+            return MedicalBillExtraction(document_type=DocumentType.hospital_bill)
+
+    text = "Mercy General Hospital\nACCOUNT NUMBER: REGEX123\nAMOUNT DUE: $145.67\n"
+
+    response = ExtractionPipeline(Settings(), FakeProvider()).extract_from_text(
+        case_id=uuid4(),
+        text=text,
+        use_ai=True,
+    )
+
+    assert response.model_used == "test/model"
+    assert response.extraction.raw_text_excerpt == text

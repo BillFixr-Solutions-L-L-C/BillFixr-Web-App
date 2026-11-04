@@ -27,6 +27,13 @@ class ExtractionPipeline:
             if should_call_ai:
                 try:
                     extraction = self.provider.extract_bill(text)
+                    # The model does not fill raw_text_excerpt, and the
+                    # deterministic extraction it replaces did. Without
+                    # this there is no record of the text the extraction
+                    # was made from, which is the only way to tell a
+                    # misread from a document that never said it.
+                    if not extraction.raw_text_excerpt:
+                        extraction.raw_text_excerpt = text[:4000]
                     model_used = self.provider.model
                     warnings.append(f"ai_provider={self.provider.provider_name}")
                     warnings.append("ai_extraction_used=true")
