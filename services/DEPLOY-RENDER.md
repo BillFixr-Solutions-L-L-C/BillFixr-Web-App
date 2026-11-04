@@ -123,13 +123,75 @@ So `advocate@billfixr.com` needs to be a real mailbox at
 businessidentity.llc (the mail host — note that the registrar, Northwest
 Registered Agent, is a different company), with IMAP credentials.
 
+### What is already in place
+
+**No DNS change is needed.** Checked live:
+
+- `billfixr.com` MX already points to `mailserver.businessidentity.llc`,
+  so the domain's mail is already hosted there. Nothing in the zone needs
+  editing — which matters, because that zone has a wildcard `*` A record
+  that has silently masked a missing record before.
+- SPF is already `v=spf1 a mx include:spf.postal.businessidentity.llc
+  include:amazonses.com ~all`. The `amazonses.com` include is what Resend
+  sends through.
+- `billfixr.com` is **verified** in Resend (region `us-east-1`), so
+  sending as `advocate@billfixr.com` works the moment the mailbox exists.
+  No new Resend domain or webhook.
+
+The whole task is therefore one thing: **have a mailbox created on that
+server.** It is Postfix + Dovecot on Ubuntu (from the service banners),
+i.e. a hand-administered mail server with no self-service panel — so this
+is a request to whoever administers businessidentity.llc, not something
+that can be done from the registrar's DNS panel.
+
+### The settings, confirmed by probing the server
+
+| Setting | Value |
+| --- | --- |
+| IMAP host | `mailserver.businessidentity.llc`, port **993**, implicit TLS |
+| SMTP host | `mailserver.businessidentity.llc`, port **465**, implicit TLS |
+| Auth | `AUTH=PLAIN` / `AUTH=LOGIN` over TLS |
+| Username | expected to be the full address, `advocate@billfixr.com` |
+
+Port **587 is closed** on this host, and plain IMAP **143 is closed** too.
+Both hosts and both ports are now set in `render.yaml`; only `SMTP_USER`
+and `SMTP_PASSWORD` are entered at approval time.
+
+That the code copes with 465 is not luck but it is close: the dispatcher
+uses `SMTP_SSL` when `SMTP_PORT` is 465, and otherwise tries STARTTLS and
+falls back to 465 only after an 8-second connection timeout. Leaving
+`SMTP_PORT` unset would have worked while wasting 8 seconds on every
+fallback send.
+
 **The variable names are not what you would guess:** the poller
 authenticates to IMAP with `SMTP_USER` and `SMTP_PASSWORD`. There is no
 `IMAP_USER`. Setting one does nothing, and the poller stays silently
 unconfigured — no error, just a negotiation that never sees a reply.
 
-The same pair also arms the SMTP fallback, so set `SMTP_HOST` to the mail
-host's SMTP server rather than leaving it on the `smtp.gmail.com` default.
+### What to ask for
+
+Plain wording, since the mailbox request may be relayed by someone
+non-technical:
+
+> Please create a new mailbox on the billfixr.com mail server:
+> **advocate@billfixr.com**. We need a real mailbox that can receive mail
+> and be read over IMAP, not a forwarder or an alias — an alias cannot be
+> logged into, and our system has to sign in to read replies. Please send
+> the username and password.
+
+An alias or forward is the likely wrong turn: it would deliver mail
+somewhere readable by a person while leaving the poller with nothing to
+log into, which looks like a working mailbox right up until no reply is
+ever picked up.
+
+### Checking it before the engine goes anywhere near it
+
+Once the credentials exist, the mailbox can be verified directly — log in
+over IMAP, confirm the account opens and `INBOX` is selectable, and send
+one message to it and read it back. Worth doing before deploying: an
+authentication failure here is one of the two silent failures in this
+whole system, and `/api/health` reports `replies_read` from whether the
+variables are *set*, not from whether they *work*.
 
 ### If the mailbox cannot be provisioned in time
 

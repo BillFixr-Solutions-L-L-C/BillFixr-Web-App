@@ -110,20 +110,35 @@ services:
       # untracked SMTP.
       - key: ADVOCATE_EMAIL
         value: advocate@billfixr.com
+      # The mail host is Postfix + Dovecot on Ubuntu at
+      # mailserver.businessidentity.llc, which offers IMAP on 993 and SMTP
+      # on implicit TLS 465 only — 587 is closed. Both ports are set
+      # explicitly because the defaults in code are the Gmail ones:
+      # SMTP_PORT defaults to 587, and the dispatcher only reaches 465
+      # after an 8-second connection timeout on its STARTTLS attempt.
+      - key: SMTP_PORT
+        value: "465"
+      - key: IMAP_PORT
+        value: "993"
       # Where replies are read from. This mailbox must be the one that
       # ADVOCATE_EMAIL delivers to, or replies are never seen.
       #
       # Note the names: the inbound poller authenticates to IMAP with
       # SMTP_USER and SMTP_PASSWORD. There is no IMAP_USER — setting one
       # does nothing and the poller stays silently unconfigured.
+      # Both hosts are the domain's existing mail server, confirmed from
+      # the live MX record for billfixr.com. A hostname is not a secret,
+      # and leaving these to be typed by hand is how the poller ends up
+      # silently unconfigured — so they are set here and only the
+      # credentials are entered at approval time.
       - key: IMAP_HOST
-        sync: false
+        value: mailserver.businessidentity.llc
+      # The same credentials also arm the SMTP fallback used when Resend
+      # is unavailable. The code's default is smtp.gmail.com, which would
+      # fail for this mailbox.
+      - key: SMTP_HOST
+        value: mailserver.businessidentity.llc
       - key: SMTP_USER
         sync: false
       - key: SMTP_PASSWORD
-        sync: false
-      # The same pair also arms the SMTP fallback used when Resend is
-      # unavailable, so point this at the real mail host rather than
-      # leaving it on the gmail.com default, which would fail.
-      - key: SMTP_HOST
         sync: false
