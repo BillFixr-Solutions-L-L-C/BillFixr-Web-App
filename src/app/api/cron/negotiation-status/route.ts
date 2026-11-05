@@ -11,6 +11,12 @@ import { isBackendConfigured } from "@/lib/aiStack";
 // The per-case negotiation GET reconciles a case when someone opens it;
 // this covers the ones nobody opens, so the "Your provider responded"
 // email does not wait on the customer happening to visit.
+//
+// Daily, not hourly: the Vercel account is on Hobby, which rejects any
+// cron expression that would run more than once a day (a deploy with
+// `0 */4 * * *` was refused outright). Reconcile-on-read carries the
+// common case -- a customer who opens their case sees the truth
+// immediately -- so the sweep is the backstop, not the main path.
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
