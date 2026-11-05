@@ -18,9 +18,9 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app import readiness
 from app.ai.provider import ExtractionProvider
 from app.auth import Principal, ensure_owner_access, require_roles
-from app import readiness
 from app.casework import analyze_case, draft_communication
 from app.config import Settings, get_settings
 from app.contracts import (

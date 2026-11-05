@@ -8,7 +8,6 @@ from app.contracts import (
     ValidationSeverity,
 )
 
-
 # The document types that are expected to state money. A collection
 # letter or a financial assistance form is not, so neither is held to it.
 _CHARGE_BEARING_TYPES = frozenset(

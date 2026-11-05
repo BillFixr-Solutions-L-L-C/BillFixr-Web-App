@@ -11,11 +11,11 @@ from app.config import Settings
 
 
 def settings_of(tmp_path, **overrides):
-    base = dict(
-        local_api_key="service-key",
-        openrouter_api_key="or-key",
-        storage_encryption_key="enc-key",
-    )
+    base = {
+        "local_api_key": "service-key",
+        "openrouter_api_key": "or-key",
+        "storage_encryption_key": "enc-key",
+    }
     base.update(overrides)
     return Settings(
         storage_dir=tmp_path / "data",

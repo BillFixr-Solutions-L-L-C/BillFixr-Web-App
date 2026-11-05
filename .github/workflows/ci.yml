@@ -49,6 +49,61 @@ jobs:
       # also covers files outside Next's own build (e.g. *.test.ts).
       - run: npm run typecheck
 
+  # The two Python services under services/ were not covered by CI at all
+  # until 2026-11-05: `npm test` never reaches them, so 140 tests only ever
+  # ran on someone's laptop. Both services are deployed to Render and the
+  # web app now calls them in production, so a regression here is a
+  # production regression.
+  #
+  # Deliberately NOT a dependency of the deploy jobs below. Those ship the
+  # Next.js app to Vercel; the Python services deploy separately to Render.
+  # Blocking a web hotfix on an unrelated engine test failure would be a
+  # coupling that does not exist in the deploy path. Make these required
+  # status checks in branch protection instead — that is what stops a red
+  # suite being merged, without tying together two things that ship apart.
+  python:
+    name: Python tests (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      # Both services are reported even when the first one fails, so a
+      # failure in one does not hide the state of the other.
+      fail-fast: false
+      matrix:
+        include:
+          - service: ai-service
+            install: pip install -e ".[dev]"
+            lint: ruff check .
+            deps: services/ai-service/pyproject.toml
+          - service: automation-engine
+            install: pip install -r requirements-dev.txt
+            lint: ""
+            deps: services/automation-engine/requirements*.txt
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # 3.11 is this project's floor (ai-service requires-python >=3.11)
+      # and matches the Dockerfiles the Render services are built from.
+      # cache-dependency-path is explicit because this step runs from the
+      # repo root (`defaults.run.working-directory` applies to `run`, not
+      # to actions), so pip's default lookup would not find the service's
+      # own dependency file.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: ${{ matrix.deps }}
+
+      - run: ${{ matrix.install }}
+
+      # Only ai-service configures ruff (pyproject.toml [tool.ruff]).
+      - if: matrix.lint != ''
+        run: ${{ matrix.lint }}
+
+      - run: pytest -q
+
   # Deploys intentionally do NOT use `vercel pull` + `vercel build` +
   # `vercel deploy --prebuilt` (the pattern Vercel's own docs lead with).
   # That pattern builds locally on the runner, and this project has env
