@@ -34,11 +34,11 @@ def test_start_without_commitment_creates_nothing():
 def test_fees_endpoint_reports_the_defaults():
     fees = client.get("/api/fees").json()
     assert fees["commitment_fee"] == 20.0
-    assert fees["completion_fee_rate"] == 0.10
+    assert fees["completion_fee_rate"] == 0.20
 
 
 def test_case_fee_rate_and_payment_references_are_kept():
-    started = _start(commitment_paid=True, commitment_payment_ref="pi_commit_1", completion_fee_rate=0.20).json()
+    started = _start(commitment_paid=True, commitment_payment_ref="pi_commit_1", completion_fee_rate=0.30).json()
     assert started["commitment_payment_ref"] == "pi_commit_1"
     neg_id = started["id"]
     client.post(f"/api/negotiations/{neg_id}/accept", json={"accepted_amount": 149.99})
@@ -48,7 +48,8 @@ def test_case_fee_rate_and_payment_references_are_kept():
     )
     neg = client.get(f"/api/negotiations/{neg_id}").json()
     assert neg["status"] == "AWAITING_COMPLETION_FEE"
-    assert neg["completion_fee"] == 371.0  # 20% of 1,850.51 = 370.10, rounded up
+    # 0.30, not the 0.20 default, so this still fails if the per-case rate is ignored.
+    assert neg["completion_fee"] == 556.0  # 30% of 1,850.51 = 555.15, rounded up
 
     paid = client.post(f"/api/negotiations/{neg_id}/pay/completion", json={"payment_reference": "pi_done_1"})
     assert paid.status_code == 200

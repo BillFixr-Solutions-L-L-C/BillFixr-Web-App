@@ -209,7 +209,7 @@ def test_revised_bill_pdf_is_read_and_locked_until_paid():
     assert resp.status_code == 200
     neg = resp.json()["negotiation"]
     assert neg["status"] == "AWAITING_COMPLETION_FEE"
-    assert neg["completion_fee"] == 186.0  # 10% of 1,850.51, rounded up
+    assert neg["completion_fee"] == 371.0  # 20% of 1,850.51 = 370.10, rounded up
     assert neg["revised_bill_has_pdf"] is True
     assert neg["revised_bill_check"]["passed"] is True
     assert "revised_bill_pdf_path" not in neg

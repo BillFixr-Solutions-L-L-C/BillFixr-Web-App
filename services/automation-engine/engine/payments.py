@@ -14,7 +14,10 @@ from typing import Optional
 COMMITMENT_FEE = float(os.getenv("COMMITMENT_FEE", "20"))
 
 # Charged when the hospital has sent the revised bill: a share of savings, rounded up to the next dollar.
-COMPLETION_FEE_RATE = float(os.getenv("COMPLETION_FEE_RATE", "0.10"))
+# 0.20 is the rate docs/FEES.md documents and the site quotes customers. It was 0.10 here, which meant a
+# deploy that did not set COMPLETION_FEE_RATE charged half the documented fee and reported it as correct --
+# the blueprints pin the env var, but a default that can only be wrong is not worth keeping as a safety net.
+COMPLETION_FEE_RATE = float(os.getenv("COMPLETION_FEE_RATE", "0.20"))
 
 
 def savings_amount(total_billed: float, settled_amount: float) -> float:
@@ -23,7 +26,7 @@ def savings_amount(total_billed: float, settled_amount: float) -> float:
 
 
 def completion_fee(total_billed: float, settled_amount: float, rate: Optional[float] = None) -> float:
-    """Completion fee = a share of savings (default 10%), rounded up to the next whole dollar."""
+    """Completion fee = a share of savings (default 20%), rounded up to the next whole dollar."""
     savings = savings_amount(total_billed, settled_amount)
     applied_rate = COMPLETION_FEE_RATE if rate is None else float(rate)
     # Round to cents before ceiling so float noise (e.g. 20.000000000000004) doesn't add a dollar.
