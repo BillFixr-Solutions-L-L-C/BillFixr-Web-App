@@ -112,6 +112,46 @@ export function describeNegotiationStatus(status: string): NegotiationSummary {
   );
 }
 
+// Whether the provider has actually written back, which decides if the
+// customer sees the "response" view or is still waiting.
+//
+// This replaced `cases.status === 'response_received'`, which only the
+// (dev) simulate button ever set — so the one thing that moved a case to
+// "the provider replied" was the customer clicking a button themselves.
+// The engine knows the real answer because it reads the provider's email.
+//
+// All 16 are listed, as everywhere else in this file: a default here
+// would either claim a reply that never came or hide one that did. The
+// four false cases are the ones where nothing has come back from the
+// provider — DISPATCHED and IN_REVIEW are still waiting, HIPAA_AUTH is
+// our own blocker, and CLOSED_NO_RESPONSE is the explicit silence.
+const PROVIDER_RESPONDED: Record<AutomationNegotiationStatus, boolean> = {
+  DISPATCHED: false,
+  IN_REVIEW: false,
+  HIPAA_AUTH_PENDING: false,
+  CLOSED_NO_RESPONSE: false,
+  REPLY_RECEIVED: true,
+  COUNTER_OFFER_RECEIVED: true,
+  // We only counter something they said, so a counter-offer going out
+  // means one came in.
+  COUNTER_OFFER_SENT: true,
+  DISPUTE_ESCALATION: true,
+  PROVIDER_NO_ERROR: true,
+  FINANCIAL_ASSISTANCE_REQUIRED: true,
+  ITEMIZED_BILL_RECEIVED: true,
+  HOSPITAL_ACCEPTED: true,
+  HELD_FOR_REVIEW: true,
+  SETTLEMENT_AGREED: true,
+  AWAITING_COMPLETION_FEE: true,
+  COMPLETED: true,
+};
+
+export function providerHasResponded(status: string): boolean {
+  // An unknown status is treated as "not yet": claiming a reply we cannot
+  // substantiate is the worse of the two errors.
+  return PROVIDER_RESPONDED[status as AutomationNegotiationStatus] ?? false;
+}
+
 // The savings the provider has actually agreed to, which is not the same
 // as the audit's estimate and must never be shown as if it were. Null
 // until a settlement exists.

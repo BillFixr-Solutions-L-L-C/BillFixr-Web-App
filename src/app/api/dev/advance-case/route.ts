@@ -24,18 +24,21 @@ import { escapeHtml } from "@/lib/html";
 // and create-intent's zero-fee branch (where the amount owed is under
 // Stripe's minimum charge, so no PaymentIntent exists to fire a webhook).
 // Nothing in the UI ever requested it through this route.
-const ALLOWED_STATUSES = new Set(["awaiting_response", "response_received"]);
+//
+// `response_received` was removed from this list on 2026-11-05. It was
+// reachable from the "(dev) simulate provider response" button, which
+// meant the only thing that ever marked a provider as having replied was
+// the customer saying so. The engine reads the provider's actual email,
+// so that status is now written server-side from the engine's own view —
+// see src/lib/caseStatusSync.ts. What is left here is the post-scan
+// transition in the upload flow, which still has no real trigger.
+const ALLOWED_STATUSES = new Set(["awaiting_response"]);
 
 const STATUS_EMAIL_CONTENT: Record<string, { subject: string; heading: string; body: string }> = {
   awaiting_response: {
     subject: "Your appeal letter has been sent",
     heading: "Your appeal letter is on its way",
     body: "We've sent your appeal letter to your provider on your behalf. We'll keep following up automatically and let you know as soon as there's a response.",
-  },
-  response_received: {
-    subject: "Your provider responded",
-    heading: "Your provider responded",
-    body: "Good news - your provider has responded to your case. Review the details and next steps from your dashboard.",
   },
 };
 

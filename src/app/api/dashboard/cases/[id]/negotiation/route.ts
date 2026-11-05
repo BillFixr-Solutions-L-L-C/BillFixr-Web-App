@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { auditBill, getNegotiation, startNegotiation } from "@/lib/automation-engine";
 import { toEngineBillData } from "@/lib/engineBillData";
+import { syncCaseFromNegotiation } from "@/lib/caseStatusSync";
 import type { AiMedicalBillExtraction } from "@/types/ai";
 import { isBackendConfigured } from "@/lib/aiStack";
 
@@ -19,6 +20,9 @@ import { isBackendConfigured } from "@/lib/aiStack";
 type CaseRow = {
   id: string;
   user_id: string;
+  // Read so the GET can reconcile it against the engine's negotiation
+  // status — see syncCaseFromNegotiation.
+  status: string;
   bill_id: string | null;
   negotiation_id: string | null;
 };
@@ -38,7 +42,7 @@ async function loadOwnedCase(id: string): Promise<OwnedCase> {
 
   const { data: caseRow } = await supabase
     .from("cases")
-    .select("id, user_id, bill_id, negotiation_id")
+    .select("id, user_id, status, bill_id, negotiation_id")
     .eq("id", id)
     .single();
   // One answer for "no such case" and "not yours": an id that is not
@@ -63,7 +67,20 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   try {
-    return NextResponse.json(await getNegotiation(owned.caseRow.negotiation_id));
+    const negotiation = await getNegotiation(owned.caseRow.negotiation_id);
+
+    // Reconcile on read: the engine is the only thing that knows whether
+    // the provider replied, and this is the call that asks it. Doing it
+    // here means opening a case advances it, rather than waiting for the
+    // nightly cron. A failure to sync must not fail the read — the
+    // customer still gets the engine's live status either way.
+    try {
+      await syncCaseFromNegotiation(createAdminClient(), owned.caseRow, negotiation);
+    } catch (syncError) {
+      console.error("Could not sync case status for", id, syncError);
+    }
+
+    return NextResponse.json(negotiation);
   } catch (err) {
     console.error("Could not read negotiation for case", id, err);
     return NextResponse.json({ error: "The negotiation service is unavailable." }, { status: 502 });

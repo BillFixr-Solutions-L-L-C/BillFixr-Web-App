@@ -12,7 +12,7 @@ import { getBillDocuments, type BillDocument } from "@/lib/billDocuments";
 import { buildCaseDocumentRows, type CaseDocumentRow } from "@/lib/caseDocuments";
 import { summarizeLetterEvents, describeLetterTracking, type LetterEvent } from "@/lib/letterTracking";
 import { COMPLETED_STATUSES } from "@/lib/caseStatus";
-import { agreedSavings, clientNotices, describeNegotiationStatus } from "@/lib/negotiationStatus";
+import { agreedSavings, clientNotices, describeNegotiationStatus, providerHasResponded } from "@/lib/negotiationStatus";
 import type { AutomationNegotiation } from "@/types/automation-engine";
 
 // "letter"/"summary" are gone: the provider's reply is a row in the
@@ -50,6 +50,11 @@ function BackToCasesButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+// `response_received` is no longer set by anything in the browser. It is
+// written server-side by syncCaseFromNegotiation, from the engine's own
+// reading of the provider's reply — see src/lib/caseStatusSync.ts. It is
+// still mapped here because cases carry it, including the ones advanced
+// by the dev button this replaced.
 function viewForStatus(status: string): View {
   if (status === "response_received" || status === "resolved" || status === "payment_pending" || status === "paid" || status === "closed") {
     return "received";
@@ -212,7 +217,19 @@ export default function ActiveCasePage() {
       if (cancelled) return;
       // A failure here means we cannot say where the case stands, so the
       // page shows nothing rather than a stale or invented status.
-      setNegotiation(res.ok ? ((await res.json()) as AutomationNegotiation) : null);
+      const fetched = res.ok ? ((await res.json()) as AutomationNegotiation) : null;
+      setNegotiation(fetched);
+
+      // That request also reconciles cases.status server-side, so the row
+      // we loaded can already be out of date. Reflecting it here saves a
+      // refetch and keeps the Response step and the list column in step
+      // with what the engine just told us.
+      if (fetched && providerHasResponded(fetched.status) && viewForStatus(selectedCase.status) !== "received") {
+        setCases((prev) =>
+          prev.map((c) => (c.id === selectedCase.id ? { ...c, status: "response_received" } : c)),
+        );
+        setView("received");
+      }
     })();
     return () => {
       cancelled = true;
@@ -241,24 +258,6 @@ export default function ActiveCasePage() {
     setPaymentError(null);
   }
 
-  async function advanceCase(toStatus: "response_received") {
-    if (!selectedCaseId) return;
-    const res = await fetch("/api/dev/advance-case", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caseId: selectedCaseId, toStatus }),
-    });
-    if (!res.ok) {
-      console.error(`Failed to advance case to ${toStatus}:`, await res.text());
-      return;
-    }
-    setCases((prev) => prev.map((c) => (c.id === selectedCaseId ? { ...c, status: toStatus } : c)));
-  }
-
-  async function handleSimulateProviderResponse() {
-    await advanceCase("response_received");
-    setView("received");
-  }
 
   // Real success-fee flow — only actually chargeable once the case has
   // real errors_detected/savings_found (Phase 2/AI territory, always null
@@ -748,16 +747,6 @@ export default function ActiveCasePage() {
       {/* The provider's reply is a row in the document list above, not a
           panel repeated underneath it. The route out of this screen is
           "Check and proceed" on the New Bill. */}
-      {view === "pending" && (
-        <button
-          type="button"
-          onClick={handleSimulateProviderResponse}
-          className="mt-6 text-xs text-gray-300 hover:text-gray-400"
-        >
-          (dev) simulate provider response
-        </button>
-      )}
-
       {/* Figma 817:4455 puts this directly under Provider Response once the
           provider's adjusted bill has arrived. "Check and proceed" is what
           takes the customer to the bill comparison. */}

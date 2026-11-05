@@ -87,10 +87,21 @@ describe("POST /api/dev/advance-case", () => {
     adminMock.queueResult("cases", { data: null, error: null });
     serverMock.queueResult("profiles", { data: { name: "Jane", email: "jane@example.com" }, error: null });
 
-    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "response_received" }));
+    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "awaiting_response" }));
 
     expect(res.status).toBe(200);
     expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: "jane@example.com" }));
+  });
+
+  // response_received is no longer self-advanceable: it is written only by
+  // syncCaseFromNegotiation, from the engine's reading of the provider's
+  // reply. A customer asking for it here is now a bad request.
+  it("refuses response_received, which only the engine sync may set", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+
+    const res = await POST(makeRequest({ caseId: "case-1", toStatus: "response_received" }));
+
+    expect(res.status).toBe(400);
   });
 
   it("still returns ok when the status-change email fails to send", async () => {
