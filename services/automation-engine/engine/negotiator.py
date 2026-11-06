@@ -123,6 +123,70 @@ def autopilot_blocked(neg: Dict[str, Any]) -> bool:
     return any(issue.get("confidence") != "high" for issue in issues)
 
 
+def review_blockers(neg: Dict[str, Any]) -> List[str]:
+    """The findings holding this negotiation, so a hold can say why rather than just stopping."""
+    issues = (neg.get("audit_summary") or {}).get("issues", [])
+    return [
+        (issue.get("description") or issue.get("summary") or issue.get("category") or "unnamed finding")
+        for issue in issues
+        if issue.get("confidence") != "high"
+    ]
+
+
+def hold_for_review(negotiation_id: str, neg: Dict[str, Any], pending_settlement: Optional[float] = None) -> None:
+    """Parks a negotiation for a person, keeping whatever autopilot was about to do.
+
+    `pending_settlement` is the figure autopilot would have accepted. It has
+    to be stored: the hold used to write the status alone, so the amount the
+    hospital had agreed to was gone and the settlement could not be finished
+    later even by hand. approve_held_settlement() reads it back.
+    """
+    from datetime import datetime, timezone
+
+    blockers = review_blockers(neg)
+    fields: Dict[str, Any] = {
+        "status": "HELD_FOR_REVIEW",
+        "held_for_review_at": datetime.now(timezone.utc).isoformat(),
+        "held_for_review_reason": "; ".join(blockers)[:2000] or "a finding still needs review",
+    }
+    if pending_settlement is not None:
+        fields["pending_settlement_amount"] = float(pending_settlement)
+    NegotiationRepository.update_fields(negotiation_id, **fields)
+
+    if pending_settlement is not None:
+        add_client_notice(
+            negotiation_id,
+            "Hospital agreed - we are checking it before confirming",
+            f"The hospital agreed to ${float(pending_settlement):,.2f}. One of our findings still needs a "
+            "person to review it, so we are confirming the details before we accept on your behalf. "
+            "Nothing is lost and no deadline is running.",
+        )
+
+
+def approve_held_settlement(neg: Dict[str, Any]) -> Dict[str, Any]:
+    """Completes a settlement a reviewer has approved, at the figure that was held.
+
+    Deliberately refuses to invent an amount: if nothing was pending there
+    is no agreed figure to accept, and guessing one would commit the client
+    to a number no hospital ever offered.
+    """
+    if neg.get("status") != "HELD_FOR_REVIEW":
+        raise ValueError(f"Nothing is held for review on this negotiation (status is {neg.get('status')}).")
+
+    pending = neg.get("pending_settlement_amount")
+    if pending is None:
+        raise ValueError(
+            "This negotiation is held for review but carries no agreed amount, "
+            "so there is nothing to accept."
+        )
+
+    receipt = settle_and_request_revised_bill(neg, float(pending))
+    # Cleared only after the settlement is recorded, so a failure part way
+    # through leaves the figure in place for another attempt.
+    NegotiationRepository.update_fields(neg["id"], pending_settlement_amount=None)
+    return receipt
+
+
 def add_client_notice(negotiation_id: str, subject: str, body: str) -> None:
     """Shows the client a notice in the case timeline. Notices never leave the app."""
     NegotiationRepository.add_message(
@@ -545,7 +609,8 @@ Analyze this hospital response according to the JSON schema.
         if cat == "DISPUTE_REJECTED" and auto_pilot_enabled and neg.get("status") not in STOP_FOLLOW_UP_STATUSES:
             if autopilot_blocked(neg):
                 analysis_data["held_for_review"] = True
-                NegotiationRepository.update_fields(negotiation_id, status="HELD_FOR_REVIEW")
+                analysis_data["held_for_review_reason"] = review_blockers(neg)
+                hold_for_review(negotiation_id, neg)
             else:
                 send_dispute_rebuttal(neg)
                 analysis_data["auto_pilot_executed"] = True
@@ -586,7 +651,9 @@ Analyze this hospital response according to the JSON schema.
         if auto_pilot_enabled and is_great_deal and neg.get("status") not in STOP_FOLLOW_UP_STATUSES:
             if autopilot_blocked(neg):
                 analysis_data["held_for_review"] = True
-                NegotiationRepository.update_fields(negotiation_id, status="HELD_FOR_REVIEW")
+                analysis_data["held_for_review_reason"] = review_blockers(neg)
+                analysis_data["pending_settlement_amount"] = accepted_figure
+                hold_for_review(negotiation_id, neg, pending_settlement=accepted_figure)
                 print(f"[AUTO-PILOT HOLD] {tracking_code}: offer ${accepted_figure:,.2f} held until findings are reviewed.")
             else:
                 print(f"[AUTO-PILOT] {tracking_code}: accepting ${accepted_figure:,.2f} and requesting a revised bill.")

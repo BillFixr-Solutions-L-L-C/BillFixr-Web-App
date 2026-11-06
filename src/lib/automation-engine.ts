@@ -49,10 +49,28 @@ export async function automationEngineFetch(path: string, init?: RequestInit): P
   });
 }
 
+/** Thrown when the engine answers a call with a non-2xx status. Carries the
+ *  status so a caller can tell a refusal it should pass on (409: nothing to
+ *  approve) from the engine simply being broken or unreachable. */
+export class AutomationEngineError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly detail: string,
+  ) {
+    super(message);
+    this.name = "AutomationEngineError";
+  }
+}
+
 async function readJson<T>(response: Response, action: string): Promise<T> {
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
-    throw new Error(`Automation engine ${action} failed with status ${response.status}: ${detail}`);
+    throw new AutomationEngineError(
+      `Automation engine ${action} failed with status ${response.status}: ${detail}`,
+      response.status,
+      detail,
+    );
   }
 
   return (await response.json()) as T;
@@ -140,6 +158,20 @@ export async function acceptOffer(negotiationId: string, acceptedAmount?: number
     jsonRequest("POST", { accepted_amount: acceptedAmount ?? null }),
   );
   const data = await readJson<{ negotiation: AutomationNegotiation }>(response, "accept offer");
+  return data.negotiation;
+}
+
+// Releases a negotiation the engine parked for review, settling at the figure the hospital actually
+// agreed to. Takes no amount on purpose: the engine stores what was agreed when it held the case, and
+// that is the only number it may accept. Use acceptOffer to settle at a figure of your own choosing.
+//
+// The engine answers 409 when nothing is held, or when a hold carries no agreed amount.
+export async function approveHeldSettlement(negotiationId: string): Promise<AutomationNegotiation> {
+  const response = await automationEngineFetch(
+    `/api/negotiations/${negotiationId}/review/approve`,
+    jsonRequest("POST"),
+  );
+  const data = await readJson<{ negotiation: AutomationNegotiation }>(response, "approve held settlement");
   return data.negotiation;
 }
 

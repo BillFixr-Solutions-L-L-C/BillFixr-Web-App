@@ -21,7 +21,7 @@ from engine.audit_engine import BillAuditor
 from engine.letter_generator import LetterGenerator
 from engine.negotiator import NegotiationService, generate_hipaa_authorization
 from engine.negotiator import (
-    STOP_FOLLOW_UP_STATUSES, add_client_notice, autopilot_blocked,
+    STOP_FOLLOW_UP_STATUSES, add_client_notice, approve_held_settlement, autopilot_blocked,
     process_revised_bill, receive_revised_bill, settle_and_request_revised_bill,
 )
 from engine.config import ADVOCATE_EMAIL
@@ -827,6 +827,34 @@ async def accept_hospital_settlement(negotiation_id: str, payload: AcceptSettlem
         return {"status": "success", "receipt": receipt, "negotiation": updated}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/negotiations/{negotiation_id}/review/approve")
+async def approve_review_hold(negotiation_id: str):
+    """Releases a negotiation AUTOPILOT_HOLD_FOR_REVIEW parked, at the figure that was held.
+
+    The hold exists so nothing is sent off an audit a person has not checked.
+    What it must not do is lose the outcome: before pending_settlement_amount
+    existed, a hospital accepting the offer left the case at HELD_FOR_REVIEW
+    with no agreed figure recorded, so no completion fee was ever calculated
+    and no revised bill was ever asked for. The case looked answered and was
+    finished.
+
+    Separate from /accept on purpose. /accept takes an amount from the
+    caller; this one takes none, because the only figure it may settle at is
+    the one the hospital actually agreed to.
+    """
+    neg = NegotiationRepository.get_negotiation(negotiation_id)
+    if not neg:
+        raise HTTPException(status_code=404, detail="Negotiation not found.")
+    try:
+        receipt = approve_held_settlement(neg)
+    except ValueError as err:
+        raise HTTPException(status_code=409, detail=str(err))
+    return {
+        "status": "success",
+        "receipt": receipt,
+        "negotiation": NegotiationRepository.get_negotiation(negotiation_id),
+    }
 
 @app.post("/api/negotiations/sync-inbox")
 async def sync_inbox():
