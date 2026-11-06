@@ -1,0 +1,5891 @@
+{
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 12,
+  "results": [
+   {
+    "addresses": [
+     {
+      "address_1": "135 E SWAN ST",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CENTERVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "931-729-9000",
+      "postal_code": "370331417",
+      "state": "TN",
+      "telephone_number": "931-729-4500"
+     },
+     {
+      "address_1": "10 CADILLAC DR STE 400",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BRENTWOOD",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "370271001",
+      "state": "TN"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "RUSSELL",
+     "authorized_official_last_name": "ADKINS",
+     "authorized_official_telephone_number": "6153095668",
+     "authorized_official_title_or_position": "Senior Vice President",
+     "certification_date": "2023-10-11",
+     "enumeration_date": "2023-09-21",
+     "last_updated": "2023-10-11",
+     "organization_name": "AAH OF TENNESSEE I, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1695311524000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1697030605000",
+    "number": "1780462556",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS AT HOME",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "251E00000X",
+      "desc": "Home Health",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "301 N UNIVERSITY ST",
+      "address_2": "SUITE 101",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-396-5283",
+      "postal_code": "371303900",
+      "state": "TN",
+      "telephone_number": "615-396-5004"
+     },
+     {
+      "address_1": "301 N UNIVERSITY ST",
+      "address_2": "SUITE 101",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-396-5283",
+      "postal_code": "371303900",
+      "state": "TN",
+      "telephone_number": "615-396-5004"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "MSO",
+     "authorized_official_first_name": "MARK",
+     "authorized_official_last_name": "LYNN",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153965004",
+     "authorized_official_title_or_position": "Program Director",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2007-06-07",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1181241929000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162862000",
+    "number": "1780887679",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261Q00000X",
+      "desc": "Clinic/Center",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "312-462-6293",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4100"
+     },
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "312-462-6293",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4100"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "GORDON",
+     "authorized_official_last_name": "FERGUSON",
+     "authorized_official_middle_name": "BORLAND",
+     "authorized_official_name_prefix": "Mr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153964101",
+     "authorized_official_title_or_position": "President and CEO",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2006-12-04",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL",
+     "organizational_subpart": "YES",
+     "parent_organization_legal_business_name": "SAINT THOMAS HEALTH SERVICES",
+     "status": "A"
+    },
+    "created_epoch": "1165251734000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162201000",
+    "number": "1164590386",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": "0000000100",
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_2": "ATTN: CANDACE WILSON",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4599"
+     },
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_2": "ATTN: CANDACE WILSON",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4599"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "LISA",
+     "authorized_official_last_name": "DAVIS",
+     "authorized_official_name_prefix": "Ms.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6152846845",
+     "authorized_official_title_or_position": "CFO",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2009-09-01",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL LAB",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1251820242000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162477000",
+    "number": "1538392089",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD HOSPITAL LAB",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "291U00000X",
+      "desc": "Clinical Medical Laboratory",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "437 ALEXIAN WAY",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "SIGNAL MOUNTAIN",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "373771954",
+      "state": "TN",
+      "telephone_number": "423-886-0100"
+     },
+     {
+      "address_1": "437 ALEXIAN WAY",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "SIGNAL MOUNTAIN",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "373771954",
+      "state": "TN"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "ERIN",
+     "authorized_official_last_name": "SHADBOLT",
+     "authorized_official_telephone_number": "3147293500",
+     "authorized_official_title_or_position": "CEO",
+     "certification_date": "2025-06-23",
+     "enumeration_date": "2005-12-14",
+     "last_updated": "2025-06-23",
+     "organization_name": "ALEXIAN VILLAGE OF TENNESSEE",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1134573991000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1750702268000",
+    "number": "1730164583",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION LIVING ALEXIAN VILLAGE TENNESSEE",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "313M00000X",
+      "desc": "Nursing Facility/Intermediate Care Facility",
+      "license": "102",
+      "primary": false,
+      "state": "TN",
+      "taxonomy_group": ""
+     },
+     {
+      "code": "314000000X",
+      "desc": "Skilled Nursing Facility",
+      "license": "102",
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "10 CADILLAC DR STE 400",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BRENTWOOD",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-373-4457",
+      "postal_code": "370271001",
+      "state": "TN",
+      "telephone_number": "615-637-9163"
+     },
+     {
+      "address_1": "10 CADILLAC DR STE 400",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "BRENTWOOD",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-373-4457",
+      "postal_code": "370271001",
+      "state": "TN",
+      "telephone_number": "615-637-9163"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "RUSSELL",
+     "authorized_official_last_name": "ADKINS",
+     "authorized_official_telephone_number": "6153095668",
+     "authorized_official_title_or_position": "SVP, Chief Legal OFficer",
+     "certification_date": "2023-02-07",
+     "enumeration_date": "2023-02-07",
+     "last_updated": "2023-02-07",
+     "organization_name": "ASCENSION AT HOME SNF AT HOME, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1675807673000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1675807673000",
+    "number": "1801593132",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "251B00000X",
+      "desc": "Case Management",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "PO BOX 102",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NOLENSVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371350102",
+      "state": "TN",
+      "telephone_number": "615-772-4789"
+     },
+     {
+      "address_1": "6032 CHRISTMAS DR",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "NOLENSVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371357458",
+      "state": "TN",
+      "telephone_number": "615-772-4789"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "MSN, APRN, ANP-BC",
+     "authorized_official_first_name": "SHARI",
+     "authorized_official_last_name": "BEAUREGARD",
+     "authorized_official_middle_name": "LEE",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6157724789",
+     "authorized_official_title_or_position": "Owner/Director",
+     "enumeration_date": "2011-04-03",
+     "last_updated": "2012-11-30",
+     "organization_name": "ASCENSION HEALTH AND WELLNESS, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1301847730000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1354304523000",
+    "number": "1821387515",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "363LA2200X",
+      "desc": "Nurse Practitioner, Adult Health",
+      "license": "15399",
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": "193400000X - Single Specialty Group"
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "10 CADILLAC DRIVE",
+      "address_2": "SUITE 400",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BRENTWOOD",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "370271001",
+      "state": "TN",
+      "telephone_number": "615-309-5668"
+     },
+     {
+      "address_1": "7235 BENTLEY RD STE 236",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "JACKSONVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "904-861-2612",
+      "postal_code": "322567506",
+      "state": "FL",
+      "telephone_number": "904-861-2612"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "RUSSELL",
+     "authorized_official_last_name": "ADKINS",
+     "authorized_official_telephone_number": "6153095668",
+     "authorized_official_title_or_position": "General Counsel and Secretary",
+     "certification_date": "2022-06-06",
+     "enumeration_date": "2020-11-20",
+     "last_updated": "2022-06-06",
+     "organization_name": "ASCENSION HEALTH AT HOME OF FLORIDA I, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1605887045000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1654532415000",
+    "number": "1811590961",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION AT HOME",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "251E00000X",
+      "desc": "Home Health",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1115 E GONZALEZ ST STE 10011003",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "PENSACOLA",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "850-502-5417",
+      "postal_code": "325036050",
+      "state": "FL",
+      "telephone_number": "850-266-7235"
+     },
+     {
+      "address_1": "10 CADILLAC DR STE 400",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BRENTWOOD",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-373-4457",
+      "postal_code": "370271001",
+      "state": "TN",
+      "telephone_number": "615-309-5668"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "RUSSELL",
+     "authorized_official_last_name": "ADKINS",
+     "authorized_official_telephone_number": "6153095668",
+     "authorized_official_title_or_position": "SVP, Chief Legal Officer",
+     "certification_date": "2022-06-20",
+     "enumeration_date": "2021-04-28",
+     "last_updated": "2022-06-20",
+     "organization_name": "ASCENSION HEALTH AT HOME OF FLORIDA II, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1619620722000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1655756112000",
+    "number": "1245812205",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION AT HOME",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "251E00000X",
+      "desc": "Home Health",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "2211 S HIGHWAY 77 STE 203A",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "LYNN HAVEN",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "850-588-4974",
+      "postal_code": "324444641",
+      "state": "FL",
+      "telephone_number": "850-250-1366"
+     },
+     {
+      "address_1": "10 CADILLAC DR STE 400",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BRENTWOOD",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "866-955-8538",
+      "postal_code": "370271001",
+      "state": "TN",
+      "telephone_number": "417-841-4834"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "RUSSELL",
+     "authorized_official_last_name": "ADKINS",
+     "authorized_official_middle_name": "G",
+     "authorized_official_telephone_number": "6159260340",
+     "authorized_official_title_or_position": "SVP, Chief Legal Officer",
+     "certification_date": "2024-10-28",
+     "enumeration_date": "2022-06-16",
+     "last_updated": "2024-10-28",
+     "organization_name": "ASCENSION HEALTH AT HOME OF FLORIDA III, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1655404024000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1730141990000",
+    "number": "1790415131",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION AT HOME",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "251E00000X",
+      "desc": "Home Health",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "101 PHYSICIANS WAY STE 114",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "LEBANON",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "370908134",
+      "state": "TN",
+      "telephone_number": "615-449-0990"
+     },
+     {
+      "address_1": "101 PHYSICIANS WAY STE 114",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "LEBANON",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-784-4719",
+      "postal_code": "370908134",
+      "state": "TN",
+      "telephone_number": "615-784-4718"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "KRISTEN",
+     "authorized_official_last_name": "O'CONNOR",
+     "authorized_official_telephone_number": "6153767315",
+     "authorized_official_title_or_position": "Officer/Authorized Official",
+     "certification_date": "2024-09-05",
+     "enumeration_date": "2021-03-25",
+     "last_updated": "2024-09-05",
+     "organization_name": "ASCENSION SAINT THOMAS LEBANON SURGERY CENTER LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1616696570000",
+    "endpoints": [
+     {
+      "address_1": "100 N 6th St Ste 900A",
+      "address_type": "DOM",
+      "affiliation": "Y",
+      "affiliationName": "Ability Network",
+      "city": "Minneapolis",
+      "contentTypeDescription": "",
+      "country_code": "US",
+      "country_name": "United States",
+      "endpoint": "https://esmd.abilitynetwork.com:8291/gateway/documentsubmission/2_0/NhinService/XDRRequest_Service",
+      "endpointDescription": "2.16.840.1.113883.3.667.2",
+      "endpointType": "CONNECT",
+      "endpointTypeDescription": "CONNECT URL",
+      "postal_code": "554031516",
+      "state": "MN",
+      "use": "OTHER",
+      "useDescription": "Other",
+      "useOtherDescription": "CMS esMD eMDR"
+     }
+    ],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1725569310000",
+    "number": "1063099190",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "LEBANON SURGERY CENTER",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261QA1903X",
+      "desc": "Clinic/Center, Ambulatory Surgical",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "30 BURTON HILLS BLVD STE 175",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "372156403",
+      "state": "TN",
+      "telephone_number": "615-988-2000"
+     },
+     {
+      "address_1": "509 HILLSBORO RD",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "FRANKLIN",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "370642123",
+      "state": "TN",
+      "telephone_number": "615-472-2139"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "RUDY",
+     "authorized_official_last_name": "BLANK",
+     "authorized_official_telephone_number": "6159882005",
+     "authorized_official_title_or_position": "CFO",
+     "certification_date": "2025-02-20",
+     "enumeration_date": "2025-02-20",
+     "last_updated": "2025-02-20",
+     "organization_name": "CROSSROADS URGENT CARE, PLLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1740090902000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1740090902000",
+    "number": "1881490845",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS URGENT CARE",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "207Q00000X",
+      "desc": "Family Medicine",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "261Q00000X",
+      "desc": "Clinic/Center",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": ""
+     },
+     {
+      "code": "261QU0200X",
+      "desc": "Clinic/Center, Urgent Care",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   }
+  ]
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension%2A&state=WY&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 1,
+  "results": [
+   {
+    "addresses": [
+     {
+      "address_1": "PO BOX 22496",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CHEYENNE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "307-635-1897",
+      "postal_code": "820032429",
+      "state": "WY",
+      "telephone_number": "307-287-1184"
+     },
+     {
+      "address_1": "1208 E PERSHING BLVD",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CHEYENNE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "307-635-1897",
+      "postal_code": "820013230",
+      "state": "WY",
+      "telephone_number": "307-287-1184"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "GARY",
+     "authorized_official_last_name": "VILLENEUVE",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "3072871184",
+     "authorized_official_title_or_position": "Business Directorr",
+     "enumeration_date": "2016-03-09",
+     "last_updated": "2017-02-08",
+     "organization_name": "ASCENSION HEALTH NETWORK, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1457574270000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1486583273000",
+    "number": "1255792883",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261QR0405X",
+      "desc": "Clinic/Center, Rehabilitation, Substance Use Disorder",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   }
+  ]
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension%2A&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 9,
+  "results": [
+   {
+    "addresses": [
+     {
+      "address_1": "135 E SWAN ST",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CENTERVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "931-729-9000",
+      "postal_code": "370331417",
+      "state": "TN",
+      "telephone_number": "931-729-4500"
+     },
+     {
+      "address_1": "10 CADILLAC DR STE 400",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BRENTWOOD",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "370271001",
+      "state": "TN"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "RUSSELL",
+     "authorized_official_last_name": "ADKINS",
+     "authorized_official_telephone_number": "6153095668",
+     "authorized_official_title_or_position": "Senior Vice President",
+     "certification_date": "2023-10-11",
+     "enumeration_date": "2023-09-21",
+     "last_updated": "2023-10-11",
+     "organization_name": "AAH OF TENNESSEE I, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1695311524000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1697030605000",
+    "number": "1780462556",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS AT HOME",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "251E00000X",
+      "desc": "Home Health",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "619 N ALAMEDA BLVD",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "LAS CRUCES",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "880052130",
+      "state": "NM",
+      "telephone_number": "575-405-7146"
+     },
+     {
+      "address_1": "101 N ALAMEDA BLVD STE 20",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "LAS CRUCES",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "880052611",
+      "state": "NM",
+      "telephone_number": "575-347-8810"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "MS, LMFT",
+     "authorized_official_first_name": "AARON",
+     "authorized_official_last_name": "ESPINOZA",
+     "authorized_official_telephone_number": "5753478810",
+     "authorized_official_title_or_position": "CEO",
+     "certification_date": "2023-08-01",
+     "enumeration_date": "2023-08-01",
+     "last_updated": "2023-08-01",
+     "organization_name": "AARON ESPINOZA LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1690904684000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1690904684000",
+    "number": "1467134437",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION THERAPY",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "106H00000X",
+      "desc": "Marriage & Family Therapist",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": "193400000X - Single Specialty Group"
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1675 HANCOCK RD",
+      "address_2": "SUITE 300",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CLERMONT",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "34711",
+      "state": "FL",
+      "telephone_number": "352-978-0722"
+     },
+     {
+      "address_1": "1675 HANCOCK RD",
+      "address_2": "SUITE 300",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CLERMONT",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "347117667",
+      "state": "FL"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "ADRIANNE",
+     "authorized_official_last_name": "FERGUSON",
+     "authorized_official_telephone_number": "3524329990",
+     "authorized_official_title_or_position": "Manager",
+     "enumeration_date": "2017-04-13",
+     "last_updated": "2019-06-17",
+     "organization_name": "AENDIRA MEDICAL LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1492110402000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1560807364000",
+    "number": "1275067555",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "CLERMONT URGENT CARE",
+      "type": "Doing Business As"
+     },
+     {
+      "code": "4",
+      "organization_name": "ASCENSION MEDICAL LLC",
+      "type": "Former Legal Business Name"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261QU0200X",
+      "desc": "Clinic/Center, Urgent Care",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "6701 AIRPORT BLVD STE D436",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MOBILE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "366086705",
+      "state": "AL",
+      "telephone_number": "251-266-1987"
+     },
+     {
+      "address_1": "6701 AIRPORT BLVD STE D436",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MOBILE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "251-266-2070",
+      "postal_code": "366086705",
+      "state": "AL",
+      "telephone_number": "251-266-1987"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "MIRANDA",
+     "authorized_official_last_name": "HEMM",
+     "authorized_official_telephone_number": "9044506004",
+     "authorized_official_title_or_position": "Enrollment Manager",
+     "certification_date": "2021-06-08",
+     "enumeration_date": "2021-06-29",
+     "last_updated": "2021-06-29",
+     "organization_name": "ALABAMA PROVIDENCE HEALTHCARE SERVICES",
+     "organizational_subpart": "YES",
+     "parent_organization_legal_business_name": "ALABAMA PROVIDENCE HEALTHCARE SERVICES",
+     "status": "A"
+    },
+    "created_epoch": "1624976762000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1624976762000",
+    "number": "1609446087",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION PROVIDENCE DIABETES MANAGEMENT PROGRAM",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "207RE0101X",
+      "desc": "Internal Medicine, Endocrinology, Diabetes & Metabolism",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "4005 RIPA AVE",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "SAINT LOUIS",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "631252378",
+      "state": "MO",
+      "telephone_number": "314-544-1111"
+     },
+     {
+      "address_1": "4005 RIPA AVE",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "SAINT LOUIS",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "631252378",
+      "state": "MO",
+      "telephone_number": "314-544-1111"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "KELLIE",
+     "authorized_official_last_name": "GRONEFELD",
+     "authorized_official_telephone_number": "3147293500",
+     "authorized_official_title_or_position": "COO",
+     "certification_date": "2024-06-28",
+     "enumeration_date": "2006-11-28",
+     "last_updated": "2024-06-28",
+     "organization_name": "ALEXIAN BROTHERS SHERBROOKE VILLAGE",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1164740448000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1719608705000",
+    "number": "1851467039",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION LIVING SHERBROOKE VILLAGE",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "314000000X",
+      "desc": "Skilled Nursing Facility",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "9301 N 76TH ST",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MILWAUKEE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "414-357-5106",
+      "postal_code": "532231074",
+      "state": "WI",
+      "telephone_number": "414-355-9300"
+     },
+     {
+      "address_1": "9255 N 76TH ST",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MILWAUKEE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "414-357-5106",
+      "postal_code": "532231058",
+      "state": "WI",
+      "telephone_number": "414-355-9300"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "ERIN",
+     "authorized_official_last_name": "SHADBOLT",
+     "authorized_official_telephone_number": "7155290366",
+     "authorized_official_title_or_position": "CEO",
+     "certification_date": "2025-11-04",
+     "enumeration_date": "2006-11-28",
+     "last_updated": "2025-11-04",
+     "organization_name": "ALEXIAN VILLAGE OF MILWAUKEE",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1164739549000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1762268865000",
+    "number": "1144396300",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION LIVING ALEXIAN VILLAGE MILWAUKEE",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "313M00000X",
+      "desc": "Nursing Facility/Intermediate Care Facility",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": ""
+     },
+     {
+      "code": "314000000X",
+      "desc": "Skilled Nursing Facility",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "437 ALEXIAN WAY",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "SIGNAL MOUNTAIN",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "373771954",
+      "state": "TN",
+      "telephone_number": "423-886-0100"
+     },
+     {
+      "address_1": "437 ALEXIAN WAY",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "SIGNAL MOUNTAIN",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "373771954",
+      "state": "TN"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "ERIN",
+     "authorized_official_last_name": "SHADBOLT",
+     "authorized_official_telephone_number": "3147293500",
+     "authorized_official_title_or_position": "CEO",
+     "certification_date": "2025-06-23",
+     "enumeration_date": "2005-12-14",
+     "last_updated": "2025-06-23",
+     "organization_name": "ALEXIAN VILLAGE OF TENNESSEE",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1134573991000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1750702268000",
+    "number": "1730164583",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION LIVING ALEXIAN VILLAGE TENNESSEE",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "313M00000X",
+      "desc": "Nursing Facility/Intermediate Care Facility",
+      "license": "102",
+      "primary": false,
+      "state": "TN",
+      "taxonomy_group": ""
+     },
+     {
+      "code": "314000000X",
+      "desc": "Skilled Nursing Facility",
+      "license": "102",
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "2105 S BASCOM AVE STE 155",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CAMPBELL",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "950083276",
+      "state": "CA"
+     },
+     {
+      "address_1": "2105 S BASCOM AVE STE 155",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CAMPBELL",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "950083276",
+      "state": "CA",
+      "telephone_number": "408-782-7400"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "JASON",
+     "authorized_official_last_name": "BLISS",
+     "authorized_official_telephone_number": "4087812023",
+     "authorized_official_title_or_position": "MANAGER",
+     "certification_date": "2026-03-10",
+     "enumeration_date": "2015-02-28",
+     "last_updated": "2026-03-10",
+     "organization_name": "AMLIFE HOME HEALTH SERVICES, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1425150375000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1773155475000",
+    "number": "1295127256",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION HEALTHCARE SERVICES",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "251E00000X",
+      "desc": "Home Health",
+      "license": "201500910355",
+      "primary": true,
+      "state": "CA",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "130 COOK AVE STE 107",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "PASADENA",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "818-696-1379",
+      "postal_code": "911077357",
+      "state": "CA",
+      "telephone_number": "818-696-1377"
+     },
+     {
+      "address_1": "130 COOK AVE STE 107",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "PASADENA",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "626-793-7943",
+      "postal_code": "911077357",
+      "state": "CA",
+      "telephone_number": "626-432-1642"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "GUILLAUME",
+     "authorized_official_last_name": "DELAPORTE",
+     "authorized_official_middle_name": "G",
+     "authorized_official_telephone_number": "6264321642",
+     "authorized_official_title_or_position": "CEO/Administrator",
+     "certification_date": "2020-05-06",
+     "enumeration_date": "2011-06-06",
+     "last_updated": "2020-05-06",
+     "organization_name": "ANGELS OF THE VALLEY HOSPICE CARE, INC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1307400585000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1588809084000",
+    "number": "1407140510",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION HOSPICE CARE",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "251G00000X",
+      "desc": "Hospice Care, Community Based",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   }
+  ]
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension+rutherford%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension+rutherford%2A&state=WY&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension+rutherford%2A&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension+saint%2A&state=WY&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension+saint+thomas%2A&state=WY&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension+saint+thomas+rutherford%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 3,
+  "results": [
+   {
+    "addresses": [
+     {
+      "address_1": "301 N UNIVERSITY ST",
+      "address_2": "SUITE 101",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-396-5283",
+      "postal_code": "371303900",
+      "state": "TN",
+      "telephone_number": "615-396-5004"
+     },
+     {
+      "address_1": "301 N UNIVERSITY ST",
+      "address_2": "SUITE 101",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-396-5283",
+      "postal_code": "371303900",
+      "state": "TN",
+      "telephone_number": "615-396-5004"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "MSO",
+     "authorized_official_first_name": "MARK",
+     "authorized_official_last_name": "LYNN",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153965004",
+     "authorized_official_title_or_position": "Program Director",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2007-06-07",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1181241929000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162862000",
+    "number": "1780887679",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261Q00000X",
+      "desc": "Clinic/Center",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "312-462-6293",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4100"
+     },
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "312-462-6293",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4100"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "GORDON",
+     "authorized_official_last_name": "FERGUSON",
+     "authorized_official_middle_name": "BORLAND",
+     "authorized_official_name_prefix": "Mr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153964101",
+     "authorized_official_title_or_position": "President and CEO",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2006-12-04",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL",
+     "organizational_subpart": "YES",
+     "parent_organization_legal_business_name": "SAINT THOMAS HEALTH SERVICES",
+     "status": "A"
+    },
+    "created_epoch": "1165251734000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162201000",
+    "number": "1164590386",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": "0000000100",
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_2": "ATTN: CANDACE WILSON",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4599"
+     },
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_2": "ATTN: CANDACE WILSON",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4599"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "LISA",
+     "authorized_official_last_name": "DAVIS",
+     "authorized_official_name_prefix": "Ms.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6152846845",
+     "authorized_official_title_or_position": "CFO",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2009-09-01",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL LAB",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1251820242000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162477000",
+    "number": "1538392089",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD HOSPITAL LAB",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "291U00000X",
+      "desc": "Clinical Medical Laboratory",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   }
+  ]
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension+saint+thomas+rutherford%2A&state=WY&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension+saint+thomas+rutherford%2A&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 3,
+  "results": [
+   {
+    "addresses": [
+     {
+      "address_1": "301 N UNIVERSITY ST",
+      "address_2": "SUITE 101",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-396-5283",
+      "postal_code": "371303900",
+      "state": "TN",
+      "telephone_number": "615-396-5004"
+     },
+     {
+      "address_1": "301 N UNIVERSITY ST",
+      "address_2": "SUITE 101",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-396-5283",
+      "postal_code": "371303900",
+      "state": "TN",
+      "telephone_number": "615-396-5004"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "MSO",
+     "authorized_official_first_name": "MARK",
+     "authorized_official_last_name": "LYNN",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153965004",
+     "authorized_official_title_or_position": "Program Director",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2007-06-07",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1181241929000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162862000",
+    "number": "1780887679",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261Q00000X",
+      "desc": "Clinic/Center",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "312-462-6293",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4100"
+     },
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "312-462-6293",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4100"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "GORDON",
+     "authorized_official_last_name": "FERGUSON",
+     "authorized_official_middle_name": "BORLAND",
+     "authorized_official_name_prefix": "Mr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153964101",
+     "authorized_official_title_or_position": "President and CEO",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2006-12-04",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL",
+     "organizational_subpart": "YES",
+     "parent_organization_legal_business_name": "SAINT THOMAS HEALTH SERVICES",
+     "status": "A"
+    },
+    "created_epoch": "1165251734000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162201000",
+    "number": "1164590386",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": "0000000100",
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_2": "ATTN: CANDACE WILSON",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4599"
+     },
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_2": "ATTN: CANDACE WILSON",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4599"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "LISA",
+     "authorized_official_last_name": "DAVIS",
+     "authorized_official_name_prefix": "Ms.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6152846845",
+     "authorized_official_title_or_position": "CFO",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2009-09-01",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL LAB",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1251820242000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162477000",
+    "number": "1538392089",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD HOSPITAL LAB",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "291U00000X",
+      "desc": "Clinical Medical Laboratory",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   }
+  ]
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension+st%2A&state=WY&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension+st+thomas%2A&state=WY&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=ascension+st+thomas+rutherford%2A&state=WY&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=cleveland+clinic%2A&state=OH&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 8,
+  "results": [
+   {
+    "addresses": [
+     {
+      "address_1": "99 NORTHLINE CIR",
+      "address_2": "SUITE 100",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "EUCLID",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441191482",
+      "state": "OH",
+      "telephone_number": "216-692-7771"
+     },
+     {
+      "address_1": "99 NORTHLINE CIR",
+      "address_2": "SUITE 100",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "EUCLID",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441191482",
+      "state": "OH"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "DANIEL",
+     "authorized_official_last_name": "MEDVE",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "2169733321",
+     "authorized_official_title_or_position": "Director",
+     "certification_date": "2022-01-06",
+     "enumeration_date": "2006-05-04",
+     "last_updated": "2022-01-06",
+     "organization_name": "CLEVELAND CLINIC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1146779544000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1641501863000",
+    "number": "1558319491",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261Q00000X",
+      "desc": "Clinic/Center",
+      "license": "047654",
+      "primary": true,
+      "state": "OH",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "9500 EUCLID AVE",
+      "address_2": "DEPARTMENT OF RADIOLOGY- HB6",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CLEVELAND",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441950001",
+      "state": "OH"
+     },
+     {
+      "address_1": "9500 EUCLID AVE",
+      "address_2": "DEPARTMENT OF RADIOLOGY- HB6",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CLEVELAND",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441950001",
+      "state": "OH",
+      "telephone_number": "216-444-2136"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "LAUREN",
+     "authorized_official_last_name": "STEIN",
+     "authorized_official_middle_name": "FISCHER",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "2026692991",
+     "authorized_official_title_or_position": "Resident",
+     "enumeration_date": "2008-05-28",
+     "last_updated": "2008-05-28",
+     "organization_name": "CLEVELAND CLINIC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1211980507000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1211980507000",
+    "number": "1275791162",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "9500 EUCLID AVE",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CLEVELAND",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441950001",
+      "state": "OH",
+      "telephone_number": "216-444-6781"
+     },
+     {
+      "address_1": "9500 EUCLID AVE",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CLEVELAND",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441950001",
+      "state": "OH",
+      "telephone_number": "216-444-6781"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "DANIEL",
+     "authorized_official_last_name": "MEDVE",
+     "authorized_official_name_prefix": "Mr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "2169733321",
+     "authorized_official_title_or_position": "Director",
+     "certification_date": "2022-01-06",
+     "enumeration_date": "2008-05-21",
+     "last_updated": "2022-01-06",
+     "organization_name": "CLEVELAND CLINIC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1211381126000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1641498209000",
+    "number": "1356508964",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "281P00000X",
+      "desc": "Chronic Disease Hospital",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "8601 OAKWOOD LN",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "NORTH ROYALTON",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441332267",
+      "state": "OH",
+      "telephone_number": "440-237-4583"
+     },
+     {
+      "address_1": "8601 OAKWOOD LANE",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NORTH ROYALTON",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "44133",
+      "state": "OH",
+      "telephone_number": "440-237-4583"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "DANIEL",
+     "authorized_official_last_name": "MEDVE",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "2169733321",
+     "authorized_official_title_or_position": "Director",
+     "certification_date": "2022-01-06",
+     "enumeration_date": "2008-10-14",
+     "last_updated": "2022-01-06",
+     "organization_name": "CLEVELAND CLINIC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1224013217000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1641486312000",
+    "number": "1053563767",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": "RN179015",
+      "primary": true,
+      "state": "OH",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "CLEVELAND CLINIC 9500 EUCLID AVE H35",
+      "address_2": "CARDIOTHORACIC SURGERY,",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CLEVELAND",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441950001",
+      "state": "OH"
+     },
+     {
+      "address_1": "CLEVELAND CLINIC 9500 EUCLID AVE H35",
+      "address_2": "CARDIOTHORACIC SURGERY,",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CLEVELAND",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441950001",
+      "state": "OH",
+      "telephone_number": "216-526-5430"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "MD",
+     "authorized_official_first_name": "DENIZ",
+     "authorized_official_last_name": "GOKSEDEF",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "2164442200",
+     "authorized_official_title_or_position": "Clinical Fellow",
+     "enumeration_date": "2008-05-09",
+     "last_updated": "2008-05-22",
+     "organization_name": "CLEVELAND CLINIC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1210343085000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1211475068000",
+    "number": "1336316389",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "3035 WOOSTER RD",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "ROCKY RIVER",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441164144",
+      "state": "OH",
+      "telephone_number": "440-356-9103"
+     },
+     {
+      "address_1": "3035 WOOSTER RD",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "ROCKY RIVER",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441164144",
+      "state": "OH",
+      "telephone_number": "440-356-9103"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "DPT",
+     "authorized_official_first_name": "MATTHEW",
+     "authorized_official_last_name": "YANIK",
+     "authorized_official_middle_name": "R",
+     "authorized_official_name_prefix": "Dr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "4403569103",
+     "authorized_official_title_or_position": "Staff physical therapist",
+     "enumeration_date": "2014-03-16",
+     "last_updated": "2014-03-16",
+     "organization_name": "CLEVELAND CLINIC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1395015890000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1395015890000",
+    "number": "1841616752",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261QP2000X",
+      "desc": "Clinic/Center, Physical Therapy",
+      "license": "013300",
+      "primary": true,
+      "state": "OH",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "9500 EUCLID AVE",
+      "address_2": "JJN1-200",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CLEVELAND",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441950001",
+      "state": "OH",
+      "telephone_number": "216-442-5542"
+     },
+     {
+      "address_1": "9500 EUCLID AVE",
+      "address_2": "JJN1-200",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CLEVELAND",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441950001",
+      "state": "OH",
+      "telephone_number": "216-442-5542"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "PharmD",
+     "authorized_official_first_name": "STEPHANIE",
+     "authorized_official_last_name": "YAGER",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "2164425542",
+     "authorized_official_title_or_position": "Pharmacy Resident",
+     "enumeration_date": "2016-09-15",
+     "last_updated": "2016-09-15",
+     "organization_name": "CLEVELAND CLINIC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1473975047000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1473975047000",
+    "number": "1487102679",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "1835P2201X",
+      "desc": "Pharmacist, Ambulatory Care",
+      "license": "RPH.03136224-1",
+      "primary": true,
+      "state": "OH",
+      "taxonomy_group": "193400000X - Single Specialty Group"
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "9500 EUCLID AVE",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CLEVELAND",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441950001",
+      "state": "OH",
+      "telephone_number": "216-445-0055"
+     },
+     {
+      "address_1": "9500 EUCLID AVE",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CLEVELAND",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "441950001",
+      "state": "OH",
+      "telephone_number": "216-445-0055"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "M.D.",
+     "authorized_official_first_name": "SEAN",
+     "authorized_official_last_name": "NAGEL",
+     "authorized_official_middle_name": "JEREMY",
+     "authorized_official_name_prefix": "Dr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "2167525477",
+     "authorized_official_title_or_position": "Resident Physician Neurosurgery",
+     "enumeration_date": "2008-04-09",
+     "last_updated": "2008-04-10",
+     "organization_name": "CLEVELAND CLINIC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1207769063000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1207844334000",
+    "number": "1104099217",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": "90910",
+      "primary": true,
+      "state": "OH",
+      "taxonomy_group": ""
+     }
+    ]
+   }
+  ]
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=johns+hopkins+hospital%2A&state=MD&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 8,
+  "results": [
+   {
+    "addresses": [
+     {
+      "address_1": "3300 FOSTER AVE",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212244112",
+      "state": "MD",
+      "telephone_number": "520-444-7518"
+     },
+     {
+      "address_1": "1800 ORLEANS ST # 6107D",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212870010",
+      "state": "MD",
+      "telephone_number": "443-287-0618"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "MD",
+     "authorized_official_first_name": "ALBERT",
+     "authorized_official_last_name": "CHI",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "5204447518",
+     "authorized_official_title_or_position": "Assistant Professor",
+     "enumeration_date": "2014-02-21",
+     "last_updated": "2014-02-21",
+     "organization_name": "JOHNS HOPKINS HOSPITAL",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1392998456000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1392998456000",
+    "number": "1477978807",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1800 ORLEANS ST",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212870010",
+      "state": "MD"
+     },
+     {
+      "address_1": "600 N WOLFE ST",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212870005",
+      "state": "MD",
+      "telephone_number": "410-614-3234"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "RONALD",
+     "authorized_official_last_name": "HERBST",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "4106143234",
+     "authorized_official_title_or_position": "Occupational Therapist",
+     "enumeration_date": "2016-02-11",
+     "last_updated": "2016-02-11",
+     "organization_name": "JOHNS HOPKINS HOSPITAL",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1455214445000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1455214445000",
+    "number": "1447619044",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "283X00000X",
+      "desc": "Rehabilitation Hospital",
+      "license": "07623",
+      "primary": true,
+      "state": "MD",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1800 ORLEANS ST # M2350",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212870010",
+      "state": "MD"
+     },
+     {
+      "address_1": "1800 ORLEANS ST # M2350",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212870010",
+      "state": "MD",
+      "telephone_number": "443-287-9262"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "KATHRYN",
+     "authorized_official_last_name": "KAUFMAN",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "4432879262",
+     "authorized_official_title_or_position": "Manager",
+     "enumeration_date": "2016-02-15",
+     "last_updated": "2016-02-15",
+     "organization_name": "JOHNS HOPKINS HOSPITAL",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1455553392000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1455553392000",
+    "number": "1528427911",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282NC2000X",
+      "desc": "General Acute Care Hospital, Children",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "11550 CROSSROADS CIR UNIT 606",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MIDDLE RIVER",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212202990",
+      "state": "MD"
+     },
+     {
+      "address_1": "11550 CROSSROAD CIRCLE",
+      "address_2": "UNIT 606",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MIDDLE RIVER",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "21220",
+      "state": "MD",
+      "telephone_number": "410-598-1695"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "JENNIFER",
+     "authorized_official_last_name": "O'RANGERS",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "4432872119",
+     "authorized_official_title_or_position": "Operations Manager",
+     "enumeration_date": "2013-12-27",
+     "last_updated": "2013-12-27",
+     "organization_name": "JOHNS HOPKINS HOSPITAL",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1388162508000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1388162508000",
+    "number": "1356762959",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "JOHNS HOPKINS DEPARTMENT OF SURGERY",
+      "address_2": "600 N WOLFE ST TOWER 110",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212870001",
+      "state": "MD"
+     },
+     {
+      "address_1": "JOHNS HOPKINS DEPARTMENT OF SURGERY",
+      "address_2": "600 N WOLFE ST TOWER 110",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212870001",
+      "state": "MD",
+      "telephone_number": "410-955-5020"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "DEVIN",
+     "authorized_official_last_name": "ZARKOWSKY",
+     "authorized_official_middle_name": "STEPHEN",
+     "authorized_official_name_prefix": "Dr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "4109555020",
+     "authorized_official_title_or_position": "Resident",
+     "enumeration_date": "2012-08-20",
+     "last_updated": "2012-09-04",
+     "organization_name": "JOHNS HOPKINS HOSPITAL",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1345481119000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1346776839000",
+    "number": "1477801694",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "600 N WOLFE ST",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212871604",
+      "state": "MD"
+     },
+     {
+      "address_1": "401 N BROADWAY ST",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212871604",
+      "state": "MD",
+      "telephone_number": "410-955-8998"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "RONALD",
+     "authorized_official_last_name": "WERTHMAN",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "4109556552",
+     "authorized_official_title_or_position": "Vice President, Treasurer, CFO",
+     "enumeration_date": "2014-02-03",
+     "last_updated": "2014-02-03",
+     "organization_name": "JOHNS HOPKINS HOSPITAL",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1391445812000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1391445812000",
+    "number": "1730502345",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": "21885",
+      "primary": true,
+      "state": "MD",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1800 ORLEANS ST",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212870010",
+      "state": "MD",
+      "telephone_number": "410-502-2958"
+     },
+     {
+      "address_1": "1800 ORLEANS ST",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212870010",
+      "state": "MD",
+      "telephone_number": "410-502-2958"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "LCSW-C",
+     "authorized_official_first_name": "DIANE",
+     "authorized_official_last_name": "PICKETT",
+     "authorized_official_middle_name": "VOLPE",
+     "authorized_official_name_prefix": "Mrs.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "4105022958",
+     "authorized_official_title_or_position": "Superviosr Social work",
+     "enumeration_date": "2013-01-07",
+     "last_updated": "2013-01-07",
+     "organization_name": "JOHNS HOPKINS HOSPITAL",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1357577334000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1357577334000",
+    "number": "1841537255",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282NC2000X",
+      "desc": "General Acute Care Hospital, Children",
+      "license": "12044",
+      "primary": true,
+      "state": "MD",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1800 ORLEANS ST",
+      "address_2": "MEYER 1-130",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212870010",
+      "state": "MD"
+     },
+     {
+      "address_1": "1800 ORLEANS ST",
+      "address_2": "MEYER 1-130",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "212870010",
+      "state": "MD",
+      "telephone_number": "410-614-3235"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "JESSICA",
+     "authorized_official_last_name": "DILEO",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "9088923154",
+     "authorized_official_title_or_position": "Occupational Therapist 1",
+     "enumeration_date": "2015-08-07",
+     "last_updated": "2015-08-07",
+     "organization_name": "JOHNS HOPKINS HOSPITAL",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1438962054000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1438962054000",
+    "number": "1467838839",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261QR0400X",
+      "desc": "Clinic/Center, Rehabilitation",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   }
+  ]
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=matthew+walker%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 5,
+  "results": [
+   {
+    "addresses": [
+     {
+      "address_1": "904 26TH AVE N",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-327-2806",
+      "postal_code": "372083202",
+      "state": "TN",
+      "telephone_number": "615-327-9400"
+     },
+     {
+      "address_1": "1035 14TH AVE N",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-327-2806",
+      "postal_code": "372083050",
+      "state": "TN",
+      "telephone_number": "615-327-9400"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "JEFFREY",
+     "authorized_official_last_name": "MCKISSACK",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153401292",
+     "authorized_official_title_or_position": "Chief Executive Officer",
+     "certification_date": "2022-02-25",
+     "enumeration_date": "2008-09-30",
+     "last_updated": "2022-02-25",
+     "organization_name": "COMMUNITY GOVERNING BOARD OF MATTEW WALKER COMPREHENSIVE CENTE",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1222805258000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1645813611000",
+    "number": "1386895027",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "MATTHEW WALKER COMPREHENSIVE HEALTH CENTER",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261QF0400X",
+      "desc": "Clinic/Center, Federally Qualified Health Center (FQHC)",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "230 DOVER RD",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CLARKSVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-320-6033",
+      "postal_code": "370424183",
+      "state": "TN",
+      "telephone_number": "931-920-5000"
+     },
+     {
+      "address_1": "1035 14TH AVE N",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-327-2806",
+      "postal_code": "372083050",
+      "state": "TN",
+      "telephone_number": "615-327-9400"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "KATINA",
+     "authorized_official_last_name": "BEARD",
+     "authorized_official_name_prefix": "Mrs.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153401265",
+     "authorized_official_title_or_position": "Chief Executive Officer",
+     "certification_date": "2022-02-25",
+     "enumeration_date": "2007-12-05",
+     "last_updated": "2022-02-25",
+     "organization_name": "MATTHEW WALKER COMPREHENSIVE HEALTH CENTER, INC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1196867897000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1645813083000",
+    "number": "1104008747",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261QF0400X",
+      "desc": "Clinic/Center, Federally Qualified Health Center (FQHC)",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1035 14TH AVE N",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "37208",
+      "state": "TN",
+      "telephone_number": "615-327-9400"
+     },
+     {
+      "address_1": "1035 14TH AVENUE NORTH",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-327-2806",
+      "postal_code": "372083050",
+      "state": "TN",
+      "telephone_number": "615-340-1292"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "KATINA",
+     "authorized_official_last_name": "BEARD",
+     "authorized_official_middle_name": "R",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153279400",
+     "authorized_official_title_or_position": "Chief Executive Officer",
+     "certification_date": "2022-02-25",
+     "enumeration_date": "2006-12-22",
+     "last_updated": "2022-02-25",
+     "organization_name": "MATTHEW WALKER COMPREHENSIVE HEALTH CENTER, INC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1166797316000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1645813233000",
+    "number": "1356405278",
+    "other_names": [],
+    "practiceLocations": [
+     {
+      "address_1": "739 PRESIDENT PLACE",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "SMYRNA",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-327-2806",
+      "postal_code": "371676844",
+      "state": "TN",
+      "telephone_number": "615-340-1292"
+     }
+    ],
+    "taxonomies": [
+     {
+      "code": "261QF0400X",
+      "desc": "Clinic/Center, Federally Qualified Health Center (FQHC)",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "4928 EDMONDSON PIKE",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "372114787",
+      "state": "TN"
+     },
+     {
+      "address_1": "4928 EDMONDSON PIKE",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "372114787",
+      "state": "TN",
+      "telephone_number": "615-327-9400"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "KATINA",
+     "authorized_official_last_name": "BEARD",
+     "authorized_official_middle_name": "R",
+     "authorized_official_telephone_number": "6153401265",
+     "authorized_official_title_or_position": "CEO",
+     "certification_date": "2026-10-30",
+     "enumeration_date": "2026-10-30",
+     "last_updated": "2026-10-30",
+     "organization_name": "MATTHEW WALKER COMPREHENSIVE HEALTH CENTER, INC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1793376304000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1793376304000",
+    "number": "1194623918",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261QF0400X",
+      "desc": "Clinic/Center, Federally Qualified Health Center (FQHC)",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "739 PRESIDENT PL",
+      "address_2": "SUITE 100",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "SMYRNA",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-320-6033",
+      "postal_code": "371676844",
+      "state": "TN",
+      "telephone_number": "615-984-4290"
+     },
+     {
+      "address_1": "1035 14TH AVE N",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-327-2806",
+      "postal_code": "372083050",
+      "state": "TN",
+      "telephone_number": "615-327-9400"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "KATINA",
+     "authorized_official_last_name": "BEARD",
+     "authorized_official_middle_name": "R",
+     "authorized_official_telephone_number": "6153401265",
+     "authorized_official_title_or_position": "Chief Executive Officer",
+     "certification_date": "2022-02-25",
+     "enumeration_date": "2010-08-20",
+     "last_updated": "2022-02-25",
+     "organization_name": "MATTHEW WALKER COMPREHENSIVE HEALTH CENTER, INC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1282336348000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1645813179000",
+    "number": "1174839781",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "OB GYN ASSOCIATES",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261QF0400X",
+      "desc": "Clinic/Center, Federally Qualified Health Center (FQHC)",
+      "license": null,
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": ""
+     }
+    ]
+   }
+  ]
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=matthew+walker+hospital%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=matthew+walker+hospital+nashville%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=rutherford%2A&state=WY&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=rutherford%2A&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 10,
+  "results": [
+   {
+    "addresses": [
+     {
+      "address_1": "W140 N8981 LILLY ROAD",
+      "address_2": "ATTN LEGAL DEPARTMENT",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MENOMONEE FALLS",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "262-251-7633",
+      "postal_code": "530512325",
+      "state": "WI",
+      "telephone_number": "262-257-8888"
+     },
+     {
+      "address_1": "805 BUCHANAN STREET",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "FREMONT",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "419-332-7346",
+      "postal_code": "43420",
+      "state": "OH",
+      "telephone_number": "419-334-6962"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "WALTER",
+     "authorized_official_last_name": "LEVONOWICH",
+     "authorized_official_middle_name": "A",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "2622578888",
+     "authorized_official_title_or_position": "Vice President Controller",
+     "enumeration_date": "2007-10-01",
+     "last_updated": "2007-10-01",
+     "organization_name": "ASSISTED LIVING CONCEPTS INC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1191291509000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1191291509000",
+    "number": "1548457856",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "RUTHERFORD HOUSE",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "310400000X",
+      "desc": "Assisted Living Facility",
+      "license": "2128",
+      "primary": true,
+      "state": "OH",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "220 5TH AVE E",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "HENDERSONVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "828-696-1794",
+      "postal_code": "287924377",
+      "state": "NC",
+      "telephone_number": "828-692-4289"
+     },
+     {
+      "address_1": "187 W MAIN ST",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "SPINDALE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "828-696-1794",
+      "postal_code": "281601539",
+      "state": "NC",
+      "telephone_number": "828-692-4289"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "TAMMY",
+     "authorized_official_last_name": "GREENWELL",
+     "authorized_official_middle_name": "R",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "8282332284",
+     "authorized_official_title_or_position": "CEO",
+     "certification_date": "2025-09-09",
+     "enumeration_date": "2013-12-06",
+     "last_updated": "2025-09-09",
+     "organization_name": "BLUE RIDGE COMMUNITY HEALTH SERVICES, INC.",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1386373970000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1757439484000",
+    "number": "1669803276",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "RUTHERFORD HEALTH CENTER",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261QF0400X",
+      "desc": "Clinic/Center, Federally Qualified Health Center (FQHC)",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "P.O. BOX 700",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "VALDESE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "828-874-0318",
+      "postal_code": "28690",
+      "state": "NC",
+      "telephone_number": "828-874-2811"
+     },
+     {
+      "address_1": "730 MALCOLM BLVD.",
+      "address_2": "SUITE 230",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "RUTHERFORD COLLEGE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "828-874-0318",
+      "postal_code": "28671",
+      "state": "NC",
+      "telephone_number": "828-874-2811"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "ROBERT",
+     "authorized_official_last_name": "FRITTS",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "8285805545",
+     "authorized_official_title_or_position": "SVP-CFO",
+     "enumeration_date": "2009-04-01",
+     "last_updated": "2010-04-21",
+     "organization_name": "BLUE RIDGE HEALTHCARE MEDICAL GROUP, INC.",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1238597791000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1271860722000",
+    "number": "1326280793",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "RUTHERFORD COLLEGE FAMILY MEDICAL CARE CENTER",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "207Q00000X",
+      "desc": "Family Medicine",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": "193400000X - Single Specialty Group"
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "730 MALCOLM BLVD.",
+      "address_2": "SUITE 230",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "RUTHERFORD COLLEGE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "828-874-0318",
+      "postal_code": "28671",
+      "state": "NC",
+      "telephone_number": "828-874-2811"
+     },
+     {
+      "address_1": "730 MALCOLM BLVD",
+      "address_2": "SUITE 730",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "RUTHERFORD COLLEGE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "828-874-0318",
+      "postal_code": "28671",
+      "state": "NC",
+      "telephone_number": "828-874-2811"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "PATRICIA",
+     "authorized_official_last_name": "MOLL",
+     "authorized_official_telephone_number": "8285805003",
+     "authorized_official_title_or_position": "SVP-CFO",
+     "certification_date": "2025-03-14",
+     "enumeration_date": "2006-10-11",
+     "last_updated": "2025-03-14",
+     "organization_name": "BLUE RIDGE HEALTHCARE MEDICAL GROUP, INC.",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1160601177000",
+    "endpoints": [
+     {
+      "address_1": "2720 Dundee Rd # 302",
+      "address_type": "DOM",
+      "affiliation": "Y",
+      "affiliationName": "Cobius Healthcare Solutions",
+      "city": "Northbrook",
+      "contentTypeDescription": "",
+      "country_code": "US",
+      "country_name": "United States",
+      "endpoint": "https://cobiusconnect.cobius.com:8291/Gateway/DocumentSubmission/2_0/NhinService/XDRRequest_Service",
+      "endpointDescription": "2.16.840.1.113883.3.1068.1",
+      "endpointType": "CONNECT",
+      "endpointTypeDescription": "CONNECT URL",
+      "postal_code": "600622609",
+      "state": "IL",
+      "use": "OTHER",
+      "useDescription": "Other",
+      "useOtherDescription": "CMS esMD eMDR"
+     }
+    ],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1741963701000",
+    "number": "1780772715",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "RUTHERFORD COLLEGE FAMILY MEDICAL CARE CENTER",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "207Q00000X",
+      "desc": "Family Medicine",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": "193400000X - Single Specialty Group"
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "181 DANIEL RD",
+      "address_2": "SUITE 100",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "FOREST CITY",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "828-286-1581",
+      "postal_code": "280437151",
+      "state": "NC",
+      "telephone_number": "828-286-9036"
+     },
+     {
+      "address_1": "PO BOX 602148",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CHARLOTTE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "828-286-1581",
+      "postal_code": "282602148",
+      "state": "NC",
+      "telephone_number": "828-286-9036"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "THOMAS",
+     "authorized_official_last_name": "LAYMON",
+     "authorized_official_middle_name": "FORD",
+     "authorized_official_name_prefix": "Mr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "7046446825",
+     "authorized_official_title_or_position": "Senior Vice President",
+     "enumeration_date": "2009-06-29",
+     "last_updated": "2018-09-27",
+     "organization_name": "CAROLINAS PHYSICIANS NETWORK INC",
+     "organizational_subpart": "YES",
+     "parent_organization_legal_business_name": "CAROLINAS PHYSICIANS NETWORK INC",
+     "status": "A"
+    },
+    "created_epoch": "1246308647000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1538073467000",
+    "number": "1629206651",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "RUTHERFORD INTERNAL MEDICINE ASSOCIATES",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "207R00000X",
+      "desc": "Internal Medicine",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207RC0200X",
+      "desc": "Internal Medicine, Critical Care Medicine",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207RG0100X",
+      "desc": "Internal Medicine, Gastroenterology",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207RH0000X",
+      "desc": "Internal Medicine, Hematology",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207RP1001X",
+      "desc": "Internal Medicine, Pulmonary Disease",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "2084N0400X",
+      "desc": "Psychiatry & Neurology, Neurology",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "2084S0012X",
+      "desc": "Psychiatry & Neurology, Sleep Medicine",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207RX0202X",
+      "desc": "Internal Medicine, Medical Oncology",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "141 TRYON RD",
+      "address_2": "STE A",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "RUTHERFORDTON",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "281393099",
+      "state": "NC",
+      "telephone_number": "828-286-9049"
+     },
+     {
+      "address_1": "PO BOX 19305",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CHARLOTTE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "282199305",
+      "state": "NC",
+      "telephone_number": "704-631-0002"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "SCOTT",
+     "authorized_official_last_name": "RISSMILLER",
+     "authorized_official_telephone_number": "7043558675",
+     "authorized_official_title_or_position": "Enterprise EVP",
+     "enumeration_date": "2011-12-09",
+     "last_updated": "2023-03-09",
+     "organization_name": "CAROLINAS PHYSICIANS NETWORK INC",
+     "organizational_subpart": "YES",
+     "parent_organization_legal_business_name": "CAROLINAS PHYSICIANS NETWORK INC",
+     "status": "A"
+    },
+    "created_epoch": "1323470467000",
+    "endpoints": [
+     {
+      "address_1": "100 N 6th St Ste 900A",
+      "address_type": "DOM",
+      "affiliation": "Y",
+      "affiliationName": "ABILITY Network",
+      "city": "Minneapolis",
+      "contentTypeDescription": "",
+      "country_code": "US",
+      "country_name": "United States",
+      "endpoint": "https://esmd.abilitynetwork.com:8291/Gateway/DocumentSubmission/2_0/NhinService/XDRRequest_Service",
+      "endpointDescription": "2.16.840.1.113883.3.667.2",
+      "endpointType": "CONNECT",
+      "endpointTypeDescription": "CONNECT URL",
+      "postal_code": "554031516",
+      "state": "MN",
+      "use": "OTHER",
+      "useDescription": "Other",
+      "useOtherDescription": "CMS esMD eMDR"
+     },
+     {
+      "address_1": "141 Tryon Rd",
+      "address_2": "Ste A",
+      "address_type": "DOM",
+      "affiliation": "Y",
+      "affiliationName": "Atrium Health",
+      "city": "Rutherfordton",
+      "contentTypeDescription": "",
+      "country_code": "US",
+      "country_name": "United States",
+      "endpoint": "Ambulatory@direct.carolinashealthcare.org",
+      "endpointType": "DIRECT",
+      "endpointTypeDescription": "Direct Messaging Address",
+      "postal_code": "281393099",
+      "state": "NC",
+      "useDescription": ""
+     }
+    ],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1678404918000",
+    "number": "1073881694",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ATRIUM HEALTH LEVINE CHILDREN'S RUTHERFORD PEDIATRICS",
+      "type": "Doing Business As"
+     },
+     {
+      "code": "3",
+      "organization_name": "RUTHERFORD PEDIATRICS",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "2080A0000X",
+      "desc": "Pediatrics, Adolescent Medicine",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "208000000X",
+      "desc": "Pediatrics",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "PO BOX 602148",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CHARLOTTE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "828-245-4062",
+      "postal_code": "282602148",
+      "state": "NC",
+      "telephone_number": "828-245-4061"
+     },
+     {
+      "address_1": "1178 OLD CAROLEEN ROAD",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "FOREST CITY",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "828-245-4062",
+      "postal_code": "280433710",
+      "state": "NC",
+      "telephone_number": "828-245-4061"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "DANIEL",
+     "authorized_official_last_name": "WIENS",
+     "authorized_official_name_prefix": "Mr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "7043550648",
+     "authorized_official_title_or_position": "Senior Vice President of Operations",
+     "enumeration_date": "2011-12-09",
+     "last_updated": "2013-01-08",
+     "organization_name": "CAROLINAS PHYSICIANS NETWORK INC.",
+     "organizational_subpart": "YES",
+     "parent_organization_legal_business_name": "CAROLINAS PHYSICIANS NETWORK INC.",
+     "status": "A"
+    },
+    "created_epoch": "1323470469000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1357676474000",
+    "number": "1982972501",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "RUTHERFORD PEDIATRICS",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "208000000X",
+      "desc": "Pediatrics",
+      "license": null,
+      "primary": true,
+      "state": "NC",
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "PO BOX 602148",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CHARLOTTE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "828-894-2390",
+      "postal_code": "282602148",
+      "state": "NC",
+      "telephone_number": "828-894-2308"
+     },
+     {
+      "address_1": "52 HOSPITAL DR",
+      "address_2": "SUITE 3-A",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "COLUMBUS",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "828-894-2390",
+      "postal_code": "287228516",
+      "state": "NC",
+      "telephone_number": "828-894-2308"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "THOMAS",
+     "authorized_official_last_name": "LAYMON",
+     "authorized_official_middle_name": "FORD",
+     "authorized_official_name_prefix": "Mr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "7046310002",
+     "authorized_official_title_or_position": "Senior Vice President",
+     "enumeration_date": "2009-06-29",
+     "last_updated": "2016-08-17",
+     "organization_name": "CAROLINAS PHYSICIANS NETWORK, INC.",
+     "organizational_subpart": "YES",
+     "parent_organization_legal_business_name": "CAROLINAS PHYSICIANS NETWORK INC.",
+     "status": "A"
+    },
+    "created_epoch": "1246308226000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1471451090000",
+    "number": "1184852105",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "RUTHERFORD INTERNAL MEDICINE ASSOCIATES",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "207RC0200X",
+      "desc": "Internal Medicine, Critical Care Medicine",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207RH0000X",
+      "desc": "Internal Medicine, Hematology",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207RP1001X",
+      "desc": "Internal Medicine, Pulmonary Disease",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207R00000X",
+      "desc": "Internal Medicine",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207RG0100X",
+      "desc": "Internal Medicine, Gastroenterology",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "2084N0400X",
+      "desc": "Psychiatry & Neurology, Neurology",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "2084S0012X",
+      "desc": "Psychiatry & Neurology, Sleep Medicine",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207RX0202X",
+      "desc": "Internal Medicine, Medical Oncology",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "201 BOB HARDIN RD",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "RUTHERFORDTON",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "704-344-0493",
+      "postal_code": "281396908",
+      "state": "NC",
+      "telephone_number": "704-344-0491"
+     },
+     {
+      "address_1": "PO BOX 759194",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BALTIMORE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "704-344-0493",
+      "postal_code": "212759194",
+      "state": "MD",
+      "telephone_number": "704-344-0491"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "PAMELA",
+     "authorized_official_last_name": "FREELEY",
+     "authorized_official_middle_name": "L",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "7043440491",
+     "authorized_official_title_or_position": "NC Billing Systems Supervisor",
+     "enumeration_date": "2016-06-08",
+     "last_updated": "2018-12-04",
+     "organization_name": "FAMILY PRESERVATION SERVICES OF NORTH CAROLINA, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1465400801000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1543942379000",
+    "number": "1073962254",
+    "other_names": [
+     {
+      "code": "5",
+      "organization_name": "RUTHERFORDTON ELEMENTARY",
+      "type": "Other Name"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "251S00000X",
+      "desc": "Community/Behavioral Health",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "3512 QUENTIN RD",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BROOKLYN",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "112344244",
+      "state": "NY"
+     },
+     {
+      "address_1": "188 OSCAR JUSTICE RD",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "RUTHERFORDTON",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "281398110",
+      "state": "NC",
+      "telephone_number": "828-286-9001"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "ISRAEL",
+     "authorized_official_last_name": "FRIEDMAN",
+     "authorized_official_telephone_number": "8458250449",
+     "authorized_official_title_or_position": "COO",
+     "certification_date": "2024-01-09",
+     "enumeration_date": "2024-01-09",
+     "last_updated": "2024-01-09",
+     "organization_name": "RUTHERFORDTON NC OPCO LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1704824703000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1704824703000",
+    "number": "1881465953",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "314000000X",
+      "desc": "Skilled Nursing Facility",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   }
+  ]
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=saint+thomas+rutherford%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 3,
+  "results": [
+   {
+    "addresses": [
+     {
+      "address_1": "301 N UNIVERSITY ST",
+      "address_2": "SUITE 101",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-396-5283",
+      "postal_code": "371303900",
+      "state": "TN",
+      "telephone_number": "615-396-5004"
+     },
+     {
+      "address_1": "301 N UNIVERSITY ST",
+      "address_2": "SUITE 101",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-396-5283",
+      "postal_code": "371303900",
+      "state": "TN",
+      "telephone_number": "615-396-5004"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "MSO",
+     "authorized_official_first_name": "MARK",
+     "authorized_official_last_name": "LYNN",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153965004",
+     "authorized_official_title_or_position": "Program Director",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2007-06-07",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1181241929000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162862000",
+    "number": "1780887679",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261Q00000X",
+      "desc": "Clinic/Center",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "312-462-6293",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4100"
+     },
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "312-462-6293",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4100"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "GORDON",
+     "authorized_official_last_name": "FERGUSON",
+     "authorized_official_middle_name": "BORLAND",
+     "authorized_official_name_prefix": "Mr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153964101",
+     "authorized_official_title_or_position": "President and CEO",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2006-12-04",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL",
+     "organizational_subpart": "YES",
+     "parent_organization_legal_business_name": "SAINT THOMAS HEALTH SERVICES",
+     "status": "A"
+    },
+    "created_epoch": "1165251734000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162201000",
+    "number": "1164590386",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": "0000000100",
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_2": "ATTN: CANDACE WILSON",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4599"
+     },
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_2": "ATTN: CANDACE WILSON",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4599"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "LISA",
+     "authorized_official_last_name": "DAVIS",
+     "authorized_official_name_prefix": "Ms.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6152846845",
+     "authorized_official_title_or_position": "CFO",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2009-09-01",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL LAB",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1251820242000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162477000",
+    "number": "1538392089",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD HOSPITAL LAB",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "291U00000X",
+      "desc": "Clinical Medical Laboratory",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   }
+  ]
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=saint+thomas+rutherford+hospital%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 3,
+  "results": [
+   {
+    "addresses": [
+     {
+      "address_1": "301 N UNIVERSITY ST",
+      "address_2": "SUITE 101",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-396-5283",
+      "postal_code": "371303900",
+      "state": "TN",
+      "telephone_number": "615-396-5004"
+     },
+     {
+      "address_1": "301 N UNIVERSITY ST",
+      "address_2": "SUITE 101",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-396-5283",
+      "postal_code": "371303900",
+      "state": "TN",
+      "telephone_number": "615-396-5004"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "MSO",
+     "authorized_official_first_name": "MARK",
+     "authorized_official_last_name": "LYNN",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153965004",
+     "authorized_official_title_or_position": "Program Director",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2007-06-07",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1181241929000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162862000",
+    "number": "1780887679",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261Q00000X",
+      "desc": "Clinic/Center",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "312-462-6293",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4100"
+     },
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "312-462-6293",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4100"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "GORDON",
+     "authorized_official_last_name": "FERGUSON",
+     "authorized_official_middle_name": "BORLAND",
+     "authorized_official_name_prefix": "Mr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153964101",
+     "authorized_official_title_or_position": "President and CEO",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2006-12-04",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL",
+     "organizational_subpart": "YES",
+     "parent_organization_legal_business_name": "SAINT THOMAS HEALTH SERVICES",
+     "status": "A"
+    },
+    "created_epoch": "1165251734000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162201000",
+    "number": "1164590386",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": "0000000100",
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_2": "ATTN: CANDACE WILSON",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4599"
+     },
+     {
+      "address_1": "1700 MEDICAL CENTER PKWY",
+      "address_2": "ATTN: CANDACE WILSON",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "MURFREESBORO",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371292245",
+      "state": "TN",
+      "telephone_number": "615-396-4599"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "LISA",
+     "authorized_official_last_name": "DAVIS",
+     "authorized_official_name_prefix": "Ms.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6152846845",
+     "authorized_official_title_or_position": "CFO",
+     "certification_date": "2020-08-11",
+     "enumeration_date": "2009-09-01",
+     "last_updated": "2020-08-11",
+     "organization_name": "SAINT THOMAS RUTHERFORD HOSPITAL LAB",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1251820242000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1597162477000",
+    "number": "1538392089",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ASCENSION SAINT THOMAS RUTHERFORD HOSPITAL LAB",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "291U00000X",
+      "desc": "Clinical Medical Laboratory",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   }
+  ]
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=st+thomas%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 5,
+  "results": [
+   {
+    "addresses": [
+     {
+      "address_1": "301 TYSON AVE",
+      "address_2": "SUITE 104",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "PARIS",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-269-7359",
+      "postal_code": "382424544",
+      "state": "TN",
+      "telephone_number": "731-642-1220"
+     },
+     {
+      "address_1": "3024 BUSINESS PARK CIR",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "GOODLETTSVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-851-2018",
+      "postal_code": "370723132",
+      "state": "TN",
+      "telephone_number": "615-851-6033"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "MD",
+     "authorized_official_first_name": "CHAD",
+     "authorized_official_last_name": "CALENDINE",
+     "authorized_official_middle_name": "L",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153563999",
+     "authorized_official_title_or_position": "CEO",
+     "enumeration_date": "2017-01-18",
+     "last_updated": "2017-01-19",
+     "organization_name": "ADVANCED DIAGNOSTIC IMAGING, PC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1484766665000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1484834719000",
+    "number": "1063958718",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ST THOMAS MEDICAL GROUP",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "332BX2000X",
+      "desc": "Durable Medical Equipment & Medical Supplies, Oxygen Equipment & Supplies",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "3024 BUSINESS PARK CIR",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "GOODLETTSVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-851-2018",
+      "postal_code": "370723132",
+      "state": "TN",
+      "telephone_number": "615-851-6033"
+     },
+     {
+      "address_1": "4230 HARDING PIKE",
+      "address_2": "SUITE 503",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-386-2399",
+      "postal_code": "372052013",
+      "state": "TN",
+      "telephone_number": "615-964-5864"
+     }
+    ],
+    "basic": {
+     "authorized_official_credential": "MD",
+     "authorized_official_first_name": "CHAD",
+     "authorized_official_last_name": "CALENDINE",
+     "authorized_official_middle_name": "L",
+     "authorized_official_name_prefix": "--",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6153563999",
+     "authorized_official_title_or_position": "CEO",
+     "enumeration_date": "2017-01-26",
+     "last_updated": "2017-01-26",
+     "organization_name": "ADVANCED DIAGNOSTIC IMAGING, PC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1485439798000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1485439798000",
+    "number": "1265979405",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ST THOMAS MEDICAL GROUP",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "332BX2000X",
+      "desc": "Durable Medical Equipment & Medical Supplies, Oxygen Equipment & Supplies",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "PO BOX 13380",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BELFAST",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "317-583-3099",
+      "postal_code": "049154024",
+      "state": "ME",
+      "telephone_number": "317-583-3036"
+     },
+     {
+      "address_1": "4220 HARDING PIKE",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "317-583-3099",
+      "postal_code": "372052005",
+      "state": "TN",
+      "telephone_number": "317-583-3036"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "STACEY",
+     "authorized_official_last_name": "HOPPER",
+     "authorized_official_middle_name": "MARIE",
+     "authorized_official_name_prefix": "Miss",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "3175833036",
+     "authorized_official_title_or_position": "FOLLOW UP",
+     "enumeration_date": "2014-09-10",
+     "last_updated": "2014-09-10",
+     "organization_name": "BAPTIST HEALTHCARE GRP",
+     "organizational_subpart": "YES",
+     "parent_organization_legal_business_name": "ST THOMAS",
+     "status": "A"
+    },
+    "created_epoch": "1410379237000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1410379237000",
+    "number": "1710388640",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ST THOMAS",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "275N00000X",
+      "desc": "Medicare Defined Swing Bed Unit",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": ""
+     },
+     {
+      "code": "284300000X",
+      "desc": "Special Hospital",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": ""
+     },
+     {
+      "code": "174400000X",
+      "desc": "Specialist",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "1A BURTON HILLS BLVD STE 300",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-234-1720",
+      "postal_code": "372156153",
+      "state": "TN",
+      "telephone_number": "615-263-4011"
+     },
+     {
+      "address_1": "4230 HARDING PIKE STE 400",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-297-9825",
+      "postal_code": "372054900",
+      "state": "TN",
+      "telephone_number": "615-250-4108"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "JEFFREY",
+     "authorized_official_last_name": "SNODGRASS",
+     "authorized_official_name_prefix": "Mr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6156651283",
+     "authorized_official_title_or_position": "President",
+     "certification_date": "2025-09-23",
+     "enumeration_date": "2005-08-09",
+     "last_updated": "2025-09-23",
+     "organization_name": "ENDOSCOPY CENTER OF ST THOMAS LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1123613333000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1758660138000",
+    "number": "1225039761",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "ST THOMAS MEDICAL GROUP ENDOSCOPY CENTER",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261QA1903X",
+      "desc": "Clinic/Center, Ambulatory Surgical",
+      "license": "0000000017",
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "4220 HARDING PIKE",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-222-4097",
+      "postal_code": "372052005",
+      "state": "TN",
+      "telephone_number": "615-222-4097"
+     },
+     {
+      "address_1": "4220 HARDING PIKE",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-222-3687",
+      "postal_code": "372052005",
+      "state": "TN",
+      "telephone_number": "615-222-4097"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "MARK",
+     "authorized_official_last_name": "MCGINNIS",
+     "authorized_official_name_prefix": "Mr.",
+     "authorized_official_name_suffix": "--",
+     "authorized_official_telephone_number": "6152224097",
+     "authorized_official_title_or_position": "Vice President, Finance",
+     "enumeration_date": "2008-03-13",
+     "last_updated": "2008-03-14",
+     "organization_name": "ST THOMAS NP LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1205464569000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1205503452000",
+    "number": "1669643987",
+    "other_names": [],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "363LA2200X",
+      "desc": "Nurse Practitioner, Adult Health",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": "193400000X - Multiple Single Specialty Group"
+     }
+    ]
+   }
+  ]
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=st+thomas+rutherford%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=vanderbilt%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 12,
+  "results": [
+   {
+    "addresses": [
+     {
+      "address_1": "3841 GREEN HILLS VILLAGE DR STE 200",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "372152691",
+      "state": "TN"
+     },
+     {
+      "address_1": "651 DUNLOP LN",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CLARKSVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "931-502-1215",
+      "postal_code": "370405015",
+      "state": "TN",
+      "telephone_number": "931-502-1000"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "CECELIA",
+     "authorized_official_last_name": "MOORE",
+     "authorized_official_middle_name": "B.",
+     "authorized_official_telephone_number": "6153220084",
+     "authorized_official_title_or_position": "Authorized Official/Treasurer",
+     "certification_date": "2026-03-10",
+     "enumeration_date": "2006-05-24",
+     "last_updated": "2026-03-10",
+     "organization_name": "CLARKSVILLE HEALTH SYSTEM, LLC",
+     "organizational_subpart": "YES",
+     "parent_organization_legal_business_name": "CLARKSVILLE HEALTH SYSTEM, LLC",
+     "status": "A"
+    },
+    "created_epoch": "1148493811000",
+    "endpoints": [
+     {
+      "address_1": "1300 SE Cardinal Ct Ste 190",
+      "address_type": "DOM",
+      "affiliation": "Y",
+      "affiliationName": "Bluemark LLC / Office Ally",
+      "city": "Vancouver",
+      "contentTypeDescription": "",
+      "country_code": "US",
+      "country_name": "United States",
+      "endpoint": "https://esmd.officeally.io:8291/Gateway/DocumentSubmission/2_0/NhinService/XDRRequest_Service",
+      "endpointDescription": "2.16.840.1.113883.3.2019.3",
+      "endpointType": "CONNECT",
+      "endpointTypeDescription": "CONNECT URL",
+      "postal_code": "986839683",
+      "state": "WA",
+      "use": "OTHER",
+      "useDescription": "Other",
+      "useOtherDescription": "CMS esMD eMDR"
+     }
+    ],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1773152438000",
+    "number": "1659326700",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "VANDERBILT CLARKSVILLE HOSPITAL",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "273Y00000X",
+      "desc": "Rehabilitation Unit",
+      "license": "000000090",
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "3841 GREEN HILLS VILLAGE DR STE 200",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "372152691",
+      "state": "TN"
+     },
+     {
+      "address_1": "651 DUNLOP LN",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CLARKSVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "931-502-1215",
+      "postal_code": "370405015",
+      "state": "TN",
+      "telephone_number": "931-502-1000"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "CECELIA",
+     "authorized_official_last_name": "MOORE",
+     "authorized_official_middle_name": "B.",
+     "authorized_official_telephone_number": "6153220084",
+     "authorized_official_title_or_position": "Authorized Official/Treasurer",
+     "certification_date": "2026-03-10",
+     "enumeration_date": "2006-05-23",
+     "last_updated": "2026-03-10",
+     "organization_name": "CLARKSVILLE HEALTH SYSTEM, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1148420831000",
+    "endpoints": [
+     {
+      "address_1": "1300 SE Cardinal Ct Ste 190",
+      "address_type": "DOM",
+      "affiliation": "Y",
+      "affiliationName": "Bluemark LLC / Office Ally",
+      "city": "Vancouver",
+      "contentTypeDescription": "",
+      "country_code": "US",
+      "country_name": "United States",
+      "endpoint": "https://esmd.officeally.io:8291/Gateway/DocumentSubmission/2_0/NhinService/XDRRequest_Service",
+      "endpointDescription": "2.16.840.1.113883.3.2019.3",
+      "endpointType": "CONNECT",
+      "endpointTypeDescription": "CONNECT URL",
+      "postal_code": "986839683",
+      "state": "WA",
+      "use": "OTHER",
+      "useDescription": "Other",
+      "useOtherDescription": "CMS esMD eMDR"
+     }
+    ],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1773152283000",
+    "number": "1285689794",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "VANDERBILT CLARKSVILLE HOSPITAL",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "3336I0012X",
+      "desc": "Pharmacy, Institutional Pharmacy",
+      "license": "147",
+      "primary": false,
+      "state": "TN",
+      "taxonomy_group": ""
+     },
+     {
+      "code": "261QR0206X",
+      "desc": "Clinic/Center, Radiology, Mammography",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": ""
+     },
+     {
+      "code": "261QR0400X",
+      "desc": "Clinic/Center, Rehabilitation",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": ""
+     },
+     {
+      "code": "333600000X",
+      "desc": "Pharmacy",
+      "license": "147",
+      "primary": false,
+      "state": "TN",
+      "taxonomy_group": ""
+     },
+     {
+      "code": "261QA1903X",
+      "desc": "Clinic/Center, Ambulatory Surgical",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": ""
+     },
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": "000000090",
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "2835 HIGHWAY 231 N",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "SHELBYVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371607327",
+      "state": "TN",
+      "telephone_number": "931-685-5433"
+     },
+     {
+      "address_1": "3841 GREEN HILLS VILLAGE DR STE 200",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "372152691",
+      "state": "TN"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "ANGELA",
+     "authorized_official_last_name": "SIMMONS",
+     "authorized_official_middle_name": "L",
+     "authorized_official_telephone_number": "6159368875",
+     "authorized_official_title_or_position": "VP - Finance",
+     "certification_date": "2022-03-31",
+     "enumeration_date": "2020-10-21",
+     "last_updated": "2022-03-31",
+     "organization_name": "VANDERBILT BEDFORD HOSPITAL, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1603301716000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1648741708000",
+    "number": "1952900920",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "VANDERBILT BEDFORD HOSPITAL",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "275N00000X",
+      "desc": "Medicare Defined Swing Bed Unit",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "3841 GREEN HILLS VILLAGE DR STE 200",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "372152691",
+      "state": "TN"
+     },
+     {
+      "address_1": "2835 HIGHWAY 231 N",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "SHELBYVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "371607327",
+      "state": "TN",
+      "telephone_number": "931-685-5433"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "ANGELA",
+     "authorized_official_last_name": "SIMMONS",
+     "authorized_official_middle_name": "L",
+     "authorized_official_telephone_number": "6159368875",
+     "authorized_official_title_or_position": "VP - Finance",
+     "certification_date": "2026-01-27",
+     "enumeration_date": "2020-10-21",
+     "last_updated": "2026-01-27",
+     "organization_name": "VANDERBILT BEDFORD HOSPITAL, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1603299756000",
+    "endpoints": [
+     {
+      "address_1": "1300 SE Cardinal Ct Ste 190",
+      "address_type": "DOM",
+      "affiliation": "Y",
+      "affiliationName": "Bluemark LLC / Office Ally",
+      "city": "Vancouver",
+      "contentTypeDescription": "",
+      "country_code": "US",
+      "country_name": "United States",
+      "endpoint": "https://esmd.officeally.io:8291/Gateway/DocumentSubmission/2_0/NhinService/XDRRequest_Service",
+      "endpointDescription": "2.16.840.1.113883.3.2019.3",
+      "endpointType": "CONNECT",
+      "endpointTypeDescription": "CONNECT URL",
+      "postal_code": "986839683",
+      "state": "WA",
+      "use": "OTHER",
+      "useDescription": "Other",
+      "useOtherDescription": "CMS esMD eMDR"
+     }
+    ],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1769540379000",
+    "number": "1487253449",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "VANDERBILT BEDFORD HOSPITAL",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "282N00000X",
+      "desc": "General Acute Care Hospital",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "2009 MALLORY LN",
+      "address_2": "SUITE 100",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "FRANKLIN",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-468-2666",
+      "postal_code": "370672845",
+      "state": "TN",
+      "telephone_number": "615-468-2772"
+     },
+     {
+      "address_1": "2009 MALLORY LN",
+      "address_2": "SUITE 100",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "FRANKLIN",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-468-2666",
+      "postal_code": "370672845",
+      "state": "TN",
+      "telephone_number": "615-468-2772"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "JENNIFER",
+     "authorized_official_last_name": "BALDOCK",
+     "authorized_official_middle_name": "BOYD",
+     "authorized_official_telephone_number": "6152345954",
+     "authorized_official_title_or_position": "Officer and Authorized Official",
+     "certification_date": "2023-01-03",
+     "enumeration_date": "2005-11-15",
+     "last_updated": "2023-01-03",
+     "organization_name": "AMBULATORY SURGERY CENTER OF COOL SPRINGS LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1132071989000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1672764005000",
+    "number": "1871575043",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "VANDERBILT SURGERY CENTER COOL SPRINGS",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261QA1903X",
+      "desc": "Clinic/Center, Ambulatory Surgical",
+      "license": "0000000117",
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "3841 GREEN HILLS VILLAGE DR STE 200",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-875-8618",
+      "postal_code": "372152691",
+      "state": "TN",
+      "telephone_number": "470-351-0247"
+     },
+     {
+      "address_1": "651 DUNLOP LN",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CLARKSVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "931-502-5081",
+      "postal_code": "370405015",
+      "state": "TN",
+      "telephone_number": "931-502-5080"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "WENDY",
+     "authorized_official_last_name": "MONACI",
+     "authorized_official_telephone_number": "6153439094",
+     "authorized_official_title_or_position": "Vice President",
+     "certification_date": "2026-06-09",
+     "enumeration_date": "2006-06-13",
+     "last_updated": "2026-06-09",
+     "organization_name": "CLARKSVILLE PHYSICIAN SERVICES LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1150175098000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1781012061000",
+    "number": "1083657829",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "VANDERBILT PHYSICIAN SERVICES CLARKSVILLE",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [
+     {
+      "address_1": "647 DUNLOP LN STE 203",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CLARKSVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "931-502-3705",
+      "postal_code": "370405165",
+      "state": "TN",
+      "telephone_number": "931-502-3700"
+     }
+    ],
+    "taxonomies": [
+     {
+      "code": "208M00000X",
+      "desc": "Hospitalist",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "208600000X",
+      "desc": "Surgery",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "208800000X",
+      "desc": "Urology",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "363L00000X",
+      "desc": "Nurse Practitioner",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207Q00000X",
+      "desc": "Family Medicine",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "363A00000X",
+      "desc": "Physician Assistant",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207RC0000X",
+      "desc": "Internal Medicine, Cardiovascular Disease",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207X00000X",
+      "desc": "Orthopaedic Surgery",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "208G00000X",
+      "desc": "Thoracic Surgery (Cardiothoracic Vascular Surgery)",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "207RG0100X",
+      "desc": "Internal Medicine, Gastroenterology",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "208D00000X",
+      "desc": "General Practice",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "3841 GREEN HILLS VILLAGE DR STE 200",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "372152691",
+      "state": "TN"
+     },
+     {
+      "address_1": "133 DR ROBERT H LEE ROAD",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "DOVER",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "931-232-3905",
+      "postal_code": "370583750",
+      "state": "TN",
+      "telephone_number": "931-232-5141"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "WENDY",
+     "authorized_official_last_name": "MONACI",
+     "authorized_official_telephone_number": "6159363944",
+     "authorized_official_title_or_position": "President",
+     "certification_date": "2026-02-03",
+     "enumeration_date": "2012-02-03",
+     "last_updated": "2026-02-03",
+     "organization_name": "CLARKSVILLE PHYSICIAN SERVICES, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1328304086000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1770145521000",
+    "number": "1992077077",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "VANDERBILT PRIMARY CARE DOVER",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "261QR1300X",
+      "desc": "Clinic/Center, Rural Health",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "3841 GREEN HILLS VILLAGE DR STE 200",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "372152691",
+      "state": "TN"
+     },
+     {
+      "address_1": "719 THOMPSON LN",
+      "address_2": "SUITE 23300",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-936-5343",
+      "postal_code": "372043609",
+      "state": "TN",
+      "telephone_number": "615-936-3606"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "EMILY",
+     "authorized_official_last_name": "JACKSON",
+     "authorized_official_middle_name": "B",
+     "authorized_official_telephone_number": "6159363606",
+     "authorized_official_title_or_position": "President",
+     "certification_date": "2026-03-06",
+     "enumeration_date": "2008-12-01",
+     "last_updated": "2026-03-06",
+     "organization_name": "ONE HUNDRED OAKS IMAGING, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1228144566000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1772820859000",
+    "number": "1245485549",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "VANDERBILT IMAGING SERVICES ONE HUNDRED OAKS",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "235Z00000X",
+      "desc": "Speech-Language Pathologist,  ",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "363LA2100X",
+      "desc": "Nurse Practitioner, Acute Care",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "363LW0102X",
+      "desc": "Nurse Practitioner, Women's Health",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "363LG0600X",
+      "desc": "Nurse Practitioner, Gerontology",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     },
+     {
+      "code": "2085R0202X",
+      "desc": "Radiology, Diagnostic Radiology",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": "193200000X - Multi-Specialty Group"
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "4222 PAYSPHERE CIR",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CHICAGO",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "606740042",
+      "state": "IL",
+      "telephone_number": "800-879-6137"
+     },
+     {
+      "address_1": "624 GRASSMERE PARK",
+      "address_2": "SUITE 22",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "fax_number": "615-726-8887",
+      "postal_code": "372113662",
+      "state": "TN",
+      "telephone_number": "877-726-0776"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "MEENAL",
+     "authorized_official_last_name": "SETHNA",
+     "authorized_official_telephone_number": "8008796137",
+     "authorized_official_title_or_position": "President & CFO",
+     "certification_date": "2025-10-14",
+     "enumeration_date": "2009-08-03",
+     "last_updated": "2025-10-14",
+     "organization_name": "OPTION CARE INFUSION SERVICES, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1249326541000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1760474942000",
+    "number": "1326279746",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "VANDERBILT HC/OPTION CARE IV SERVICES",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "332B00000X",
+      "desc": "Durable Medical Equipment & Medical Supplies",
+      "license": "0000003433",
+      "primary": false,
+      "state": "TN",
+      "taxonomy_group": ""
+     },
+     {
+      "code": "251F00000X",
+      "desc": "Home Infusion",
+      "license": null,
+      "primary": false,
+      "state": null,
+      "taxonomy_group": ""
+     },
+     {
+      "code": "332BP3500X",
+      "desc": "Durable Medical Equipment & Medical Supplies, Parenteral & Enteral Nutrition",
+      "license": "0000003433",
+      "primary": false,
+      "state": "TN",
+      "taxonomy_group": ""
+     },
+     {
+      "code": "332BX2000X",
+      "desc": "Durable Medical Equipment & Medical Supplies, Oxygen Equipment & Supplies",
+      "license": "0000003433",
+      "primary": false,
+      "state": "TN",
+      "taxonomy_group": ""
+     },
+     {
+      "code": "3336H0001X",
+      "desc": "Pharmacy, Home Infusion Therapy Pharmacy",
+      "license": "0000003433",
+      "primary": true,
+      "state": "TN",
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "3000 LAKESIDE DR STE 300N",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BANNOCKBURN",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "600155405",
+      "state": "IL"
+     },
+     {
+      "address_1": "624 GRASSMERE PARK STE 22",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "372113671",
+      "state": "TN",
+      "telephone_number": "877-726-0776"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "MEENAL",
+     "authorized_official_last_name": "SETHNA",
+     "authorized_official_telephone_number": "8008796137",
+     "authorized_official_title_or_position": "President & CFO",
+     "certification_date": "2025-10-14",
+     "enumeration_date": "2020-10-12",
+     "last_updated": "2025-10-14",
+     "organization_name": "OPTION CARE INFUSION SERVICES, LLC",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1602530431000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1760474897000",
+    "number": "1316545494",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "VANDERBILT HC/OPTION CARE IV SERVICES",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "251F00000X",
+      "desc": "Home Infusion",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "3000 LAKESIDE DR STE 300N",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "BANNOCKBURN",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "600155405",
+      "state": "IL"
+     },
+     {
+      "address_1": "624 GRASSMERE PARK STE 22A",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "NASHVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "372113619",
+      "state": "TN",
+      "telephone_number": "877-726-0776"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "MEENAL",
+     "authorized_official_last_name": "SETHNA",
+     "authorized_official_telephone_number": "8008796137",
+     "authorized_official_title_or_position": "President & CFO",
+     "certification_date": "2026-05-05",
+     "enumeration_date": "2021-04-14",
+     "last_updated": "2026-05-05",
+     "organization_name": "OPTION CARE INFUSION SERVICES, LLC.",
+     "organizational_subpart": "NO",
+     "status": "A"
+    },
+    "created_epoch": "1618420305000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1777985102000",
+    "number": "1184205932",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "VANDERBILT HC/OPTION CARE IV SERVICES",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [
+     {
+      "address_1": "117 N HICKORY AVE STE 201",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "COOKEVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "385012424",
+      "state": "TN",
+      "telephone_number": "877-726-0776"
+     },
+     {
+      "address_1": "230 E. JAMES CAMPBELL BLVD",
+      "address_2": "SUITE 111",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "COLUMBIA",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "384010504",
+      "state": "TN",
+      "telephone_number": "877-726-0776"
+     },
+     {
+      "address_1": "800 WEATHERLY DR STE 102",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "CLARKSVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "370438957",
+      "state": "TN",
+      "telephone_number": "877-726-0776"
+     }
+    ],
+    "taxonomies": [
+     {
+      "code": "261QI0500X",
+      "desc": "Clinic/Center, Infusion Therapy",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   },
+   {
+    "addresses": [
+     {
+      "address_1": "PO BOX 713362",
+      "address_purpose": "MAILING",
+      "address_type": "DOM",
+      "city": "CINCINNATI",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "452713362",
+      "state": "OH",
+      "telephone_number": "888-636-4438"
+     },
+     {
+      "address_1": "4570 S JEFFERSON AVE",
+      "address_purpose": "LOCATION",
+      "address_type": "DOM",
+      "city": "COOKEVILLE",
+      "country_code": "US",
+      "country_name": "United States",
+      "postal_code": "385067696",
+      "state": "TN",
+      "telephone_number": "888-636-4438"
+     }
+    ],
+    "basic": {
+     "authorized_official_first_name": "CHRISTOPHER",
+     "authorized_official_last_name": "BRADY",
+     "authorized_official_middle_name": "J",
+     "authorized_official_telephone_number": "8886364438",
+     "authorized_official_title_or_position": "Secretary",
+     "certification_date": "2025-12-04",
+     "enumeration_date": "2017-12-14",
+     "last_updated": "2025-12-04",
+     "organization_name": "ROCKY MOUNTAIN HOLDINGS, LLC",
+     "organizational_subpart": "YES",
+     "parent_organization_legal_business_name": "AIR METHODS CORPORATION",
+     "status": "A"
+    },
+    "created_epoch": "1513301430000",
+    "endpoints": [],
+    "enumeration_type": "NPI-2",
+    "identifiers": [],
+    "last_updated_epoch": "1764867847000",
+    "number": "1659887545",
+    "other_names": [
+     {
+      "code": "3",
+      "organization_name": "VANDERBILT LIFEFLIGHT",
+      "type": "Doing Business As"
+     }
+    ],
+    "practiceLocations": [],
+    "taxonomies": [
+     {
+      "code": "3416A0800X",
+      "desc": "Ambulance, Air Transport",
+      "license": "10189",
+      "primary": false,
+      "state": "TN",
+      "taxonomy_group": ""
+     },
+     {
+      "code": "3416A0800X",
+      "desc": "Ambulance, Air Transport",
+      "license": null,
+      "primary": true,
+      "state": null,
+      "taxonomy_group": ""
+     }
+    ]
+   }
+  ]
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=zzqqxxnotahospital%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=zzqqxxnotahospital%2A&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=zzqqxxnotahospital+medical%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=zzqqxxnotahospital+medical%2A&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=zzqqxxnotahospital+medical+center%2A&state=TN&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ },
+ "https://npiregistry.cms.hhs.gov/api/?organization_name=zzqqxxnotahospital+medical+center%2A&version=2.1&enumeration_type=NPI-2&limit=200": {
+  "result_count": 0,
+  "results": []
+ }
+}

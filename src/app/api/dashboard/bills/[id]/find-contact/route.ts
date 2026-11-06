@@ -76,7 +76,38 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const value = (field === "billingManagerEmail" ? contact.billing_email : contact.support_email)?.trim() || null;
   if (!value) {
-    return NextResponse.json({ ok: true, value: null });
+    // A miss on the EMAIL is the normal case, not an error, and it is not
+    // the same as finding nothing. Hospitals almost never publish a billing
+    // email -- 3 of the 16 in the curated directory do, and the federal NPI
+    // registry, which covers essentially every US provider, has no email
+    // field at all. What it does have is a postal address and a phone
+    // number, so that is what comes back here. The customer rings the
+    // billing line and types the address in, which is the only thing that
+    // actually unblocks a send, since the engine refuses to mail a letter
+    // without one.
+    return NextResponse.json({
+      ok: true,
+      value: null,
+      fallback: {
+        providerName: contact.provider_name ?? null,
+        phone: contact.phone ?? null,
+        billingUrl: contact.billing_url ?? null,
+        notes: contact.notes ?? "",
+        mailingAddress: contact.mailing_address ?? null,
+        facilityType: contact.facility_type ?? null,
+        npi: contact.npi ?? null,
+        // Only the alternatives, so the UI can offer "not this one?"
+        // without repeating the facility it already named above.
+        otherMatches: (contact.candidates ?? []).slice(1, 4).map((candidate) => ({
+          name: candidate.name,
+          facilityType: candidate.facility_type,
+          mailingAddress: candidate.mailing_address,
+          phone: candidate.phone,
+          city: candidate.city,
+          state: candidate.state,
+        })),
+      },
+    });
   }
 
   // Persist the found address so the letter flow and the scan gate see it

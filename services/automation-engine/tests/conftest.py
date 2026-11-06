@@ -21,6 +21,12 @@ os.environ["TESTING"] = "1"  # no live SMTP, no live inbox
 os.environ["ENGINE_DATA_DIR"] = os.path.join(_workdir, "data")
 os.environ.pop("ENGINE_API_KEY", None)
 
+# The contact lookup calls the federal NPI registry over the network. Off by
+# default in tests, so the curated-directory tests stay deterministic and the
+# suite does not fail when CMS is slow or down. test_nppes.py turns it back
+# on against recorded payloads instead of the live API.
+os.environ["NPPES_DISABLED"] = "1"
+
 _test_url = os.environ.pop("ENGINE_TEST_DATABASE_URL", "").strip()
 
 if _test_url:

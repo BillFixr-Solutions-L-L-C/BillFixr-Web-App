@@ -96,6 +96,9 @@ describe("findProviderContact", () => {
       billing_email: "billing@riverside.test",
       support_email: null,
       phone: null,
+      provider_name: "Riverside General",
+      billing_url: null,
+      notes: "",
       verification_status: "verified",
     });
 
@@ -106,9 +109,46 @@ describe("findProviderContact", () => {
       billing_email: "billing@riverside.test",
       support_email: null,
       phone: null,
+      provider_name: "Riverside General",
+      billing_url: null,
+      notes: "",
       verification_status: "verified",
+      // The engine answered from its curated directory, so there is no
+      // registry record behind this one. Asserted explicitly rather than
+      // left off: toEqual treats a missing key and an undefined one as
+      // equal, so omitting these would pass even if the seam dropped them.
+      mailing_address: null,
+      npi: null,
+      facility_type: null,
+      fax: null,
+      candidates: [],
       source: "automation-engine",
     });
+  });
+
+  it("carries the engine's phone, billing page and notes, which is all most hospitals publish", async () => {
+    // billing_email is null for most hospitals -- 3 of the 16 providers in
+    // the engine's directory have one. These three fields are what the
+    // customer is actually left with, and the seam used to drop them, which
+    // turned a usable billing line into a dead end at the UI.
+    process.env.AUTOMATION_ENGINE_BASE_URL = "https://engine.test";
+    engineContact.mockResolvedValue({
+      billing_email: null,
+      support_email: null,
+      phone: "800-242-7416",
+      provider_name: "Ascension Saint Thomas Rutherford",
+      billing_url: "https://example.test/billing",
+      sources: ["https://example.test/billing"],
+      verification_status: "listed",
+      notes: "This hospital publishes no billing email.",
+    });
+
+    const contact = await findProviderContact(HOSPITAL);
+
+    expect(contact.phone).toBe("800-242-7416");
+    expect(contact.provider_name).toBe("Ascension Saint Thomas Rutherford");
+    expect(contact.billing_url).toBe("https://example.test/billing");
+    expect(contact.notes).toMatch(/no billing email/i);
   });
 
   it("uses ai-service when the engine isn't configured, with no verification status to report", async () => {
