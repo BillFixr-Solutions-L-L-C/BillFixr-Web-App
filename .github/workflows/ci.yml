@@ -244,3 +244,90 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  # Render receives no push events from this repo, so every deploy of these
+  # two services has been fired by hand. This replaces that, and is better
+  # than repairing it would be: a push-triggered Render deploy runs in
+  # parallel with CI, so it ships the services before their tests above
+  # have finished. Gating on the suites means a red test stops the deploy.
+  #
+  # Deploy hooks rather than the Render API key, because a hook URL deploys
+  # exactly one service while the API key can act on every service in the
+  # workspace.
+  #
+  # Fire-and-forget: confirming a deploy reached "live" needs the API key,
+  # so a green job here means Render accepted the request, not that the new
+  # code is serving. Render's own notifyOnFail email is the backstop.
+  deploy-services:
+    name: Deploy Render services
+    needs: [python, engine-postgres]
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Both ends of the pushed range have to be present for the diff
+          # below, and a shallow clone has only the tip.
+          fetch-depth: 0
+
+      # Each service builds a Docker image from its own directory, so a
+      # web-only change has nothing here to redeploy.
+      - name: Which services changed?
+        id: changed
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -uo pipefail
+          # A manual run has no range, and a force push can orphan the old
+          # tip. Either way, deploy both rather than silently skip: a
+          # needless deploy costs a build, a missed one ships nothing while
+          # reporting success.
+          if [ -z "${BEFORE:-}" ] || ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            echo "no usable diff range -- deploying both services"
+            echo "engine=true" >> "$GITHUB_OUTPUT"
+            echo "ai=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(git diff --name-only "$BEFORE" "$AFTER")
+          echo "changed files:"
+          echo "$files"
+          engine=false
+          ai=false
+          echo "$files" | grep -q '^services/automation-engine/' && engine=true
+          echo "$files" | grep -q '^services/ai-service/' && ai=true
+          echo "engine=$engine ai=$ai"
+          echo "engine=$engine" >> "$GITHUB_OUTPUT"
+          echo "ai=$ai" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy automation-engine
+        if: steps.changed.outputs.engine == 'true'
+        env:
+          HOOK: ${{ secrets.RENDER_ENGINE_DEPLOY_HOOK }}
+        run: |
+          set -uo pipefail
+          if [ -z "${HOOK:-}" ]; then
+            echo "::warning title=No deploy hook::RENDER_ENGINE_DEPLOY_HOOK is not set, so automation-engine was not deployed. Add it under Settings > Secrets and variables > Actions."
+            exit 0
+          fi
+          code=$(curl -sS -o body.json -w '%{http_code}' -X POST "$HOOK")
+          echo "HTTP $code"
+          cat body.json || true
+          echo
+          case "$code" in 200|201) ;; *) exit 1 ;; esac
+
+      - name: Deploy ai-service
+        if: steps.changed.outputs.ai == 'true'
+        env:
+          HOOK: ${{ secrets.RENDER_AI_DEPLOY_HOOK }}
+        run: |
+          set -uo pipefail
+          if [ -z "${HOOK:-}" ]; then
+            echo "::warning title=No deploy hook::RENDER_AI_DEPLOY_HOOK is not set, so ai-service was not deployed. Add it under Settings > Secrets and variables > Actions."
+            exit 0
+          fi
+          code=$(curl -sS -o body.json -w '%{http_code}' -X POST "$HOOK")
+          echo "HTTP $code"
+          cat body.json || true
+          echo
+          case "$code" in 200|201) ;; *) exit 1 ;; esac

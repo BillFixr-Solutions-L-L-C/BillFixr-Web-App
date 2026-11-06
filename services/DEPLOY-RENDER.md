@@ -158,9 +158,33 @@ one line at the very end, after a successful push to the registry.
 **Pushes do not deploy themselves.** `autoDeploy` is `yes` with trigger
 `commit`, but pushing the fix to `main` triggered nothing; the deploy had
 to be started by hand (`render deploys create <srv-id>`). The GitHub
-webhook is not connected to this workspace. Until it is, treat every
-deploy as manual — a pushed fix that appears to do nothing has not
-necessarily failed, it may simply not have been built.
+webhook is not connected to this workspace.
+
+**Confirmed 2026-11-06: it never worked, as opposed to having broken.**
+Across the whole deploy history of both services every deploy reads
+`trigger=api`, the only exception being one `blueprint_sync` at creation.
+Both blueprints also have `autoSync: true` and a `lastSync` frozen at
+2026-11-04 despite many later pushes to `main`. Two independent
+push-driven mechanisms, silent since the services were created; the one
+thing they share is GitHub → Render event delivery. Vercel auto-deploys
+from this same repo, so GitHub's webhooks are fine in general — it is
+Render's installation specifically. Most likely the repo is reached
+through a personal OAuth link, which is enough to clone an org-owned
+repo but not to receive its events.
+
+**This is now deployed from CI instead, and the webhook is not worth
+repairing.** See the `deploy-services` job in `.github/workflows/ci.yml`.
+A push-triggered Render deploy runs in parallel with CI, so it would
+ship these services before their own tests finished; deploying from CI
+gates on those suites, and filters on path so a web-only change does
+not rebuild two Docker images. It fires each service's **deploy hook**
+rather than using the Render API key, because a hook URL deploys exactly
+one service while the key can act on every service in the workspace.
+The hooks live in repo secrets as `RENDER_ENGINE_DEPLOY_HOOK` and
+`RENDER_AI_DEPLOY_HOOK`; with a secret unset that service is skipped
+with a warning rather than failing the run. Confirming a deploy reached
+`live` needs the API key, so a green job means Render accepted the
+request — Render's `notifyOnFail` email is the backstop.
 
 **Blueprints are read from the repository, not from disk.** `--path` is
 repo-relative, so a blueprint change has to be committed and pushed
