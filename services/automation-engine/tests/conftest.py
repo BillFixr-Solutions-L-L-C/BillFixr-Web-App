@@ -39,12 +39,14 @@ if _test_url:
             "test database. The suite drops the engine's tables; refusing to run."
         )
 
-    # Dropped before database.py is imported, so init_db() builds the
-    # schema from scratch -- the same starting point the SQLite run gets
-    # from a fresh temp file.
+    # Dropped before database.py is imported, so init_db() builds it from
+    # scratch -- the same starting point the SQLite run gets from a fresh
+    # temp file. The whole schema goes, not the two tables by name: the
+    # engine keeps them in a schema of its own, and dropping by bare name
+    # would silently resolve against `public` and remove nothing.
+    _schema = os.environ.get("ENGINE_DB_SCHEMA", "engine")
     with psycopg.connect(_test_url, autocommit=True) as _conn:
-        _conn.execute("DROP TABLE IF EXISTS negotiation_messages")
-        _conn.execute("DROP TABLE IF EXISTS negotiations")
+        _conn.execute(f"DROP SCHEMA IF EXISTS {_schema} CASCADE")
 
     os.environ["ENGINE_DATABASE_URL"] = _test_url
 else:
