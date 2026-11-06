@@ -182,6 +182,88 @@ describe("CaseInformationStep", () => {
     );
   });
 
+  it("shows the postal address, and does not claim it found nothing", async () => {
+    // For most US hospitals a postal address and a phone number IS the
+    // answer -- the federal registry has no email field. Printing "we
+    // couldn't find an address" above the hospital's actual address would
+    // send the customer away from a result that is right there.
+    mockFetch({
+      extract: BILL_READ,
+      contact: {
+        status: 200,
+        body: {
+          ok: true,
+          value: null,
+          fallback: {
+            providerName: "Ascension Saint Thomas Rutherford",
+            phone: "615-396-4100",
+            billingUrl: null,
+            notes: "Found in the federal NPI registry (NPI 1164590386).",
+            mailingAddress: "1700 MEDICAL CENTER PKWY, MURFREESBORO, TN 37129-2245",
+            facilityType: "General Acute Care Hospital",
+            npi: "1164590386",
+            otherMatches: [],
+          },
+        },
+      },
+    });
+    const user = userEvent.setup();
+    renderStep();
+
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+
+    expect(await screen.findByText(/1700 MEDICAL CENTER PKWY/)).toBeInTheDocument();
+    expect(screen.getByText(/No email published/i)).toBeInTheDocument();
+    expect(screen.queryByText(/couldn't find an address/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /NPI registry record 1164590386/i })).toHaveAttribute(
+      "href",
+      "https://npiregistry.cms.hhs.gov/provider-view/1164590386",
+    );
+  });
+
+  it("offers the other facilities registered under the same name", async () => {
+    // A hospital, its clinic and its lab share one name and one street. A
+    // dispute posted to the laboratory goes nowhere, so the customer needs
+    // to see that there was a choice.
+    mockFetch({
+      extract: BILL_READ,
+      contact: {
+        status: 200,
+        body: {
+          ok: true,
+          value: null,
+          fallback: {
+            providerName: "Saint Thomas Rutherford Hospital",
+            phone: "615-396-4100",
+            billingUrl: null,
+            notes: "",
+            mailingAddress: "1700 MEDICAL CENTER PKWY, MURFREESBORO, TN 37129-2245",
+            facilityType: "General Acute Care Hospital",
+            npi: "1164590386",
+            otherMatches: [
+              {
+                name: "Saint Thomas Rutherford Hospital Lab",
+                facilityType: "Clinical Medical Laboratory",
+                mailingAddress: "1700 MEDICAL CENTER PKWY",
+                phone: "615-396-4599",
+                city: "MURFREESBORO",
+                state: "TN",
+              },
+            ],
+          },
+        },
+      },
+    });
+    const user = userEvent.setup();
+    renderStep();
+
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+
+    expect(await screen.findByText(/Not the right one\? 1 other match/i)).toBeInTheDocument();
+    expect(screen.getByText("Saint Thomas Rutherford Hospital Lab")).toBeInTheDocument();
+    expect(screen.getByText(/Clinical Medical Laboratory/)).toBeInTheDocument();
+  });
+
   it("reports a lookup that isn't available, and still lets them type it", async () => {
     mockFetch({
       extract: BILL_READ,

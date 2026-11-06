@@ -50,7 +50,8 @@ The tests use a throwaway database, never send email, and make no network calls.
 | `engine/negotiator.py` | Autopilot: replies, settlement, revised bill, notices |
 | `engine/revised_bill.py` | Reads the revised bill (text and PDF) and checks the amount |
 | `engine/payments.py` | Fee rules |
-| `engine/contact_finder.py`, `engine/provider_directory.json` | Hospital billing contact lookup from a sourced directory. It never guesses |
+| `engine/contact_finder.py`, `engine/provider_directory.json` | Hospital billing contact lookup. The curated directory is the only source that can carry a billing **email**; it covers a few dozen hospitals. It never guesses |
+| `engine/nppes.py` | Resolves a free-text provider name against the federal NPI registry, so a postal address and phone are reachable for **any** US provider. No email field exists in NPPES. Needs no API key; set `NPPES_DISABLED=1` to turn it off |
 | `engine/email_dispatcher.py`, `engine/inbound_poller.py` | Sending email and reading replies |
 | `database.py` | The negotiations store. PostgreSQL when `ENGINE_DATABASE_URL` is set, SQLite otherwise (see INTEGRATION.md) |
 | `static/`, `demo_assets/`, `engine/demo_data.py` | Demo only. Do not ship |

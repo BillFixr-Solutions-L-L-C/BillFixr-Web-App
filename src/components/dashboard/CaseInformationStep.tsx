@@ -71,18 +71,41 @@ const HOSPITAL: Field[] = [
 // What the lookup found when it could not find an email. Rendered rather
 // than dropped because it is the normal outcome: the billing line is how
 // the customer gets the address that the send actually requires.
+type ContactMatch = {
+  name: string;
+  facilityType: string | null;
+  mailingAddress: string | null;
+  phone: string | null;
+  city: string | null;
+  state: string | null;
+};
+
 type ContactHelp = {
   providerName: string | null;
   phone: string | null;
   billingUrl: string | null;
   notes: string;
+  mailingAddress: string | null;
+  facilityType: string | null;
+  npi: string | null;
+  otherMatches: ContactMatch[];
 };
 
 function ContactHelpBlock({ help }: { help: ContactHelp }) {
-  if (!help.phone && !help.billingUrl && !help.notes) return null;
+  if (!help.phone && !help.billingUrl && !help.notes && !help.mailingAddress) return null;
   return (
     <div className="mt-1 space-y-0.5 text-xs text-gray-500">
       {help.notes && <p>{help.notes}</p>}
+      {help.mailingAddress && (
+        <p>
+          <span className="font-medium text-[#003322]">
+            {help.providerName ?? "Billing address"}
+          </span>
+          {help.facilityType ? ` — ${help.facilityType}` : ""}
+          <br />
+          {help.mailingAddress}
+        </p>
+      )}
       {help.phone && (
         <p>
           Billing line:{" "}
@@ -103,6 +126,46 @@ function ContactHelpBlock({ help }: { help: ContactHelp }) {
             className="font-medium text-[#0f7545] hover:underline"
           >
             {help.providerName ? `${help.providerName} billing page` : "Hospital billing page"}
+          </a>
+        </p>
+      )}
+      {help.otherMatches.length > 0 && (
+        // A hospital registers several NPIs under one name -- the hospital,
+        // its lab, its clinic -- and a big system puts the same name on
+        // facilities in different towns. Showing the alternatives lets the
+        // customer catch a wrong pick instead of posting a dispute to a
+        // laboratory.
+        <details className="pt-0.5">
+          <summary className="cursor-pointer font-medium text-[#0f7545] hover:underline">
+            Not the right one? {help.otherMatches.length} other{" "}
+            {help.otherMatches.length === 1 ? "match" : "matches"}
+          </summary>
+          <ul className="mt-1 space-y-1 pl-3">
+            {help.otherMatches.map((match, index) => (
+              <li key={`${match.name}-${index}`}>
+                <span className="font-medium text-[#003322]">{match.name}</span>
+                {match.facilityType ? ` — ${match.facilityType}` : ""}
+                {match.mailingAddress && (
+                  <>
+                    <br />
+                    {match.mailingAddress}
+                  </>
+                )}
+                {match.phone && <> · {match.phone}</>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {help.npi && (
+        <p>
+          <a
+            href={`https://npiregistry.cms.hhs.gov/provider-view/${help.npi}`}
+            target="_blank"
+            rel="noreferrer"
+            className="hover:underline"
+          >
+            Federal NPI registry record {help.npi}
           </a>
         </p>
       )}
@@ -287,9 +350,21 @@ export default function CaseInformationStep({
 
     const found = String(body?.value ?? "").trim();
     if (!found) {
-      setSearchNote((n) => ({ ...n, [key]: "We couldn't find an address for this hospital." }));
       const f = body?.fallback;
-      if (f && (f.phone || f.billingUrl || f.notes)) {
+      // "No email" and "nothing at all" are different outcomes and read
+      // very differently to someone stuck on this field. Hospitals hardly
+      // ever publish a billing email, so when the lookup comes back with
+      // the hospital's postal address and billing line it has done its job
+      // -- saying "we couldn't find an address" over the top of a real
+      // address is just wrong.
+      const foundSomething = Boolean(f && (f.mailingAddress || f.phone || f.billingUrl));
+      setSearchNote((n) => ({
+        ...n,
+        [key]: foundSomething
+          ? "No email published — here's how to reach them."
+          : "We couldn't find an address for this hospital.",
+      }));
+      if (f && (f.phone || f.billingUrl || f.notes || f.mailingAddress)) {
         setSearchHelp((h) => ({
           ...h,
           [key]: {
@@ -297,6 +372,10 @@ export default function CaseInformationStep({
             phone: f.phone ?? null,
             billingUrl: f.billingUrl ?? null,
             notes: String(f.notes ?? ""),
+            mailingAddress: f.mailingAddress ?? null,
+            facilityType: f.facilityType ?? null,
+            npi: f.npi ?? null,
+            otherMatches: Array.isArray(f.otherMatches) ? f.otherMatches : [],
           },
         }));
       }

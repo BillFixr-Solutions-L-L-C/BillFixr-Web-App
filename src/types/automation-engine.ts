@@ -48,6 +48,20 @@ export type EngineBillData = {
 // "needs_review" for keyword rules, estimates, or unverified benchmark rates.
 // A hospital's billing contacts. Every field except the notes can be null: the engine never guesses, and
 // most hospitals publish no billing email. The first three fields match AiProviderContact in ai-service.ts.
+export type AutomationProviderCandidate = {
+  npi: string;
+  name: string;
+  legal_name: string | null;
+  facility_type: string | null;
+  mailing_address: string | null;
+  phone: string | null;
+  fax: string | null;
+  city: string | null;
+  state: string | null;
+  score: number;
+  source_url: string | null;
+};
+
 export type AutomationProviderContact = {
   billing_email: string | null;
   support_email: string | null;
@@ -57,6 +71,19 @@ export type AutomationProviderContact = {
   sources: string[];
   verification_status: "verified" | "listed" | "unverified";
   notes: string;
+  // From the federal NPI registry, which the engine falls back to for any
+  // US provider that is not in its curated directory. The registry has no
+  // email field, so these are a postal address and a phone number — enough
+  // to post a letter or ring the billing line, never enough to send an
+  // email.
+  mailing_address: string | null;
+  npi: string | null;
+  facility_type: string | null;
+  fax: string | null;
+  // Other facilities that matched the same name. One hospital registers
+  // several NPIs — the hospital, its lab, its clinic — so the customer
+  // confirms which one rather than having one chosen for them.
+  candidates: AutomationProviderCandidate[];
 };
 
 export type AutomationFinding = {

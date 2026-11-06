@@ -5,12 +5,23 @@ const serverMock = createSupabaseMock();
 const adminMock = createSupabaseMock();
 const findProviderContact = vi.fn();
 const getAiServiceConfig = vi.fn();
+// The engine client, mocked separately. The seam prefers the engine when
+// both are configured, and only the engine returns a postal address and a
+// verification status, so a test about those has to come down this branch
+// rather than ai-service's.
+const engineContact = vi.fn();
+const getAutomationEngineConfig = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => serverMock.client) }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => adminMock.client) }));
 vi.mock("@/lib/ai-service", () => ({
   findProviderContact: (...a: unknown[]) => findProviderContact(...a),
   getAiServiceConfig: () => getAiServiceConfig(),
+}));
+vi.mock("@/lib/automation-engine", () => ({
+  findProviderContact: (...a: unknown[]) => engineContact(...a),
+  getAutomationEngineConfig: () => getAutomationEngineConfig(),
+  getEngineHealth: vi.fn(),
 }));
 
 const { POST } = await import("./route");
@@ -39,6 +50,9 @@ beforeEach(() => {
   serverMock.reset();
   adminMock.reset();
   getAiServiceConfig.mockReturnValue({ baseUrl: "http://ai" });
+  // Unconfigured by default, so the tests that predate the engine branch
+  // keep going through ai-service as they always did.
+  getAutomationEngineConfig.mockReturnValue(null);
 });
 
 describe("POST /api/dashboard/bills/[id]/find-contact", () => {
@@ -111,6 +125,62 @@ describe("POST /api/dashboard/bills/[id]/find-contact", () => {
     expect(res.status).toBe(200);
     expect(body.value).toBeNull();
     expect(body.fallback.phone).toBe("800-242-7416");
+  });
+
+  it("passes back the postal address for a hospital that publishes no email", async () => {
+    // The federal NPI registry covers essentially every US provider but has
+    // no email field, so a postal address and a phone number is the whole
+    // answer for most hospitals. Dropping it here would report "nothing
+    // found" while holding the hospital's actual billing address.
+    owns();
+    getAutomationEngineConfig.mockReturnValue({ baseUrl: "http://engine" });
+    engineContact.mockResolvedValue({
+      billing_email: null,
+      support_email: null,
+      phone: "615-396-4100",
+      provider_name: "Ascension Saint Thomas Rutherford",
+      mailing_address: "1700 MEDICAL CENTER PKWY, MURFREESBORO, TN 37129-2245",
+      facility_type: "General Acute Care Hospital",
+      npi: "1164590386",
+      candidates: [],
+    });
+
+    const res = await POST(req({ field: "billingManagerEmail" }), { params });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.value).toBeNull();
+    expect(body.fallback.mailingAddress).toBe("1700 MEDICAL CENTER PKWY, MURFREESBORO, TN 37129-2245");
+    expect(body.fallback.facilityType).toBe("General Acute Care Hospital");
+    expect(body.fallback.npi).toBe("1164590386");
+  });
+
+  it("offers the other facilities that matched the name, without repeating the first", async () => {
+    // One hospital registers several NPIs -- itself, its lab, its clinic --
+    // at the same name and street. The customer has to be able to catch a
+    // wrong pick before a dispute is posted to a laboratory.
+    owns();
+    getAutomationEngineConfig.mockReturnValue({ baseUrl: "http://engine" });
+    engineContact.mockResolvedValue({
+      billing_email: null,
+      support_email: null,
+      phone: "615-396-4100",
+      provider_name: "Saint Thomas Rutherford Hospital",
+      mailing_address: "1700 MEDICAL CENTER PKWY, MURFREESBORO, TN 37129-2245",
+      npi: "1164590386",
+      candidates: [
+        { name: "Saint Thomas Rutherford Hospital", facility_type: "General Acute Care Hospital", mailing_address: "1700 MEDICAL CENTER PKWY", phone: "615-396-4100", city: "MURFREESBORO", state: "TN" },
+        { name: "Saint Thomas Rutherford Hospital", facility_type: "Clinic/Center", mailing_address: "301 N UNIVERSITY ST", phone: "615-396-5004", city: "MURFREESBORO", state: "TN" },
+        { name: "Saint Thomas Rutherford Hospital Lab", facility_type: "Clinical Medical Laboratory", mailing_address: "1700 MEDICAL CENTER PKWY", phone: "615-396-4599", city: "MURFREESBORO", state: "TN" },
+      ],
+    });
+
+    const res = await POST(req({ field: "billingManagerEmail" }), { params });
+    const body = await res.json();
+
+    expect(body.fallback.otherMatches).toHaveLength(2);
+    expect(body.fallback.otherMatches[0].facilityType).toBe("Clinic/Center");
+    expect(body.fallback.otherMatches[1].facilityType).toBe("Clinical Medical Laboratory");
   });
 
   it("returns the billing address it found and stores it", async () => {

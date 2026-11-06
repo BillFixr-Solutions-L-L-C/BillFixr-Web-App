@@ -96,6 +96,9 @@ describe("findProviderContact", () => {
       billing_email: "billing@riverside.test",
       support_email: null,
       phone: null,
+      provider_name: "Riverside General",
+      billing_url: null,
+      notes: "",
       verification_status: "verified",
     });
 
@@ -106,7 +109,19 @@ describe("findProviderContact", () => {
       billing_email: "billing@riverside.test",
       support_email: null,
       phone: null,
+      provider_name: "Riverside General",
+      billing_url: null,
+      notes: "",
       verification_status: "verified",
+      // The engine answered from its curated directory, so there is no
+      // registry record behind this one. Asserted explicitly rather than
+      // left off: toEqual treats a missing key and an undefined one as
+      // equal, so omitting these would pass even if the seam dropped them.
+      mailing_address: null,
+      npi: null,
+      facility_type: null,
+      fax: null,
+      candidates: [],
       source: "automation-engine",
     });
   });

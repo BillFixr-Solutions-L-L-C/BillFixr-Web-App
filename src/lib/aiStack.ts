@@ -4,6 +4,7 @@ import {
   getEngineHealth,
   findProviderContact as engineContact,
 } from "./automation-engine";
+import type { AutomationProviderCandidate } from "@/types/automation-engine";
 
 // One seam over the two Python services under services/.
 //
@@ -22,9 +23,10 @@ import {
 export type AiBackend = "automation-engine" | "ai-service";
 
 // The engine is asked first wherever both can answer. Its contact lookup
-// is backed by a real provider directory and returns a verification
-// status; ai-service's equivalent is a documented stub that 404s until
-// that workstream ships the endpoint.
+// is backed by a curated directory plus the federal NPI registry, and
+// returns a verification status and a postal address; ai-service's
+// equivalent is a documented stub that 404s until that workstream ships
+// the endpoint.
 const PREFERENCE: AiBackend[] = ["automation-engine", "ai-service"];
 
 export function isBackendConfigured(backend: AiBackend): boolean {
@@ -84,6 +86,18 @@ export type ProviderContact = {
   provider_name: string | null;
   billing_url: string | null;
   notes: string;
+  /**
+   * Engine-only, and from the federal NPI registry rather than the curated
+   * directory. A postal address is the one contact detail that exists for
+   * essentially every US provider, so for a hospital nobody has curated
+   * this is the whole answer.
+   */
+  mailing_address: string | null;
+  npi: string | null;
+  facility_type: string | null;
+  fax: string | null;
+  /** Facilities sharing the name, for the customer to choose between. */
+  candidates: AutomationProviderCandidate[];
   /** Which backend actually answered, so a caller can say where a value came from. */
   source: AiBackend;
 };
@@ -114,6 +128,11 @@ export async function findProviderContact(provider: {
       provider_name: contact.provider_name,
       billing_url: contact.billing_url,
       notes: contact.notes,
+      mailing_address: contact.mailing_address ?? null,
+      npi: contact.npi ?? null,
+      facility_type: contact.facility_type ?? null,
+      fax: contact.fax ?? null,
+      candidates: contact.candidates ?? [],
       source: backend,
     };
   }
@@ -127,6 +146,11 @@ export async function findProviderContact(provider: {
     provider_name: null,
     billing_url: null,
     notes: "",
+    mailing_address: null,
+    npi: null,
+    facility_type: null,
+    fax: null,
+    candidates: [],
     source: backend,
   };
 }
