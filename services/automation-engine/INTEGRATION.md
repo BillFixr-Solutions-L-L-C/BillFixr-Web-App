@@ -50,7 +50,7 @@ These are the likely fits. Check the columns before relying on them.
 
 ## 4. Replacing the demo storage
 
-`database.py` holds a SQLite store behind one class, `NegotiationRepository`. These are the methods the rest of the engine uses:
+`database.py` holds the store behind one class, `NegotiationRepository`. It speaks to PostgreSQL when `ENGINE_DATABASE_URL` is set and to SQLite otherwise, with one set of statements translated for Postgres inside that module — so a caller never needs to know which backend is underneath. These are the methods the rest of the engine uses:
 
 `create_negotiation`, `get_negotiation`, `list_negotiations`, `add_message`, `update_negotiation_offer`, `update_threading`, `update_fields`, `toggle_auto_pilot`, `update_cadence`, `close_case`, `get_revised_bill`, `get_revised_bill_pdf_path`
 

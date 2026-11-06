@@ -16,6 +16,7 @@ GOOD = {
     "ADVOCATE_EMAIL": "advocate@billfixr.com",
     "SMTP_USER": "advocate@billfixr.com",
     "SMTP_PASSWORD": "mailbox-password",
+    "ENGINE_DATABASE_URL": "postgresql://engine:db-password@db.example.com:5432/postgres",
 }
 
 
@@ -36,6 +37,26 @@ def test_a_fully_configured_engine_is_ready():
     assert result["ready"] is True
     assert result["problems"] == []
     assert result["letters_tracked"] and result["replies_read"] and result["api_protected"]
+    assert result["store_durable"] is True
+
+
+def test_a_store_that_dies_with_the_container_is_a_warning():
+    """The engine still runs and still sends; what it loses is the record
+    that it sent. A reply to a letter whose negotiation is gone is parsed,
+    matched against nothing and discarded, so this has to be visible
+    somewhere before a letter goes out rather than after one is ignored."""
+    result = readiness.check(without("ENGINE_DATABASE_URL"))
+    assert result["store_durable"] is False
+    assert "ENGINE_DATABASE_URL" in settings_of(result)
+    assert "ENGINE_DATABASE_URL" not in criticals(result)
+    # Still ready: a laptop with no Postgres is a legitimate way to run this.
+    assert result["ready"] is True
+
+
+def test_the_banner_says_whether_the_store_survives_a_restart():
+    assert "store survives restart   : yes (Postgres)" in readiness.format_report(readiness.check(GOOD))
+    text = readiness.format_report(readiness.check(without("ENGINE_DATABASE_URL")))
+    assert "store survives restart   : NO (SQLite on local disk)" in text
 
 
 def test_an_open_api_is_critical():
@@ -132,7 +153,9 @@ class TestReport:
 
     def test_does_not_print_any_secret(self):
         text = readiness.format_report(readiness.check(GOOD))
-        for secret in ("engine-key", "or-key", "re-key", "mailbox-password"):
+        # db-password is in there because ENGINE_DATABASE_URL carries one
+        # inline, and the report is read in a deploy log.
+        for secret in ("engine-key", "or-key", "re-key", "mailbox-password", "db-password"):
             assert secret not in text
 
 
