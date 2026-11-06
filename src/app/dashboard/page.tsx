@@ -237,20 +237,25 @@ export default function DashboardHome() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ caseId: forCaseId }),
     });
+    const analysisBody = await analysisRes.json().catch(() => ({}));
     if (!analysisRes.ok) {
-      const body = await analysisRes.json().catch(() => ({}));
-      setScanError(body?.error ?? "We couldn't analyze your bill. Please try again.");
+      setScanError(analysisBody?.error ?? "We couldn't analyze your bill. Please try again.");
       scanStartedRef.current = null;
       return;
     }
 
-    const advanceRes = await fetch("/api/dev/advance-case", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caseId: forCaseId, toStatus: "awaiting_response" }),
-    });
-    if (!advanceRes.ok) {
-      console.error("Failed to advance case to awaiting_response:", await advanceRes.text());
+    // The scan starts the negotiation, and the engine sends the first
+    // letter as part of starting. This used to POST /api/dev/advance-case
+    // with toStatus "awaiting_response" and move on regardless — so the
+    // screen said a negotiation was under way whether or not anything had
+    // been sent, and nothing had: no caller ever started one. Show the
+    // negotiating stage only when the engine confirms it is running.
+    if (!analysisBody?.negotiation?.running) {
+      setScanError(
+        "We've read your bill, but we couldn't open the negotiation with your provider yet. We're on it — your analysis is saved.",
+      );
+      scanStartedRef.current = null;
+      return;
     }
 
     setStage("negotiating");

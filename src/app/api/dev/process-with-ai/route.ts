@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAiServiceConfig, processCase } from "@/lib/ai-service";
 import { mapAdminCaseAnalysis, mapBillAnalysis, mapCaseFields } from "@/lib/aiAnalysisMapping";
 import { guessContentType } from "@/lib/contentType";
+import { negotiationSummary, startNegotiationForCase, type StartableCase } from "@/lib/startNegotiation";
 import type { AiCaseProcessingResponse } from "@/types/ai";
 
 // Stands in for the real trigger (an automated pipeline kicking this off
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
   const { data: caseRow } = await supabase
     .from("cases")
     .select(
-      "id, user_id, bill_id, rescanned_at, bills(id, filename, storage_url, analysis_result, provider_name, provider_email, provider_phone, provider_address)",
+      "id, user_id, bill_id, negotiation_id, rescanned_at, bills(id, filename, storage_url, analysis_result, provider_name, provider_email, provider_phone, provider_address)",
     )
     .eq("id", caseId)
     .single();
@@ -49,10 +50,23 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
+  // Exactly the three fields the start reads, and bill_id taken from the
+  // joined bill rather than the case column so a case row whose bill_id
+  // is null still resolves to the right bill.
+  const startable: StartableCase = {
+    id: caseRow.id,
+    bill_id: bill.id,
+    negotiation_id: caseRow.negotiation_id,
+  };
+
   // Idempotent: already analyzed, don't re-call the AI service or
   // overwrite an existing result — unless this is an explicit re-scan.
   if (bill.analysis_result && !force) {
-    return NextResponse.json({ ok: true, alreadyProcessed: true });
+    // Still offered a negotiation: a case analyzed before the engine was
+    // wired in has an analysis and no negotiation, and this is the only
+    // way to start one without paying for a second AI read.
+    const negotiation = await beginNegotiation(admin, startable);
+    return NextResponse.json({ ok: true, alreadyProcessed: true, negotiation });
   }
 
   // One re-scan per case: it's a free second AI read, meant as a one-off
@@ -148,5 +162,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: caseUpdateError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, errorsDetected, savingsFound });
+  // The scan is where a negotiation can finally start: the commitment
+  // fee bought the case, and the extraction this route just wrote is the
+  // bill data the engine audits. Before this, nothing in the app ever
+  // started one — the route that could was never called, and the case
+  // was moved to "awaiting_response" by the client asking for it, with
+  // no letter behind the claim.
+  const negotiation = await beginNegotiation(admin, startable);
+
+  return NextResponse.json({ ok: true, errorsDetected, savingsFound, negotiation });
+}
+
+// The engine writes to a real hospital here, so this never throws into
+// the scan: the analysis above is already saved and worth returning even
+// when the negotiation could not start. The outcome is handed back so the
+// customer is told a letter went out only when one actually did.
+async function beginNegotiation(admin: ReturnType<typeof createAdminClient>, caseRow: StartableCase) {
+  try {
+    const result = await startNegotiationForCase(admin, caseRow);
+    const summary = negotiationSummary(result);
+    if (!summary.running) {
+      // Logged with the reason: "blocked" states are recoverable through
+      // POST /api/dashboard/cases/[id]/negotiation once the missing piece
+      // is in place, and a link_lost carries a live negotiation id that
+      // must not disappear.
+      const cause = result.started || "blocked" in result ? "" : result.cause;
+      console.error("No negotiation running for case", caseRow.id, summary.reason, cause);
+    }
+    return summary;
+  } catch (err) {
+    console.error("Could not start a negotiation for case", caseRow.id, err);
+    return { running: false, reason: "engine_refused" };
+  }
 }

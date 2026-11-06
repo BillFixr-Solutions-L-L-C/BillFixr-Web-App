@@ -3,17 +3,20 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 
 const serverMock = createSupabaseMock();
 const adminMock = createSupabaseMock();
-const auditBill = vi.fn();
-const startNegotiation = vi.fn();
 const getNegotiation = vi.fn();
+const startNegotiationForCase = vi.fn();
 const isBackendConfigured = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => serverMock.client) }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => adminMock.client) }));
 vi.mock("@/lib/automation-engine", () => ({
-  auditBill: (...a: unknown[]) => auditBill(...a),
-  startNegotiation: (...a: unknown[]) => startNegotiation(...a),
   getNegotiation: (...a: unknown[]) => getNegotiation(...a),
+}));
+// The guards and the engine call live in src/lib/startNegotiation.ts and
+// are tested there. This route's remaining job is ownership and turning
+// an outcome into a status code, which is all that is asserted here.
+vi.mock("@/lib/startNegotiation", () => ({
+  startNegotiationForCase: (...a: unknown[]) => startNegotiationForCase(...a),
 }));
 vi.mock("@/lib/aiStack", () => ({ isBackendConfigured: (...a: unknown[]) => isBackendConfigured(...a) }));
 
@@ -21,68 +24,9 @@ const { GET, POST } = await import("./route");
 
 const params = Promise.resolve({ id: "case-1" });
 const USER = { id: "user-1" };
-const OWN_CASE = { id: "case-1", user_id: USER.id, bill_id: "bill-1", negotiation_id: null };
-const AUDIT = {
-  settlement_options: { aggressive_offer: 1200, fair_market_offer: 1500, potential_savings: 800 },
-};
-// A real extraction, in the AI service's shape. The engine reads other
-// field names entirely, so a fixture that is not shaped like this cannot
-// catch the translation going wrong.
-const EXTRACTION = {
-  document_type: "hospital_bill",
-  patient: { name: "Ada Patient", phone: null, email: null, address: null },
-  provider: { name: "Mercy General Hospital", phone: null, email: null, address: null },
-  insurer: { name: null, phone: null, email: null, address: null },
-  account_number: "ACC-77",
-  claim_number: null,
-  statement_date: "2026-07-01",
-  due_date: null,
-  date_of_service_start: "2026-06-18",
-  date_of_service_end: null,
-  total_charges: { amount: 5000, currency: "USD" },
-  insurance_paid: { amount: 0, currency: "USD" },
-  adjustments: { amount: 0, currency: "USD" },
-  patient_responsibility: { amount: 4500, currency: "USD" },
-  line_items: [
-    {
-      description: "ER visit",
-      service_code: "99284",
-      service_date: "2026-06-18",
-      quantity: 1,
-      charge: { amount: 500, currency: "USD" },
-      patient_responsibility: { amount: 100, currency: "USD" },
-      confidence: 0.8,
-    },
-  ],
-  detected_issues: [],
-  missing_fields: [],
-  confidence: 0.9,
-};
+const OWN_CASE = { id: "case-1", user_id: USER.id, status: "scanning", bill_id: "bill-1", negotiation_id: null };
 
 const request = () => new Request("http://localhost/api/dashboard/cases/case-1/negotiation", { method: "POST" });
-
-function readyToStart({
-  caseRow = OWN_CASE,
-  fee = { processor_ref: "pi_1" },
-  extraction = { result: EXTRACTION },
-}: {
-  caseRow?: typeof OWN_CASE;
-  fee?: { processor_ref: string } | null;
-  extraction?: { result: unknown } | null;
-} = {}) {
-  serverMock.getUser.mockResolvedValue({ data: { user: USER } });
-  serverMock.queueResult("cases", { data: caseRow, error: null });
-  serverMock.queueResult("bills", {
-    data: { id: "bill-1", provider_email: "billing@hospital.test", provider_support_email: null },
-    error: null,
-  });
-  serverMock.queueResult("payment_records", { data: fee, error: null });
-  serverMock.queueResult("bill_extractions", { data: extraction, error: null });
-  adminMock.queueResult("app_settings", { data: { success_fee_percentage: 20 }, error: null });
-  isBackendConfigured.mockReturnValue(true);
-  auditBill.mockResolvedValue(AUDIT);
-  startNegotiation.mockResolvedValue({ id: "neg-1", status: "active" });
-}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -91,134 +35,101 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
+function ownedCase(caseRow: Record<string, unknown> | null = OWN_CASE) {
+  serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+  serverMock.queueResult("cases", { data: caseRow, error: null });
+}
+
 describe("POST /api/dashboard/cases/[id]/negotiation", () => {
   it("returns 401 without a session", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: null } });
     expect((await POST(request(), { params })).status).toBe(401);
-    expect(startNegotiation).not.toHaveBeenCalled();
+    expect(startNegotiationForCase).not.toHaveBeenCalled();
   });
 
   it("returns 404 for someone else's case", async () => {
-    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
-    serverMock.queueResult("cases", { data: { ...OWN_CASE, user_id: "someone-else" }, error: null });
+    ownedCase({ ...OWN_CASE, user_id: "someone-else" });
     expect((await POST(request(), { params })).status).toBe(404);
-    expect(startNegotiation).not.toHaveBeenCalled();
+    expect(startNegotiationForCase).not.toHaveBeenCalled();
   });
 
-  it("returns 503 when the engine isn't configured", async () => {
-    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
-    serverMock.queueResult("cases", { data: OWN_CASE, error: null });
-    isBackendConfigured.mockReturnValue(false);
-
-    expect((await POST(request(), { params })).status).toBe(503);
-    expect(startNegotiation).not.toHaveBeenCalled();
+  it("returns 404 for a case that does not exist", async () => {
+    ownedCase(null);
+    expect((await POST(request(), { params })).status).toBe(404);
+    expect(startNegotiationForCase).not.toHaveBeenCalled();
   });
 
-  it("refuses to start a second negotiation on the same case", async () => {
-    // A second start would strand the first, along with whatever it has
-    // already sent to the provider.
-    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
-    serverMock.queueResult("cases", { data: { ...OWN_CASE, negotiation_id: "neg-existing" }, error: null });
-    isBackendConfigured.mockReturnValue(true);
-
-    expect((await POST(request(), { params })).status).toBe(409);
-    expect(startNegotiation).not.toHaveBeenCalled();
-  });
-
-  it("will not write to a provider without a billing email", async () => {
-    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
-    serverMock.queueResult("cases", { data: OWN_CASE, error: null });
-    serverMock.queueResult("bills", { data: { id: "bill-1", provider_email: null }, error: null });
-    isBackendConfigured.mockReturnValue(true);
-
-    expect((await POST(request(), { params })).status).toBe(409);
-    expect(startNegotiation).not.toHaveBeenCalled();
-  });
-
-  it("returns 402 when the commitment fee hasn't been paid", async () => {
-    readyToStart({ fee: null });
-
-    expect((await POST(request(), { params })).status).toBe(402);
-    expect(startNegotiation).not.toHaveBeenCalled();
-  });
-
-  it("returns 409 when the bill has not been read yet", async () => {
-    readyToStart({ extraction: null });
-
-    const res = await POST(request(), { params });
-
-    expect(res.status).toBe(409);
-    expect(auditBill).not.toHaveBeenCalled();
-  });
-
-  it("audits the extracted bill, opens at the aggressive offer, and links the negotiation", async () => {
-    readyToStart();
+  it("starts the negotiation with the service role and returns the engine's view", async () => {
+    // Service role on purpose: bill_extractions has RLS on with no
+    // policies, so reading it through the session client returns nothing
+    // and the start refuses every case as "this bill hasn't been read".
+    ownedCase();
+    startNegotiationForCase.mockResolvedValue({ started: true, negotiation: { id: "neg-1", status: "DISPATCHED" } });
 
     const res = await POST(request(), { params });
 
     expect(res.status).toBe(200);
-    // The engine's field names, not the extraction's. Passed through
-    // untranslated this audits as a $0 bill with no charges and reports
-    // no issues, which is how the mismatch went unnoticed.
-    expect(auditBill).toHaveBeenCalledWith({
-      provider_name: "Mercy General Hospital",
-      patient_name: "Ada Patient",
-      account_number: "ACC-77",
-      statement_date: "2026-07-01",
-      date_of_service: "2026-06-18",
-      total_billed: 5000,
-      patient_due: 4500,
-      is_itemized: true,
-      line_items: [
-        { description: "ER visit", cpt_code: "99284", date: "2026-06-18", quantity: 1, charge_amount: 500 },
-      ],
+    expect(await res.json()).toEqual({ id: "neg-1", status: "DISPATCHED" });
+    expect(startNegotiationForCase).toHaveBeenCalledWith(adminMock.client, OWN_CASE);
+  });
+
+  it("maps each refusal to the code it had before the logic moved out", async () => {
+    const expected: [string, number][] = [
+      ["engine_unavailable", 503],
+      ["already_started", 409],
+      ["no_provider_email", 409],
+      ["commitment_fee_unpaid", 402],
+      ["bill_not_read", 409],
+    ];
+    for (const [blocked, status] of expected) {
+      vi.clearAllMocks();
+      serverMock.reset();
+      ownedCase();
+      startNegotiationForCase.mockResolvedValue({ started: false, blocked });
+
+      const res = await POST(request(), { params });
+
+      expect(res.status, blocked).toBe(status);
+      expect(await res.json(), blocked).toHaveProperty("error");
+    }
+  });
+
+  it("reports a lost link as a 500 rather than leaving the case looking unstarted", async () => {
+    // The engine may already be writing to the hospital, so this is a
+    // failure the caller can act on, not a silent success.
+    ownedCase();
+    startNegotiationForCase.mockResolvedValue({
+      started: false,
+      failed: "link_lost",
+      negotiationId: "neg-1",
+      cause: "deadlock",
     });
-    expect(startNegotiation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        initialOffer: 1200,
-        hospitalEmail: "billing@hospital.test",
-        commitmentPaymentRef: "pi_1",
-        // 20% stored as a percentage, sent as the rate the engine expects.
-        completionFeeRate: 0.2,
-      }),
-    );
-    const link = adminMock.from.mock.results[1].value.update;
-    expect(link).toHaveBeenCalledWith({ negotiation_id: "neg-1" });
+
+    expect((await POST(request(), { params })).status).toBe(500);
   });
 
-  it("reports a failure rather than leaving the case looking unstarted", async () => {
-    // The engine may already be writing to the hospital, so a lost link
-    // is a 500 the caller can act on, not a silent success.
-    readyToStart();
-    adminMock.queueResult("cases", { data: null, error: { message: "update failed" } });
+  it("returns 502 when the engine refuses to start", async () => {
+    ownedCase();
+    startNegotiationForCase.mockResolvedValue({
+      started: false,
+      failed: "engine_refused",
+      cause: new Error("engine down"),
+    });
 
-    const res = await POST(request(), { params });
-
-    expect(res.status).toBe(500);
-  });
-
-  it("does not link anything when the engine refuses to start", async () => {
-    readyToStart();
-    startNegotiation.mockRejectedValue(new Error("engine down"));
-
-    const res = await POST(request(), { params });
-
-    expect(res.status).toBe(502);
+    expect((await POST(request(), { params })).status).toBe(502);
   });
 });
 
 describe("GET /api/dashboard/cases/[id]/negotiation", () => {
   it("returns 404 when nothing has been started", async () => {
-    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
-    serverMock.queueResult("cases", { data: OWN_CASE, error: null });
+    ownedCase();
 
     expect((await GET(request(), { params })).status).toBe(404);
     expect(getNegotiation).not.toHaveBeenCalled();
   });
 
   it("returns the engine's view of a started negotiation", async () => {
-    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
-    serverMock.queueResult("cases", { data: { ...OWN_CASE, negotiation_id: "neg-1" }, error: null });
+    ownedCase({ ...OWN_CASE, negotiation_id: "neg-1" });
     isBackendConfigured.mockReturnValue(true);
     getNegotiation.mockResolvedValue({ id: "neg-1", status: "awaiting_response" });
 
@@ -229,9 +140,16 @@ describe("GET /api/dashboard/cases/[id]/negotiation", () => {
     expect(getNegotiation).toHaveBeenCalledWith("neg-1");
   });
 
+  it("returns 503 when the engine is not configured", async () => {
+    ownedCase({ ...OWN_CASE, negotiation_id: "neg-1" });
+    isBackendConfigured.mockReturnValue(false);
+
+    expect((await GET(request(), { params })).status).toBe(503);
+    expect(getNegotiation).not.toHaveBeenCalled();
+  });
+
   it("returns 404 for someone else's case before asking the engine anything", async () => {
-    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
-    serverMock.queueResult("cases", { data: { ...OWN_CASE, user_id: "other", negotiation_id: "neg-1" }, error: null });
+    ownedCase({ ...OWN_CASE, user_id: "other", negotiation_id: "neg-1" });
 
     expect((await GET(request(), { params })).status).toBe(404);
     expect(getNegotiation).not.toHaveBeenCalled();
