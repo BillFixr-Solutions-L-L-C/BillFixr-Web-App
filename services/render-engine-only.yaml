@@ -16,8 +16,9 @@
 # spin-down after 15 idle minutes. The consequence that matters here is
 # that the inbox poller stops with the service, so a hospital's reply is
 # not picked up -- reply handling cannot be tested on this plan. Letters
-# can be sent and tracked. Everything under /app/data (the engine
-# database and the revised-bill PDFs) is lost on each spin-down.
+# can be sent and tracked. Everything under /app/data -- now just the
+# revised-bill PDFs -- is lost on each spin-down. The negotiations
+# themselves no longer live there: see ENGINE_DATABASE_URL below.
 
 services:
   - type: web
@@ -53,6 +54,22 @@ services:
       - key: COMPLETION_FEE_RATE
         value: "0.20"
       - key: ENGINE_API_KEY
+        sync: false
+      # Supabase Postgres, session pooler (port 5432 on the pooler host --
+      # the direct connection is IPv6-only on Supabase's free plan and
+      # Render's egress is IPv4, and the transaction pooler on 6543 cannot
+      # hold the session this engine wants). sync: false because it carries
+      # the database password, so it is set on the service, not here.
+      #
+      # It is declared here even though the value is not, because this
+      # blueprint is the desired state for the service's env vars and
+      # autoSync is on: a key absent from this file is a key a sync can
+      # take away. Unset, the engine silently falls back to a SQLite file
+      # on the container filesystem, which on free is wiped on every
+      # deploy and every spin-down -- a hospital's reply then matches no
+      # negotiation and is dropped. Check store_durable in /api/health
+      # rather than assuming.
+      - key: ENGINE_DATABASE_URL
         sync: false
       - key: OPENROUTER_API_KEY
         sync: false
