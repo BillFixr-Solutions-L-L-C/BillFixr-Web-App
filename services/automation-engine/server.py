@@ -138,7 +138,7 @@ class LetterRequest(BaseModel):
     custom_notes: Optional[str] = ""
 
 @app.get("/api/health")
-async def health_check():
+async def health_check(check: str = ""):
     # This used to report qwen and deepseek as the models in use. Those are
     # the *fallbacks*; the models actually called are these, and either can
     # be overridden by environment variable. The one endpoint used to check
@@ -147,8 +147,21 @@ async def health_check():
     from engine.vision_extractor import VISION_MODEL
 
     state = readiness.check()
+    extra = {}
+    if "registry" in {part.strip() for part in check.split(",")}:
+        # Opt-in, because it calls the NPI registry over the network and
+        # Render polls this route. Asked for by name, it answers the one
+        # question the test suite structurally cannot: the suite runs
+        # against recorded responses, so blocked egress from this container
+        # would look like "no hospital found" for every provider that is
+        # not in the curated directory, and look like nothing at all here.
+        from engine import nppes
+
+        extra["provider_registry"] = nppes.probe()
+
     return {
         "status": "healthy",
+        **extra,
         "openrouter_configured": bool(os.getenv("OPENROUTER_API_KEY", "").strip()),
         "vision_model": VISION_MODEL,
         "reasoning_model": REASONING_MODEL,

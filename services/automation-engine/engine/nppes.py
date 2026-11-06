@@ -384,3 +384,38 @@ def resolve(provider_name: str, address: Optional[str] = None, limit: int = 5) -
         seen.add(key)
         unique.append(cand)
     return unique[:limit]
+
+
+def probe() -> Dict[str, Any]:
+    """Can this process actually reach the registry? Never raises.
+
+    Worth a function of its own because every test in the suite runs
+    against a recorded response. That is deliberate -- a suite that depends
+    on CMS being up is a suite that fails for reasons that are nobody's
+    fault -- but it means a blocked outbound call from the deployment would
+    surface as "no match" for every uncurated hospital and show up nowhere
+    else. This is the check that tells those two apart.
+
+    Uses a phrase prefix with a known, stable answer, and reports the count
+    rather than the records: the question is reachability, not content.
+    """
+    if os.getenv("NPPES_DISABLED", "").strip():
+        return {"reachable": False, "disabled": True}
+
+    started = time.time()
+    try:
+        data = _request({"organization_name": "johns hopkins hospital*"})
+    except Exception as err:          # noqa: BLE001 -- a health check reports, it does not fail
+        return {
+            "reachable": False,
+            "disabled": False,
+            "error": type(err).__name__,
+            "elapsed_ms": int((time.time() - started) * 1000),
+        }
+
+    return {
+        "reachable": True,
+        "disabled": False,
+        "results": len(data.get("results") or []),
+        "elapsed_ms": int((time.time() - started) * 1000),
+    }
