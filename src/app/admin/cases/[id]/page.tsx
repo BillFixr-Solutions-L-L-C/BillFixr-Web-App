@@ -15,9 +15,13 @@ import CaseDocumentList from "@/components/dashboard/CaseDocumentList";
 import LetterDeliveryPanel from "@/components/admin/LetterDeliveryPanel";
 import { isCaseCompleted } from "@/lib/caseStatus";
 import ManualOverridePanel from "@/components/admin/ManualOverridePanel";
+import HeldSettlementPanel from "@/components/admin/HeldSettlementPanel";
 import CaseDocumentsPanel from "@/components/admin/CaseDocumentsPanel";
 import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
+import { getNegotiation } from "@/lib/automation-engine";
+import { isBackendConfigured } from "@/lib/aiStack";
+import type { AutomationNegotiation } from "@/types/automation-engine";
 
 const RISK_COLOR: Record<string, string> = {
   High: "text-red-500",
@@ -37,7 +41,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const { data: caseRow } = await supabase
     .from("cases")
     .select(
-      "id, status, created_at, letter_sent_at, appeal_letter_text, admin_analysis, manual_notes, override_reason, approval_chain, manual_review_status, profiles!cases_user_id_fkey(name), bills(id, filename, storage_url, status, uploaded_at, analysis_result)",
+      "id, status, created_at, letter_sent_at, appeal_letter_text, admin_analysis, manual_notes, override_reason, approval_chain, manual_review_status, negotiation_id, profiles!cases_user_id_fkey(name), bills(id, filename, storage_url, status, uploaded_at, analysis_result)",
     )
     .eq("id", id)
     .single();
@@ -56,6 +60,22 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   // a fabricated one an admin might act on is not.
   const analysis = caseRow.admin_analysis as AdminCaseAnalysis | null;
   const delivered = isCaseCompleted(caseRow.status);
+
+  // Asked for only so a held settlement can be surfaced and released. The
+  // page must still render when the engine is down or not configured —
+  // an admin looking at a case does not need the engine to read it.
+  let negotiation: AutomationNegotiation | null = null;
+  if (caseRow.negotiation_id && isBackendConfigured("automation-engine")) {
+    try {
+      negotiation = await getNegotiation(caseRow.negotiation_id);
+    } catch (err) {
+      console.error("Could not read the negotiation for case", id, err);
+    }
+  }
+  const heldSettlement =
+    negotiation?.status === "HELD_FOR_REVIEW" && negotiation.pending_settlement_amount !== null
+      ? negotiation
+      : null;
 
   const { data: caseDocuments } = await supabase
     .from("case_documents")
@@ -248,6 +268,17 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
             repliedAt={firstResponse ? (firstResponse.received_on ?? firstResponse.created_at) : null}
             hasEvents={events.length > 0}
           />
+
+          {heldSettlement && (
+            <HeldSettlementPanel
+              caseId={id}
+              pendingAmount={heldSettlement.pending_settlement_amount!}
+              totalBilled={heldSettlement.total_billed ?? null}
+              reason={heldSettlement.held_for_review_reason}
+              heldAt={heldSettlement.held_for_review_at}
+              canApprove={canOverride}
+            />
+          )}
 
           <ManualOverridePanel
             caseId={id}

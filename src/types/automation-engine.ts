@@ -150,6 +150,14 @@ export type AutomationNegotiation = {
   settled_amount: number | null;
   completion_fee: number | null;
   completion_paid: boolean;
+  /** The figure autopilot was about to accept when the review hold stopped
+   *  it. Null unless the status is HELD_FOR_REVIEW. Without it a held case
+   *  has no record of what the provider agreed to, which is how one went
+   *  un-finishable on 2026-11-06. */
+  pending_settlement_amount: number | null;
+  held_for_review_at: string | null;
+  /** The findings below `high` confidence that are holding the case. */
+  held_for_review_reason: string | null;
   revised_bill_available: boolean;
   revised_bill_has_pdf: boolean;
   revised_bill_check?: AutomationRevisedBillCheck;

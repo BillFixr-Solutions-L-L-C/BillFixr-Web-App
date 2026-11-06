@@ -101,6 +101,14 @@ def init_db():
         # Resend so its webhook can match a delivery, bounce or open back
         # to the case without the engine calling into the web app.
         ("external_ref", "TEXT"),
+        # The figure autopilot was about to accept when AUTOPILOT_HOLD_FOR_REVIEW
+        # stopped it. Before these columns existed the hold wrote
+        # status=HELD_FOR_REVIEW and nothing else, so the amount the hospital
+        # had agreed to was lost -- the settlement could not be completed
+        # afterwards even by hand, because nothing recorded what it was for.
+        ("pending_settlement_amount", "REAL"),
+        ("held_for_review_at", "TEXT"),
+        ("held_for_review_reason", "TEXT"),
     ]
     for col_name, col_def in migration_cols_negotiations:
         try:
