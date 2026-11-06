@@ -30,7 +30,7 @@ from engine.email_dispatcher import email_dispatcher, case_tags
 from engine import readiness
 from engine.inbound_poller import inbound_poller
 from engine.demo_data import DEMO_BILLS, get_demo_bill
-from database import NegotiationRepository, get_connection
+from database import NegotiationRepository
 from engine.contact_finder import ProviderContactFinder
 
 contact_finder = ProviderContactFinder()
@@ -158,6 +158,7 @@ async def health_check():
         "letters_tracked": state["letters_tracked"],
         "replies_read": state["replies_read"],
         "api_protected": state["api_protected"],
+        "store_durable": state["store_durable"],
     }
 
 @app.get("/api/demo-bills")
@@ -347,10 +348,7 @@ async def start_negotiation(payload: StartNegotiationRequest):
         )
 
         # Save support email
-        conn = get_connection()
-        conn.cursor().execute("UPDATE negotiations SET support_email = ? WHERE id = ?", (target_support_email, record["id"]))
-        conn.commit()
-        conn.close()
+        NegotiationRepository.set_support_email(record["id"], target_support_email)
 
         # Shared thread dual-recipient dispatch
         receipt = email_dispatcher.dispatch_dispute_packet(
@@ -373,19 +371,9 @@ async def start_negotiation(payload: StartNegotiationRequest):
         # has no record of, and the inbound poller would never match one.
         real_mid = receipt.get("message_id")
         if receipt.get("mode") == "LIVE_RESEND" and real_mid and real_mid != record.get("root_message_id"):
-            conn = get_connection()
-            cur = conn.cursor()
-            cur.execute(
-                "UPDATE negotiations SET root_message_id = ?, last_message_id = ? WHERE id = ?",
-                (real_mid, real_mid, record["id"]),
+            NegotiationRepository.reconcile_root_message_id(
+                record["id"], real_mid, record.get("root_message_id")
             )
-            cur.execute(
-                "UPDATE negotiation_messages SET message_id_header = ?, references_header = ? "
-                "WHERE negotiation_id = ? AND message_id_header = ?",
-                (real_mid, real_mid, record["id"], record.get("root_message_id")),
-            )
-            conn.commit()
-            conn.close()
 
         record["dispatch_receipt"] = receipt
         return NegotiationRepository.get_negotiation(record["id"])
@@ -709,11 +697,10 @@ async def edit_case_field(negotiation_id: str, payload: EditProfileRequest):
         raise HTTPException(status_code=404, detail="Negotiation not found.")
     
     old_val = neg.get(payload.field)
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(f"UPDATE negotiations SET {payload.field} = ? WHERE id = ? OR tracking_code = ?", (payload.new_value, negotiation_id, negotiation_id))
-    conn.commit()
-    conn.close()
+    try:
+        NegotiationRepository.set_editable_field(negotiation_id, payload.field, payload.new_value)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     
     entry = NegotiationRepository.record_edit(negotiation_id, payload.field, old_val, payload.new_value, payload.reason, payload.actor or "User")
     return {"status": "success", "edit": entry, "negotiation": NegotiationRepository.get_negotiation(negotiation_id)}

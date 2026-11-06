@@ -1,29 +1,146 @@
 """
-SQLite Database Layer for BillFixr Negotiations.
+Database Layer for BillFixr Negotiations.
 Persists negotiation sessions, audit records, hospital messages, and timeline events.
+
+Two backends, one dialect:
+
+    ENGINE_DATABASE_URL set    -> PostgreSQL via psycopg 3. Production.
+    ENGINE_DATABASE_URL unset  -> SQLite at ENGINE_DB_PATH. Local dev, tests.
+
+Postgres exists because this service's filesystem is not durable. A Render
+free web service cannot have a disk at all, so ENGINE_DB_PATH is wiped on
+every deploy and every spin-down. When that happens a hospital's reply
+still arrives and engine/inbound_poller.py still parses its BFX- tracking
+code, but get_negotiation finds nothing, the poller skips the message, and
+the reply is dropped with no error anywhere. The negotiation row is the
+only record that a letter was ever sent, so it has to outlive the
+container.
+
+Every statement below is written once, in SQLite's dialect with "?"
+placeholders, and translated for Postgres by the wrappers in this module.
+Do not write backend-specific SQL in the repository methods: the test suite
+runs against both backends (see tests/conftest.py and the CI matrix), so
+anything that only works on one of them fails there.
 """
 
 import sqlite3
 import json
 import os
+import re
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
-# SQLite is the demo store. Replace NegotiationRepository with your own persistence (see INTEGRATION.md).
+DATABASE_URL = os.getenv("ENGINE_DATABASE_URL", "").strip()
+POSTGRES = bool(DATABASE_URL)
+# Only consulted on SQLite. Kept as the fallback so a checkout with no
+# environment at all still runs.
 DB_PATH = os.getenv("ENGINE_DB_PATH") or os.path.join(os.path.dirname(__file__), "billfixrr.db")
 
+if POSTGRES:
+    import psycopg
+    from psycopg.rows import dict_row
+
+
+def _translate(sql: str) -> str:
+    """Rewrites SQLite's ? placeholders as psycopg's %s.
+
+    Refuses outright on a literal % rather than mangling it. psycopg reads
+    % as the start of a placeholder whenever parameters are passed, so a
+    LIKE pattern inlined into a statement here would fail at runtime on
+    Postgres only -- pass it as a parameter instead.
+    """
+    if "%" in sql:
+        raise ValueError("engine SQL must not contain a literal '%'; pass it as a parameter")
+    return sql.replace("?", "%s")
+
+
+def _ddl(sql: str) -> str:
+    """Adjusts column types that do not mean the same thing in both backends.
+
+    SQLite's REAL is a 64-bit float; Postgres's REAL is 32-bit, which is
+    about seven significant digits -- enough to shift a five-figure bill by
+    a cent. Every REAL here holds money, so Postgres gets the wide type.
+    """
+    if not POSTGRES:
+        return sql
+    return re.sub(r"\bREAL\b", "DOUBLE PRECISION", sql)
+
+
+class _PgCursor:
+    """The slice of the sqlite3 cursor API this module and server.py use."""
+
+    def __init__(self, inner):
+        self._inner = inner
+
+    def execute(self, sql, params=()):
+        self._inner.execute(_translate(sql), tuple(params))
+        return self
+
+    def fetchone(self):
+        return self._inner.fetchone()
+
+    def fetchall(self):
+        return self._inner.fetchall()
+
+
+class _PgConnection:
+    """Same, for the connection. dict_row makes rows behave like sqlite3.Row."""
+
+    def __init__(self, inner):
+        self._inner = inner
+
+    def cursor(self):
+        return _PgCursor(self._inner.cursor())
+
+    def commit(self):
+        self._inner.commit()
+
+    def close(self):
+        self._inner.close()
+
+
 def get_connection():
+    if POSTGRES:
+        return _PgConnection(psycopg.connect(DATABASE_URL, row_factory=dict_row))
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def _add_column(cursor, table: str, name: str, col_def: str) -> None:
+    """Adds a column if it is missing, without aborting the transaction.
+
+    On Postgres a failed statement poisons the whole transaction, so the
+    try/except-and-carry-on that works on SQLite would take out every
+    migration after the first already-present column.
+    """
+    col_def = _ddl(col_def)
+    if POSTGRES:
+        cursor.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {name} {col_def}")
+        return
+    try:
+        cursor.execute(f"ALTER TABLE {table} ADD COLUMN {name} {col_def}")
+    except sqlite3.OperationalError:
+        pass
 
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
+    if POSTGRES:
+        # Render overlaps the old and new instance during a deploy, and both
+        # run this on import. Concurrent CREATE TABLE IF NOT EXISTS, and
+        # concurrent ADD COLUMN IF NOT EXISTS, are both known Postgres races
+        # that raise a duplicate-object error and would crash the booting
+        # instance; the lock serialises them instead. Session-scoped, not
+        # transaction-scoped, because init_db commits part-way through and a
+        # transaction lock would be released before the migrations run. It
+        # is freed when this connection closes at the end of init_db.
+        cursor.execute("SELECT pg_advisory_lock(4116983205)")
+
     # Table: negotiations
-    cursor.execute("""
+    cursor.execute(_ddl("""
     CREATE TABLE IF NOT EXISTS negotiations (
         id TEXT PRIMARY KEY,
         tracking_code TEXT UNIQUE NOT NULL,
@@ -42,10 +159,10 @@ def init_db():
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
     )
-    """)
+    """))
 
     # Table: negotiation_messages (timeline of outbound & inbound events)
-    cursor.execute("""
+    cursor.execute(_ddl("""
     CREATE TABLE IF NOT EXISTS negotiation_messages (
         id TEXT PRIMARY KEY,
         negotiation_id TEXT NOT NULL,
@@ -60,7 +177,7 @@ def init_db():
         created_at TEXT NOT NULL,
         FOREIGN KEY (negotiation_id) REFERENCES negotiations (id)
     )
-    """)
+    """))
 
     conn.commit()
 
@@ -111,10 +228,7 @@ def init_db():
         ("held_for_review_reason", "TEXT"),
     ]
     for col_name, col_def in migration_cols_negotiations:
-        try:
-            cursor.execute(f"ALTER TABLE negotiations ADD COLUMN {col_name} {col_def}")
-        except sqlite3.OperationalError:
-            pass
+        _add_column(cursor, "negotiations", col_name, col_def)
 
     migration_cols_messages = [
         ("message_id_header", "TEXT"),
@@ -122,10 +236,7 @@ def init_db():
         ("references_header", "TEXT")
     ]
     for col_name, col_def in migration_cols_messages:
-        try:
-            cursor.execute(f"ALTER TABLE negotiation_messages ADD COLUMN {col_name} {col_def}")
-        except sqlite3.OperationalError:
-            pass
+        _add_column(cursor, "negotiation_messages", col_name, col_def)
 
     conn.commit()
     conn.close()
@@ -344,6 +455,82 @@ class NegotiationRepository:
         conn.close()
 
         return {"id": msg_id, "created_at": now}
+
+    @staticmethod
+    def set_support_email(negotiation_id: str, support_email: str):
+        conn = get_connection()
+        cursor = conn.cursor()
+        now = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            "UPDATE negotiations SET support_email = ?, updated_at = ? WHERE id = ?",
+            (support_email, now, negotiation_id),
+        )
+        conn.commit()
+        conn.close()
+
+    @staticmethod
+    def reconcile_root_message_id(
+        negotiation_id: str,
+        real_message_id: str,
+        previous_message_id: Optional[str],
+    ):
+        """Rewrites the thread root to the Message-ID the mail provider actually used.
+
+        Resend assigns its own Message-ID and ignores the one this engine
+        generated, so without this the negotiation is rooted on an id that
+        exists nowhere, every reply quotes an id with no match, and
+        inbound_poller silently fails to thread any of them. The message row
+        is rewritten in the same transaction as the negotiation: a half-done
+        reconcile would leave the two disagreeing about the same thread.
+        """
+        conn = get_connection()
+        cursor = conn.cursor()
+        now = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            "UPDATE negotiations SET root_message_id = ?, last_message_id = ?, updated_at = ? WHERE id = ?",
+            (real_message_id, real_message_id, now, negotiation_id),
+        )
+        cursor.execute(
+            "UPDATE negotiation_messages SET message_id_header = ?, references_header = ? "
+            "WHERE negotiation_id = ? AND message_id_header = ?",
+            (real_message_id, real_message_id, negotiation_id, previous_message_id),
+        )
+        conn.commit()
+        conn.close()
+
+    # Fields an admin may correct through the edit-field endpoint. The
+    # column name cannot be parameterised, so it is interpolated -- which
+    # makes the allowlist the only thing standing between a caller and
+    # arbitrary SQL in that statement.
+    #
+    # Money, status, payment and paywall columns are deliberately absent.
+    # Each has its own endpoint that records why it changed and keeps the
+    # fee arithmetic consistent; free-text editing of settled_amount or
+    # completion_paid would walk straight past all of it.
+    EDITABLE_FIELDS = frozenset({
+        "provider_name",
+        "patient_name",
+        "account_number",
+        "hospital_email",
+        "patient_email",
+        "support_email",
+        "admin_notes",
+    })
+
+    @staticmethod
+    def set_editable_field(negotiation_id: str, field: str, value: Any):
+        if field not in NegotiationRepository.EDITABLE_FIELDS:
+            allowed = ", ".join(sorted(NegotiationRepository.EDITABLE_FIELDS))
+            raise ValueError(f"'{field}' is not an editable field. Editable fields are: {allowed}.")
+        conn = get_connection()
+        cursor = conn.cursor()
+        now = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            f"UPDATE negotiations SET {field} = ?, updated_at = ? WHERE id = ? OR tracking_code = ?",
+            (value, now, negotiation_id, negotiation_id),
+        )
+        conn.commit()
+        conn.close()
 
     @staticmethod
     def update_negotiation_offer(negotiation_id: str, new_offer: float, new_status: str = "COUNTER_OFFER_SENT"):

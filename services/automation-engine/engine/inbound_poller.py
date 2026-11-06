@@ -142,6 +142,25 @@ class InboundEmailPoller:
                 # Find associated negotiation
                 neg = NegotiationRepository.get_negotiation(tracking_code)
                 if not neg:
+                    # A BFX- code in a reply means this engine sent that
+                    # letter, so having no negotiation for it is never
+                    # normal: either the store was wiped, or it was
+                    # restored from before the letter went out. Nothing can
+                    # be attributed without the row -- the case id lived on
+                    # it -- so a loud log is the most that can be done here,
+                    # and it is a great deal more than the silent `continue`
+                    # this replaces.
+                    logger.error(
+                        "Reply for tracking code %s from %s matches no negotiation. "
+                        "A letter was sent under this code and its record is gone, so this "
+                        "reply cannot be processed.",
+                        tracking_code,
+                        sender,
+                    )
+                    print(
+                        f"UNMATCHED REPLY: {tracking_code} from {sender} - no negotiation on record",
+                        flush=True,
+                    )
                     continue
 
                 # Check if this exact text is already in the negotiation timeline

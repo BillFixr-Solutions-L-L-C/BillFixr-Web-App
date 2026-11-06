@@ -438,6 +438,7 @@ Secrets to set:
 | `OPENROUTER_API_KEY` | |
 | `RESEND_API_KEY` | See below. |
 | `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_HOST`, `IMAP_HOST` | The advocate mailbox from step 2. |
+| `ENGINE_DATABASE_URL` | Supabase Postgres, **session pooler** string. Without it the negotiations live in a SQLite file on the container, which is deleted on every deploy and spin-down. See below. |
 
 `ADVOCATE_EMAIL` is in the blueprint as `advocate@billfixr.com`. Change it
 there if the mailbox ends up named something else.
@@ -493,11 +494,33 @@ sending at all is worse.
 without reading logs. It is outside the API key gate, so it says what is
 configured and never what anything is set to.
 
+### Where the negotiations live
+
+Set `ENGINE_DATABASE_URL` and they live in Supabase Postgres, which is the
+only configuration safe to send a real letter from.
+
+The negotiation row is the *only* record that a letter was ever sent: it
+holds the tracking code, the thread's Message-IDs, the message history and
+the agreed figure. Lose it and the hospital's reply still arrives, the
+poller still parses its `BFX-` code, nothing matches, and the reply is
+discarded. The letter stays unanswered forever and the customer's dashboard
+goes on saying the negotiation is live. The engine logs an `UNMATCHED
+REPLY` line when this happens, which is the most it can do — the case id
+lived on the row that is gone.
+
+Unset, the engine falls back to SQLite at `ENGINE_DB_PATH`
+(`/app/data/engine.db`). That is fine on a plan with a disk and fine for
+local work. It is **not** fine on a free plan, where web services cannot
+have a disk at all. `/api/health` reports `store_durable`, and the startup
+banner prints `store survives restart`, so check one of them after deploying
+rather than assuming.
+
 ### The disk
 
-`/app/data` holds the SQLite database and every revised-bill PDF. Without
-the disk mounted they are lost on each deploy and restart — mid-negotiation
-cases would vanish along with the letters already sent on them.
+`/app/data` also holds every revised-bill PDF, and those are still lost
+without the disk mounted. A revised bill can be asked for again; a
+negotiation cannot, which is why it moved to Postgres and the PDFs have
+not.
 
 ---
 

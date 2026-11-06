@@ -52,7 +52,7 @@ The tests use a throwaway database, never send email, and make no network calls.
 | `engine/payments.py` | Fee rules |
 | `engine/contact_finder.py`, `engine/provider_directory.json` | Hospital billing contact lookup from a sourced directory. It never guesses |
 | `engine/email_dispatcher.py`, `engine/inbound_poller.py` | Sending email and reading replies |
-| `database.py` | SQLite store. Replace it with the web app's storage (see INTEGRATION.md) |
+| `database.py` | The negotiations store. PostgreSQL when `ENGINE_DATABASE_URL` is set, SQLite otherwise (see INTEGRATION.md) |
 | `static/`, `demo_assets/`, `engine/demo_data.py` | Demo only. Do not ship |
 | `tests/` | The test suite |
 

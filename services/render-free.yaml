@@ -25,6 +25,16 @@
 #    the service spins down, so DATABASE_PATH/STORAGE_DIR and the engine's
 #    /app/data are ephemeral here.
 #
+#    The engine's negotiations are the one thing that cannot survive being
+#    ephemeral: the negotiation row is the only record that a letter was
+#    sent to a hospital, and without it that hospital's reply is parsed,
+#    matched against nothing and dropped in silence. So set
+#    ENGINE_DATABASE_URL here and keep them in Supabase Postgres, which is
+#    free and durable. What is still lost with the container is a revised
+#    bill that arrived as a PDF (ENGINE_DATA_DIR) and ai-service's
+#    extraction store -- both re-creatable, neither an obligation to
+#    someone outside the company.
+#
 # 3. Spin-down after 15 minutes with no inbound traffic, and about a
 #    minute to come back on the next request. Two consequences that matter
 #    more than the cold start:
@@ -92,8 +102,9 @@ services:
 
   # ---------------------------------------------------------------------
   # automation-engine — can send letters here and have Resend track them.
-  # It cannot read replies on this plan (see note 3 above), and it loses
-  # every negotiation and revised-bill PDF on each spin-down.
+  # It cannot read replies while it is spun down (see note 3 above), and it
+  # loses any revised-bill PDF on each spin-down. The negotiations
+  # themselves survive, provided ENGINE_DATABASE_URL is set.
   # ---------------------------------------------------------------------
   - type: web
     name: billfixr-automation-engine-test
@@ -117,6 +128,15 @@ services:
       # it is set here too so the binding does not depend on reading it.
       - key: HOST
         value: 0.0.0.0
+      # Postgres connection string for the negotiations store (Supabase).
+      # Without it the engine falls back to SQLite at ENGINE_DB_PATH, which
+      # on a plan with no disk is wiped on every deploy and spin-down --
+      # and a wiped store means a hospital's reply arrives, parses, matches
+      # no negotiation, and is dropped silently. Use the *session pooler*
+      # connection string: this service is long-lived and opens a
+      # connection per repository call.
+      - key: ENGINE_DATABASE_URL
+        sync: false
       - key: ENGINE_API_KEY
         sync: false
       - key: OPENROUTER_API_KEY

@@ -95,6 +95,15 @@ services:
       - key: AUTOPILOT_HOLD_FOR_REVIEW
         value: "1"
       # Without this the engine's API is open to anyone who reaches it.
+      # Postgres connection string for the negotiations store (Supabase).
+      # Without it the engine falls back to SQLite at ENGINE_DB_PATH, which
+      # on a plan with no disk is wiped on every deploy and spin-down --
+      # and a wiped store means a hospital's reply arrives, parses, matches
+      # no negotiation, and is dropped silently. Use the *session pooler*
+      # connection string: this service is long-lived and opens a
+      # connection per repository call.
+      - key: ENGINE_DATABASE_URL
+        sync: false
       - key: ENGINE_API_KEY
         sync: false
       - key: OPENROUTER_API_KEY
