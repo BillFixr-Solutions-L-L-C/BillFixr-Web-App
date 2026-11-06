@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { auditBill, getNegotiation, startNegotiation } from "@/lib/automation-engine";
-import { toEngineBillData } from "@/lib/engineBillData";
+import { getNegotiation } from "@/lib/automation-engine";
 import { syncCaseFromNegotiation } from "@/lib/caseStatusSync";
-import type { AiMedicalBillExtraction } from "@/types/ai";
+import { startNegotiationForCase, type NegotiationNotStarted } from "@/lib/startNegotiation";
 import { isBackendConfigured } from "@/lib/aiStack";
 
 // The web app's end of the automation engine's negotiation lifecycle.
@@ -13,9 +12,11 @@ import { isBackendConfigured } from "@/lib/aiStack";
 // signed-in owner of the case — the engine itself trusts whoever holds
 // the API key, so every check has to happen here.
 //
-// Starting a negotiation makes the engine write to a real hospital, so
-// the guards below are not ceremony: a case can only start one once, the
-// commitment fee must already be paid, and the bill must have been read.
+// POST is the manual and retry path. The scan starts a negotiation on
+// its own as soon as it has read the bill, which is the first moment all
+// of src/lib/startNegotiation.ts's preconditions hold; this route exists
+// for a case that never got one, and shares that same code so the two
+// cannot drift apart.
 
 type CaseRow = {
   id: string;
@@ -27,9 +28,7 @@ type CaseRow = {
   negotiation_id: string | null;
 };
 
-type OwnedCase =
-  | { error: NextResponse; supabase: null; caseRow: null }
-  | { error: null; supabase: Awaited<ReturnType<typeof createClient>>; caseRow: CaseRow };
+type OwnedCase = { error: NextResponse; caseRow: null } | { error: null; caseRow: CaseRow };
 
 async function loadOwnedCase(id: string): Promise<OwnedCase> {
   const supabase = await createClient();
@@ -37,7 +36,7 @@ async function loadOwnedCase(id: string): Promise<OwnedCase> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { error: NextResponse.json({ error: "unauthorized" }, { status: 401 }), supabase: null, caseRow: null };
+    return { error: NextResponse.json({ error: "unauthorized" }, { status: 401 }), caseRow: null };
   }
 
   const { data: caseRow } = await supabase
@@ -48,10 +47,10 @@ async function loadOwnedCase(id: string): Promise<OwnedCase> {
   // One answer for "no such case" and "not yours": an id that is not
   // yours should not be distinguishable from one that does not exist.
   if (!caseRow || caseRow.user_id !== user.id) {
-    return { error: NextResponse.json({ error: "not found" }, { status: 404 }), supabase: null, caseRow: null };
+    return { error: NextResponse.json({ error: "not found" }, { status: 404 }), caseRow: null };
   }
 
-  return { error: null, supabase, caseRow: caseRow as CaseRow };
+  return { error: null, caseRow: caseRow as CaseRow };
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -87,99 +86,33 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 }
 
+// Same codes and wording this route answered with before the logic
+// moved into src/lib/startNegotiation.ts.
+const BLOCKED_RESPONSE: Record<NegotiationNotStarted, [number, string]> = {
+  engine_unavailable: [503, "The negotiation service is unavailable."],
+  already_started: [409, "A negotiation has already been started for this case."],
+  no_provider_email: [409, "Add the provider's billing department email before starting."],
+  commitment_fee_unpaid: [402, "The commitment fee must be paid before starting."],
+  bill_not_read: [409, "This bill hasn't been read yet."],
+};
+
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const owned = await loadOwnedCase(id);
   if (owned.error) return owned.error;
-  const { supabase, caseRow } = owned;
 
-  if (!isBackendConfigured("automation-engine")) {
-    return NextResponse.json({ error: "The negotiation service is unavailable." }, { status: 503 });
+  const result = await startNegotiationForCase(createAdminClient(), owned.caseRow);
+  if (result.started) {
+    return NextResponse.json(result.negotiation);
   }
-  // Not an error worth failing on loudly: the negotiation exists, which
-  // is what the caller wanted. Returning it keeps a double-click from
-  // starting a second one, which would strand the first along with any
-  // letters it had already sent.
-  if (caseRow.negotiation_id) {
-    return NextResponse.json({ error: "A negotiation has already been started for this case." }, { status: 409 });
+  if ("blocked" in result) {
+    const [status, error] = BLOCKED_RESPONSE[result.blocked];
+    return NextResponse.json({ error }, { status });
   }
-
-  const { data: bill } = await supabase
-    .from("bills")
-    .select("id, provider_email, provider_support_email")
-    .eq("id", caseRow.bill_id ?? "")
-    .maybeSingle();
-  if (!bill?.provider_email) {
-    return NextResponse.json(
-      { error: "Add the provider's billing department email before starting." },
-      { status: 409 },
-    );
+  if (result.failed === "link_lost") {
+    console.error("Negotiation", result.negotiationId, "started but could not be linked to case", id, result.cause);
+    return NextResponse.json({ error: "The negotiation started but could not be saved." }, { status: 500 });
   }
-
-  // Same gate the appeal letter uses: nothing goes to a provider on a
-  // case that has not been paid for.
-  const { data: paidFee } = await supabase
-    .from("payment_records")
-    .select("processor_ref")
-    .eq("bill_id", caseRow.bill_id)
-    .eq("type", "commitment_fee")
-    .eq("status", "paid")
-    .maybeSingle();
-  if (!paidFee) {
-    return NextResponse.json({ error: "The commitment fee must be paid before starting." }, { status: 402 });
-  }
-
-  // The engine audits structured bill data, which is what the extraction
-  // step produced. Without it there is nothing to negotiate from.
-  const { data: extraction } = await supabase
-    .from("bill_extractions")
-    .select("result")
-    .eq("bill_id", caseRow.bill_id)
-    .maybeSingle();
-  if (!extraction?.result) {
-    return NextResponse.json({ error: "This bill hasn't been read yet." }, { status: 409 });
-  }
-
-  const admin = createAdminClient();
-  const { data: settings } = await admin
-    .from("app_settings")
-    .select("success_fee_percentage")
-    .eq("id", 1)
-    .single();
-  const feeRate = Number(settings?.success_fee_percentage);
-
-  try {
-    // Translated, not passed through: the engine reads flat `total_billed`
-    // and `cpt_code`, the extraction nests `total_charges.amount` and
-    // names it `service_code`. Untranslated it audits as a $0 bill with
-    // no charges and reports nothing wrong. See src/lib/engineBillData.ts.
-    const audit = await auditBill(toEngineBillData(extraction.result as AiMedicalBillExtraction));
-    const negotiation = await startNegotiation({
-      auditResult: audit,
-      // The opening position, not the one we expect to settle at — the
-      // engine negotiates up from here.
-      initialOffer: audit.settlement_options.aggressive_offer,
-      hospitalEmail: bill.provider_email,
-      supportEmail: bill.provider_support_email ?? undefined,
-      caseId: id,
-      commitmentPaymentRef: paidFee.processor_ref ?? id,
-      completionFeeRate: Number.isFinite(feeRate) ? feeRate / 100 : undefined,
-    });
-
-    // Stored before responding: if this write is lost, the engine is
-    // already writing to the hospital on a negotiation nothing can find.
-    const { error: linkError } = await admin
-      .from("cases")
-      .update({ negotiation_id: negotiation.id })
-      .eq("id", id);
-    if (linkError) {
-      console.error("Negotiation", negotiation.id, "started but could not be linked to case", id, linkError);
-      return NextResponse.json({ error: "The negotiation started but could not be saved." }, { status: 500 });
-    }
-
-    return NextResponse.json(negotiation);
-  } catch (err) {
-    console.error("Could not start a negotiation for case", id, err);
-    return NextResponse.json({ error: "We couldn't start the negotiation. Please try again." }, { status: 502 });
-  }
+  console.error("Could not start a negotiation for case", id, result.cause);
+  return NextResponse.json({ error: "We couldn't start the negotiation. Please try again." }, { status: 502 });
 }

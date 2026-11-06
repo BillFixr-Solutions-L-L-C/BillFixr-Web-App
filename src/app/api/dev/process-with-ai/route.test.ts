@@ -5,6 +5,7 @@ const serverMock = createSupabaseMock();
 const adminMock = createSupabaseMock();
 const getAiServiceConfig = vi.fn();
 const processCase = vi.fn();
+const startNegotiationForCase = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => serverMock.client),
@@ -15,6 +16,12 @@ vi.mock("@/lib/supabase/admin", () => ({
 vi.mock("@/lib/ai-service", () => ({
   getAiServiceConfig: (...args: unknown[]) => getAiServiceConfig(...args),
   processCase: (...args: unknown[]) => processCase(...args),
+}));
+// The start itself is covered in src/lib/startNegotiation.test.ts; what
+// matters here is that the scan asks for one and reports the answer.
+vi.mock("@/lib/startNegotiation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/startNegotiation")>()),
+  startNegotiationForCase: (...args: unknown[]) => startNegotiationForCase(...args),
 }));
 
 const { POST } = await import("./route");
@@ -90,6 +97,8 @@ const AI_RESPONSE = {
 beforeEach(() => {
   vi.clearAllMocks();
   getAiServiceConfig.mockReturnValue({ baseUrl: "http://localhost:8000" });
+  startNegotiationForCase.mockResolvedValue({ started: true, negotiation: { id: "neg-1" } });
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 function queueCaseRow(overrides: Partial<typeof BILL> = {}, caseOverrides: Record<string, unknown> = {}) {
@@ -151,7 +160,13 @@ describe("POST /api/dev/process-with-ai", () => {
     const res = await POST(makeRequest({ caseId: "case-1" }));
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, alreadyProcessed: true });
+    expect(await res.json()).toEqual({
+      ok: true,
+      alreadyProcessed: true,
+      // Offered even on this path: a case analyzed before the engine was
+      // wired in would otherwise need a paid re-scan to get a letter.
+      negotiation: { running: true, reason: null },
+    });
     expect(processCase).not.toHaveBeenCalled();
   });
 
@@ -234,7 +249,12 @@ describe("POST /api/dev/process-with-ai", () => {
     const res = await POST(makeRequest({ caseId: "case-1" }));
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, errorsDetected: 1, savingsFound: 100 });
+    expect(await res.json()).toEqual({
+      ok: true,
+      errorsDetected: 1,
+      savingsFound: 100,
+      negotiation: { running: true, reason: null },
+    });
     expect(processCase).toHaveBeenCalledWith("case-1", expect.objectContaining({ filename: "bill.pdf" }));
 
     // Located by table rather than call order: the route now checks the
@@ -285,5 +305,73 @@ describe("POST /api/dev/process-with-ai", () => {
     const res = await POST(makeRequest({ caseId: "case-1" }));
 
     expect(res.status).toBe(500);
+  });
+  it("starts the negotiation for the scanned case", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    queueCaseRow({}, { negotiation_id: null });
+    adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf bytes"]), error: null });
+    processCase.mockResolvedValue(AI_RESPONSE);
+    adminMock.queueResult("bills", { data: null, error: null });
+    adminMock.queueResult("cases", { data: null, error: null });
+
+    await POST(makeRequest({ caseId: "case-1" }));
+
+    expect(startNegotiationForCase).toHaveBeenCalledWith(adminMock.client, {
+      id: "case-1",
+      // bill_id comes off the joined bill, not the case column, so a
+      // case row with a null bill_id still reaches the right bill.
+      bill_id: "bill-1",
+      negotiation_id: null,
+    });
+  });
+
+  it("reports the analysis even when no negotiation could be started", async () => {
+    // The customer paid for the reading and it succeeded, so losing it
+    // because the engine would not open a negotiation is the wrong
+    // trade. `running: false` is what stops the UI claiming a letter.
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    queueCaseRow();
+    adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf bytes"]), error: null });
+    processCase.mockResolvedValue(AI_RESPONSE);
+    adminMock.queueResult("bills", { data: null, error: null });
+    adminMock.queueResult("cases", { data: null, error: null });
+    startNegotiationForCase.mockResolvedValue({ started: false, blocked: "no_provider_email" });
+
+    const res = await POST(makeRequest({ caseId: "case-1" }));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      errorsDetected: 1,
+      negotiation: { running: false, reason: "no_provider_email" },
+    });
+  });
+
+  it("survives the start throwing rather than losing the analysis", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    queueCaseRow();
+    adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf bytes"]), error: null });
+    processCase.mockResolvedValue(AI_RESPONSE);
+    adminMock.queueResult("bills", { data: null, error: null });
+    adminMock.queueResult("cases", { data: null, error: null });
+    startNegotiationForCase.mockRejectedValue(new Error("engine unreachable"));
+
+    const res = await POST(makeRequest({ caseId: "case-1" }));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ negotiation: { running: false, reason: "engine_refused" } });
+  });
+
+  it("treats a negotiation already running as nothing left to do", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    queueCaseRow({ analysis_result: { any: "thing" } }, { negotiation_id: "neg-existing" });
+    startNegotiationForCase.mockResolvedValue({ started: false, blocked: "already_started" });
+
+    const res = await POST(makeRequest({ caseId: "case-1" }));
+
+    expect(await res.json()).toMatchObject({
+      alreadyProcessed: true,
+      negotiation: { running: true, reason: "already_started" },
+    });
+    expect(processCase).not.toHaveBeenCalled();
   });
 });

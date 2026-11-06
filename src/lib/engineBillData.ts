@@ -1,4 +1,4 @@
-import type { AiMedicalBillExtraction } from "@/types/ai";
+import type { AiCaseProcessingResponse, AiMedicalBillExtraction } from "@/types/ai";
 import type { EngineBillData, EngineBillLineItem } from "@/types/automation-engine";
 
 // The AI service and the engine describe the same bill with different
@@ -61,4 +61,21 @@ export function toEngineBillData(extraction: AiMedicalBillExtraction): EngineBil
     is_itemized: hasChargedLines,
     line_items: lineItems,
   };
+}
+
+// What a bill_extractions row actually holds: the whole
+// AiCaseProcessingResponse, not the extraction inside it. Both writers
+// (bills/[id]/extract and dev/process-with-ai) store the full response
+// and unwrap it again on read. The negotiation start did not — it cast
+// the row straight to AiMedicalBillExtraction, and `line_items.map` on
+// the wrapper throws, so every start failed as "we couldn't start the
+// negotiation" without ever saying what was wrong.
+//
+// Null rather than an empty bill when there is no readable extraction: a
+// $0 bill with no charges audits as faultless, and a letter arguing
+// nothing is worse than no letter.
+export function storedExtraction(result: unknown): AiMedicalBillExtraction | null {
+  const response = result as AiCaseProcessingResponse | null | undefined;
+  const extraction = response?.processed_documents?.[0]?.extraction;
+  return extraction && Array.isArray(extraction.line_items) ? extraction : null;
 }

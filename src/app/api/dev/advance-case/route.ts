@@ -30,8 +30,12 @@ import { escapeHtml } from "@/lib/html";
 // meant the only thing that ever marked a provider as having replied was
 // the customer saying so. The engine reads the provider's actual email,
 // so that status is now written server-side from the engine's own view —
-// see src/lib/caseStatusSync.ts. What is left here is the post-scan
-// transition in the upload flow, which still has no real trigger.
+// see src/lib/caseStatusSync.ts. What was left here was the post-scan
+// transition in the upload flow, and as of 2026-11-06 that has a real
+// trigger too: the scan starts the negotiation and the engine's own send
+// moves the case to `letter_sent` (see src/lib/startNegotiation.ts). No
+// caller in the app reaches this route any more — it is kept as a manual
+// lever, not because anything depends on it.
 const ALLOWED_STATUSES = new Set(["awaiting_response"]);
 
 const STATUS_EMAIL_CONTENT: Record<string, { subject: string; heading: string; body: string }> = {
