@@ -508,6 +508,19 @@ goes on saying the negotiation is live. The engine logs an `UNMATCHED
 REPLY` line when this happens, which is the most it can do — the case id
 lived on the row that is gone.
 
+The two tables are created in a schema called **`engine`**, not `public`.
+That is deliberate: Supabase exposes `public` through its Data API, so a
+table there is reachable with the anon key once that role has access, and
+these two hold patient names, account numbers, amounts and the full text of
+every letter. They also have RLS enabled as defence in depth, with no
+policies — the engine connects as the table owner and is not subject to
+RLS, so nothing else reaches them. In the Supabase dashboard you have to
+switch the schema selector from `public` to `engine` to see them. Override
+the name with `ENGINE_DB_SCHEMA` if it ever clashes.
+
+If the schema cannot be selected the engine **refuses to start** rather
+than creating the tables in `public` by accident.
+
 Unset, the engine falls back to SQLite at `ENGINE_DB_PATH`
 (`/app/data/engine.db`). That is fine on a plan with a disk and fine for
 local work. It is **not** fine on a free plan, where web services cannot

@@ -33,6 +33,13 @@ from typing import Any, Dict, List, Optional
 
 DATABASE_URL = os.getenv("ENGINE_DATABASE_URL", "").strip()
 POSTGRES = bool(DATABASE_URL)
+# Postgres only. The engine's tables do NOT belong in `public`: Supabase
+# exposes `public` through its Data API, so a table there is reachable with
+# the anon key once that role has access -- and these two hold patient
+# names, account numbers, bill amounts and the full text of every letter.
+# A schema of its own is not exposed, and keeps the engine's tables from
+# sitting among the web app's.
+SCHEMA = os.getenv("ENGINE_DB_SCHEMA", "engine").strip() or "engine"
 # Only consulted on SQLite. Kept as the fallback so a checkout with no
 # environment at all still runs.
 DB_PATH = os.getenv("ENGINE_DB_PATH") or os.path.join(os.path.dirname(__file__), "billfixrr.db")
@@ -102,7 +109,15 @@ class _PgConnection:
 
 def get_connection():
     if POSTGRES:
-        return _PgConnection(psycopg.connect(DATABASE_URL, row_factory=dict_row))
+        conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
+        # Set per connection rather than passed as a libpq startup option:
+        # this runs through Supabase's connection pooler, and whether a
+        # pooler forwards startup options is its business, not something to
+        # depend on. One extra round trip per connection, against the
+        # certainty that nothing is ever created in or read from `public`.
+        conn.execute(f"SET search_path TO {SCHEMA}, public")
+        conn.commit()
+        return _PgConnection(conn)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
@@ -138,6 +153,18 @@ def init_db():
         # transaction lock would be released before the migrations run. It
         # is freed when this connection closes at the end of init_db.
         cursor.execute("SELECT pg_advisory_lock(4116983205)")
+        cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}")
+        # Checked rather than assumed. If the search_path above did not
+        # take, every table below would be created in `public` instead --
+        # silently, and in the one schema that is reachable with the anon
+        # key. Refusing to start is the only safe answer to that.
+        where = cursor.execute("SELECT current_schema() AS name").fetchone()["name"]
+        if where != SCHEMA:
+            raise RuntimeError(
+                f"engine tables would be created in '{where}', not '{SCHEMA}'. "
+                "Refusing to start: a table in an exposed schema is reachable "
+                "through the Supabase Data API."
+            )
 
     # Table: negotiations
     cursor.execute(_ddl("""
@@ -237,6 +264,27 @@ def init_db():
     ]
     for col_name, col_def in migration_cols_messages:
         _add_column(cursor, "negotiation_messages", col_name, col_def)
+
+    # get_negotiation reads the whole timeline for one negotiation on every
+    # single call -- WHERE negotiation_id = ? ORDER BY created_at ASC. Postgres
+    # does not index a foreign key column for you, and SQLite does not either,
+    # so without this both sequentially scan every message ever stored. The
+    # column order matches the query: equality first, then the sort.
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS negotiation_messages_negotiation_id_created_at_idx "
+        "ON negotiation_messages (negotiation_id, created_at)"
+    )
+
+    if POSTGRES:
+        # Defence in depth. The engine connects as the table owner, which is
+        # not subject to RLS, so this changes nothing about how it works. What
+        # it does is make the tables empty to anon and authenticated if this
+        # schema is ever added to the Data API's exposed list -- deliberately
+        # or by someone who did not know these were in here. No policies, for
+        # the same reason bill_extractions has none: nothing should reach this
+        # data except the service.
+        for table in ("negotiations", "negotiation_messages"):
+            cursor.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
 
     conn.commit()
     conn.close()

@@ -229,3 +229,55 @@ def test_edit_field_endpoint_accepts_an_allowed_field():
     # The edit is still recorded in the audit history, as before.
     assert body["edit"]["field"] == "hospital_email"
     assert body["edit"]["reason"] == "the first address bounced"
+
+
+# --- where the tables live ---------------------------------------------
+
+
+def _rows(sql):
+    conn = database.get_connection()
+    try:
+        return conn.cursor().execute(sql).fetchall()
+    finally:
+        conn.close()
+
+
+@pytest.mark.skipif(not database.POSTGRES, reason="schemas are a Postgres concern")
+def test_the_tables_are_not_in_the_public_schema():
+    """Supabase exposes `public` through its Data API, so a table there is
+    reachable with the anon key once that role has access -- and these two
+    hold patient names, account numbers, amounts and the text of every
+    letter sent on someone's behalf. They belong in a schema of their own.
+    """
+    rows = _rows(
+        "SELECT schemaname, tablename FROM pg_tables "
+        "WHERE tablename IN ('negotiations', 'negotiation_messages')"
+    )
+    assert len(rows) == 2, f"expected both tables, found {rows}"
+    for row in rows:
+        assert row["schemaname"] == database.SCHEMA, f"{row['tablename']} is in {row['schemaname']}"
+
+
+@pytest.mark.skipif(not database.POSTGRES, reason="RLS is a Postgres concern")
+def test_row_level_security_is_on_both_tables():
+    """Defence in depth: the engine connects as the table owner and is not
+    subject to RLS, so this costs nothing operationally. It is what makes
+    the tables empty to anon and authenticated if this schema is ever added
+    to the exposed list by someone who did not know they were in here."""
+    rows = _rows(
+        "SELECT tablename, rowsecurity FROM pg_tables "
+        "WHERE tablename IN ('negotiations', 'negotiation_messages')"
+    )
+    assert rows and all(row["rowsecurity"] for row in rows), rows
+
+
+def test_the_message_timeline_lookup_is_indexed():
+    """get_negotiation reads one negotiation's whole timeline on every call.
+    Neither Postgres nor SQLite indexes a foreign key column on its own, so
+    without this every read scans every message ever stored."""
+    name = "negotiation_messages_negotiation_id_created_at_idx"
+    if database.POSTGRES:
+        rows = _rows(f"SELECT indexname FROM pg_indexes WHERE indexname = '{name}'")
+    else:
+        rows = _rows(f"SELECT name AS indexname FROM sqlite_master WHERE type='index' AND name='{name}'")
+    assert len(rows) == 1, f"index {name} is missing"
