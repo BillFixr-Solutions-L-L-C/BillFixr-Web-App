@@ -76,7 +76,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const value = (field === "billingManagerEmail" ? contact.billing_email : contact.support_email)?.trim() || null;
   if (!value) {
-    return NextResponse.json({ ok: true, value: null });
+    // A miss is the normal case, not an error: hospitals rarely publish a
+    // billing email -- 3 of the 16 providers in the engine's directory do.
+    // So pass back whatever the lookup did find. The customer can ring the
+    // billing line and type the address in, which is the only thing that
+    // actually unblocks a send, since the engine refuses to mail a letter
+    // without one.
+    return NextResponse.json({
+      ok: true,
+      value: null,
+      fallback: {
+        providerName: contact.provider_name ?? null,
+        phone: contact.phone ?? null,
+        billingUrl: contact.billing_url ?? null,
+        notes: contact.notes ?? "",
+      },
+    });
   }
 
   // Persist the found address so the letter flow and the scan gate see it

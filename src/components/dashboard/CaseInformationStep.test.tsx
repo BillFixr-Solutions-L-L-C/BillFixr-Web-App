@@ -151,6 +151,37 @@ describe("CaseInformationStep", () => {
     expect(await screen.findByText(/couldn't find an address for this hospital/i)).toBeInTheDocument();
   });
 
+  it("shows the billing line and billing page when no email was found", async () => {
+    mockFetch({
+      extract: BILL_READ,
+      contact: {
+        status: 200,
+        body: {
+          ok: true,
+          value: null,
+          fallback: {
+            providerName: "Ascension Saint Thomas Rutherford",
+            phone: "800-242-7416",
+            billingUrl: "https://example.test/billing",
+            notes: "This hospital publishes no billing email.",
+          },
+        },
+      },
+    });
+    const user = userEvent.setup();
+    renderStep();
+
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+
+    expect(await screen.findByText(/publishes no billing email/i)).toBeInTheDocument();
+    const phone = screen.getByRole("link", { name: "800-242-7416" });
+    expect(phone).toHaveAttribute("href", "tel:8002427416");
+    expect(screen.getByRole("link", { name: /billing page/i })).toHaveAttribute(
+      "href",
+      "https://example.test/billing",
+    );
+  });
+
   it("reports a lookup that isn't available, and still lets them type it", async () => {
     mockFetch({
       extract: BILL_READ,

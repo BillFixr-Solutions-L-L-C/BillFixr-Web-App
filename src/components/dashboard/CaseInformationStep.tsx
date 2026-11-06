@@ -68,6 +68,48 @@ const HOSPITAL: Field[] = [
   { key: "billingPhone", label: REQUIRED_LABELS.billingPhone, required: true },
 ];
 
+// What the lookup found when it could not find an email. Rendered rather
+// than dropped because it is the normal outcome: the billing line is how
+// the customer gets the address that the send actually requires.
+type ContactHelp = {
+  providerName: string | null;
+  phone: string | null;
+  billingUrl: string | null;
+  notes: string;
+};
+
+function ContactHelpBlock({ help }: { help: ContactHelp }) {
+  if (!help.phone && !help.billingUrl && !help.notes) return null;
+  return (
+    <div className="mt-1 space-y-0.5 text-xs text-gray-500">
+      {help.notes && <p>{help.notes}</p>}
+      {help.phone && (
+        <p>
+          Billing line:{" "}
+          <a
+            href={`tel:${help.phone.replace(/[^0-9+]/g, "")}`}
+            className="font-medium text-[#0f7545] hover:underline"
+          >
+            {help.phone}
+          </a>
+        </p>
+      )}
+      {help.billingUrl && (
+        <p>
+          <a
+            href={help.billingUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-[#0f7545] hover:underline"
+          >
+            {help.providerName ? `${help.providerName} billing page` : "Hospital billing page"}
+          </a>
+        </p>
+      )}
+    </div>
+  );
+}
+
 function Section({
   title,
   fields,
@@ -80,6 +122,7 @@ function Section({
   onSearch,
   searchingKey,
   notes,
+  help,
 }: {
   title: string;
   fields: Field[];
@@ -92,6 +135,7 @@ function Section({
   onSearch: (key: keyof CaseInformation) => void;
   searchingKey: keyof CaseInformation | null;
   notes: Partial<Record<keyof CaseInformation, string>>;
+  help: Partial<Record<keyof CaseInformation, ContactHelp>>;
 }) {
   return (
     <section>
@@ -138,6 +182,7 @@ function Section({
               </div>
             )}
             {notes[f.key] && <p className="mt-1 text-xs text-gray-500">{notes[f.key]}</p>}
+            {help[f.key] && <ContactHelpBlock help={help[f.key]!} />}
           </div>
         ))}
       </div>
@@ -182,6 +227,7 @@ export default function CaseInformationStep({
   const [reading, setReading] = useState(true);
   const [searching, setSearching] = useState<keyof CaseInformation | null>(null);
   const [searchNote, setSearchNote] = useState<Partial<Record<keyof CaseInformation, string>>>({});
+  const [searchHelp, setSearchHelp] = useState<Partial<Record<keyof CaseInformation, ContactHelp>>>({});
 
   // Everything that IS printed on the bill is read off it as soon as the
   // step opens, so the customer corrects rather than types. Only blanks are
@@ -215,6 +261,7 @@ export default function CaseInformationStep({
   async function searchByAi(key: keyof CaseInformation) {
     setSearching(key);
     setSearchNote((n) => ({ ...n, [key]: "" }));
+    setSearchHelp((h) => ({ ...h, [key]: undefined }));
 
     const res = await fetch(`/api/dashboard/bills/${billId}/find-contact`, {
       method: "POST",
@@ -241,6 +288,18 @@ export default function CaseInformationStep({
     const found = String(body?.value ?? "").trim();
     if (!found) {
       setSearchNote((n) => ({ ...n, [key]: "We couldn't find an address for this hospital." }));
+      const f = body?.fallback;
+      if (f && (f.phone || f.billingUrl || f.notes)) {
+        setSearchHelp((h) => ({
+          ...h,
+          [key]: {
+            providerName: f.providerName ?? null,
+            phone: f.phone ?? null,
+            billingUrl: f.billingUrl ?? null,
+            notes: String(f.notes ?? ""),
+          },
+        }));
+      }
       return;
     }
     setValues((v) => (v[key]?.trim() ? v : { ...v, [key]: found }));
@@ -300,6 +359,7 @@ export default function CaseInformationStep({
         onSearch={searchByAi}
         searchingKey={searching}
         notes={searchNote}
+        help={searchHelp}
       />
 
       <hr className="border-gray-200" />
@@ -316,6 +376,7 @@ export default function CaseInformationStep({
         onSearch={searchByAi}
         searchingKey={searching}
         notes={searchNote}
+        help={searchHelp}
       />
 
       {previews.length > 0 && (

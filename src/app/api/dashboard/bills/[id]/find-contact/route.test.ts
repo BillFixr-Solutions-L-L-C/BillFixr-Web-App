@@ -94,6 +94,25 @@ describe("POST /api/dashboard/bills/[id]/find-contact", () => {
     expect((await res.json()).value).toBeNull();
   });
 
+  it("hands back the billing line when there is no email, instead of a dead end", async () => {
+    // The normal outcome. Hospitals rarely publish a billing email, so the
+    // response has to carry what was found or the customer has no way to
+    // obtain the address the send requires.
+    owns();
+    findProviderContact.mockResolvedValue({
+      billing_email: null,
+      support_email: null,
+      phone: "800-242-7416",
+    });
+
+    const res = await POST(req({ field: "billingManagerEmail" }), { params });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.value).toBeNull();
+    expect(body.fallback.phone).toBe("800-242-7416");
+  });
+
   it("returns the billing address it found and stores it", async () => {
     owns();
     findProviderContact.mockResolvedValue({ billing_email: "billing@riverside.com", support_email: "s@r.com", phone: null });

@@ -76,6 +76,14 @@ export type ProviderContact = {
   phone: string | null;
   /** Only the engine reports this; ai-service answers carry null. */
   verification_status: "verified" | "listed" | "unverified" | null;
+  /**
+   * Also engine-only. These matter because billing_email is null for most
+   * hospitals -- they are what the customer is left with, and dropping them
+   * here turned a usable phone number into a dead end at the UI.
+   */
+  provider_name: string | null;
+  billing_url: string | null;
+  notes: string;
   /** Which backend actually answered, so a caller can say where a value came from. */
   source: AiBackend;
 };
@@ -103,6 +111,9 @@ export async function findProviderContact(provider: {
       support_email: contact.support_email,
       phone: contact.phone,
       verification_status: contact.verification_status,
+      provider_name: contact.provider_name,
+      billing_url: contact.billing_url,
+      notes: contact.notes,
       source: backend,
     };
   }
@@ -113,6 +124,9 @@ export async function findProviderContact(provider: {
     support_email: contact.support_email,
     phone: contact.phone,
     verification_status: null,
+    provider_name: null,
+    billing_url: null,
+    notes: "",
     source: backend,
   };
 }
