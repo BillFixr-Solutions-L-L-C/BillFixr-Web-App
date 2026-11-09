@@ -251,11 +251,15 @@ describe("CaseInformationStep", () => {
 
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
-    expect(await screen.findByText(/No email is published for this hospital/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Couldn't confirm an email/i)).toBeInTheDocument();
+    // Deliberately not "publishes no email": a failed lookup is not evidence
+    // the hospital publishes none, and every real hospital tested so far
+    // publishes one we could not verify.
+    expect(screen.queryByText(/no email is published/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("555-0100");
   });
 
-  it("separates 'no email' from 'no such hospital'", async () => {
+  it("separates 'could not confirm' from 'no such hospital'", async () => {
     // Different problems: the first means type the email in, the second
     // means the name or the address is wrong, which is the one thing the
     // customer can actually fix.
