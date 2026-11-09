@@ -53,6 +53,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!searchName) {
     return NextResponse.json({ error: "Add the hospital name first, then search.", value: null }, { status: 400 });
   }
+  // And a name on its own is not a question with a single answer. The
+  // registry matches on a name prefix across the whole country, so
+  // "Matthew Walker" hits the Nashville campus and the Smyrna clinic
+  // alike, and the resolver then has nothing to rank them by -- it
+  // answers with the wrong one and looks certain. The address is what
+  // carries the town and the state. The form disables the button without
+  // one; this is the same rule where it cannot be clicked past.
+  if (!searchAddress) {
+    return NextResponse.json(
+      { error: "Add the hospital's address first, then search.", value: null },
+      { status: 400 },
+    );
+  }
   // Either backend can answer this; the seam picks, preferring the
   // engine, whose lookup is backed by a real provider directory.
   if (!preferredBackend()) {

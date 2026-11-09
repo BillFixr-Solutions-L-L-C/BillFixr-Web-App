@@ -81,6 +81,30 @@ describe("POST /api/dashboard/bills/[id]/find-contact", () => {
     expect(findProviderContact).not.toHaveBeenCalled();
   });
 
+  it("asks for the address first, rather than answering with the wrong town", async () => {
+    // A name on its own is not a question with one answer. The registry
+    // matches a name prefix across the whole country, so "Matthew Walker"
+    // hits the Nashville campus and the Smyrna clinic alike and the
+    // resolver has nothing to rank them by. It answers, confidently, with
+    // whichever came first -- which is how a Smyrna bill got Nashville.
+    owns({ ...BILL, provider_address: null });
+    const res = await POST(req({ field: "billingManagerEmail", hospitalName: "Matthew Walker" }), { params });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/address first/i);
+    expect(findProviderContact).not.toHaveBeenCalled();
+    expect(engineContact).not.toHaveBeenCalled();
+  });
+
+  it("will not take a blank address from the form either", async () => {
+    owns({ ...BILL, provider_address: null });
+    const res = await POST(
+      req({ field: "billingManagerEmail", hospitalName: "Matthew Walker", hospitalAddress: "   " }),
+      { params },
+    );
+    expect(res.status).toBe(400);
+    expect(findProviderContact).not.toHaveBeenCalled();
+  });
+
   it("searches on the name the customer just typed, before it's been saved", async () => {
     owns({ ...BILL, provider_name: null, provider_address: null });
     findProviderContact.mockResolvedValue({ billing_email: "b@r.com", support_email: null, phone: null });
