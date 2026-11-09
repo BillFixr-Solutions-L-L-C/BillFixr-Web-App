@@ -236,3 +236,51 @@ def test_it_does_nothing_when_switched_off(monkeypatch):
 def test_the_probe_reports_a_missing_key_rather_than_raising(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "")
     assert contact_search.probe()["reachable"] is False
+
+
+def test_the_probe_asks_the_way_a_real_lookup_asks(monkeypatch):
+    """A green probe has to mean the search works, not just that chat works.
+
+    The first version of this sent a bare "ping" with no tools. That passes
+    on a key with no access to the web search tool, which is the one thing
+    the probe is for: without it, every hospital comes back as publishing no
+    email and nothing anywhere says why.
+    """
+    asked = []
+
+    def fake_chat(payload, _key):
+        asked.append(payload)
+        return {"choices": [{"message": {"content": "ok"}}]}
+
+    monkeypatch.setattr(contact_search, "_chat", fake_chat)
+
+    result = contact_search.probe()
+
+    assert result["reachable"] is True
+    assert result["web_search"] is True
+    assert asked[0]["tools"][0]["type"] == "openrouter:web_search"
+
+
+def test_a_tool_openrouter_refuses_is_a_failed_probe(monkeypatch):
+    # OpenRouter returns 200 with the refusal in the body, so urllib raises
+    # nothing and the request looks like a success.
+    monkeypatch.setattr(
+        contact_search,
+        "_chat",
+        lambda *_a, **_k: {"error": {"message": "No endpoints found that support tool use"}},
+    )
+
+    result = contact_search.probe()
+
+    assert result["reachable"] is False
+    assert "tool use" in result["error"]
+
+
+def test_a_bare_error_string_in_the_body_is_reported_too(monkeypatch):
+    # Not every OpenRouter error body wraps the message in an object.
+    monkeypatch.setattr(contact_search, "_chat", lambda *_a, **_k: {"error": "rate limited"})
+
+    result = contact_search.probe()
+
+    assert result["reachable"] is False
+    assert result["error"] == "rate limited"
