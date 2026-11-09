@@ -142,111 +142,59 @@ describe("CaseInformationStep", () => {
     expect(JSON.parse(call[1].body)).toMatchObject({ field: "supportEmail", hospitalName: "Riverside General" });
   });
 
-  it("says so when no address could be found", async () => {
-    mockFetch({ extract: BILL_READ, contact: { status: 200, body: { ok: true, value: null } } });
+  it("will not search until the hospital address is filled in", async () => {
+    // The reason the button waits: one hospital name covers facilities in
+    // different towns. Matthew Walker is in Nashville AND in Smyrna, and
+    // the registry matches a name prefix nationwide, so a name-only search
+    // returns the wrong campus and looks certain about it.
     const user = userEvent.setup();
-    renderStep();
+    renderStep({ ...BLANK, hospitalName: "Matthew Walker" });
 
-    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
-    expect(await screen.findByText(/couldn't find an address for this hospital/i)).toBeInTheDocument();
+    const buttons = screen.getAllByRole("button", { name: /Search by AI/ });
+    expect(buttons[0]).toBeDisabled();
+    expect(screen.getAllByText(/Add the hospital's address first/i).length).toBe(2);
+
+    await user.click(buttons[0]);
+    const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.map(([u]) => String(u));
+    expect(calls.some((u) => u.endsWith("/find-contact"))).toBe(false);
   });
 
-  it("shows the billing line and billing page when no email was found", async () => {
+  it("enables the search once there is an address", async () => {
+    renderStep({ ...BLANK, hospitalName: "Matthew Walker", hospitalAddress: "Smyrna, TN 37167" });
+
+    expect(screen.getAllByRole("button", { name: /Search by AI/ })[0]).toBeEnabled();
+    expect(screen.queryByText(/Add the hospital's address first/i)).not.toBeInTheDocument();
+  });
+
+  it("fills the billing phone and keeps the lookup's workings off the screen", async () => {
+    // No email is the normal answer -- the federal registry has no email
+    // field at all. The phone number it does return belongs in the phone
+    // box, not in a block of findings under the email field.
     mockFetch({
-      extract: BILL_READ,
+      extract: {
+        ok: true,
+        body: { ok: true, fields: { hospitalName: "Matthew Walker", hospitalAddress: "Smyrna, TN 37167" } },
+      },
       contact: {
         status: 200,
         body: {
           ok: true,
           value: null,
           fallback: {
-            providerName: "Ascension Saint Thomas Rutherford",
-            phone: "800-242-7416",
+            providerName: "Matthew Walker Comprehensive Health Center",
+            phone: "615-327-9400",
             billingUrl: "https://example.test/billing",
-            notes: "This hospital publishes no billing email.",
-          },
-        },
-      },
-    });
-    const user = userEvent.setup();
-    renderStep();
-
-    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
-
-    expect(await screen.findByText(/publishes no billing email/i)).toBeInTheDocument();
-    const phone = screen.getByRole("link", { name: "800-242-7416" });
-    expect(phone).toHaveAttribute("href", "tel:8002427416");
-    expect(screen.getByRole("link", { name: /billing page/i })).toHaveAttribute(
-      "href",
-      "https://example.test/billing",
-    );
-  });
-
-  it("shows the postal address, and does not claim it found nothing", async () => {
-    // For most US hospitals a postal address and a phone number IS the
-    // answer -- the federal registry has no email field. Printing "we
-    // couldn't find an address" above the hospital's actual address would
-    // send the customer away from a result that is right there.
-    mockFetch({
-      extract: BILL_READ,
-      contact: {
-        status: 200,
-        body: {
-          ok: true,
-          value: null,
-          fallback: {
-            providerName: "Ascension Saint Thomas Rutherford",
-            phone: "615-396-4100",
-            billingUrl: null,
             notes: "Found in the federal NPI registry (NPI 1164590386).",
-            mailingAddress: "1700 MEDICAL CENTER PKWY, MURFREESBORO, TN 37129-2245",
-            facilityType: "General Acute Care Hospital",
-            npi: "1164590386",
-            otherMatches: [],
-          },
-        },
-      },
-    });
-    const user = userEvent.setup();
-    renderStep();
-
-    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
-
-    expect(await screen.findByText(/1700 MEDICAL CENTER PKWY/)).toBeInTheDocument();
-    expect(screen.getByText(/No email published/i)).toBeInTheDocument();
-    expect(screen.queryByText(/couldn't find an address/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /NPI registry record 1164590386/i })).toHaveAttribute(
-      "href",
-      "https://npiregistry.cms.hhs.gov/provider-view/1164590386",
-    );
-  });
-
-  it("offers the other facilities registered under the same name", async () => {
-    // A hospital, its clinic and its lab share one name and one street. A
-    // dispute posted to the laboratory goes nowhere, so the customer needs
-    // to see that there was a choice.
-    mockFetch({
-      extract: BILL_READ,
-      contact: {
-        status: 200,
-        body: {
-          ok: true,
-          value: null,
-          fallback: {
-            providerName: "Saint Thomas Rutherford Hospital",
-            phone: "615-396-4100",
-            billingUrl: null,
-            notes: "",
-            mailingAddress: "1700 MEDICAL CENTER PKWY, MURFREESBORO, TN 37129-2245",
-            facilityType: "General Acute Care Hospital",
+            mailingAddress: "1035 14TH AVE N, NASHVILLE, TN 37208",
+            facilityType: "Clinic or Health Center",
             npi: "1164590386",
             otherMatches: [
               {
-                name: "Saint Thomas Rutherford Hospital Lab",
-                facilityType: "Clinical Medical Laboratory",
-                mailingAddress: "1700 MEDICAL CENTER PKWY",
-                phone: "615-396-4599",
-                city: "MURFREESBORO",
+                name: "Matthew Walker Smyrna",
+                facilityType: "Clinic or Health Center",
+                mailingAddress: "209 LOWRY ST, SMYRNA, TN",
+                phone: "615-220-5995",
+                city: "SMYRNA",
                 state: "TN",
               },
             ],
@@ -256,12 +204,51 @@ describe("CaseInformationStep", () => {
     });
     const user = userEvent.setup();
     renderStep();
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("Smyrna, TN 37167"));
 
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
-    expect(await screen.findByText(/Not the right one\? 1 other match/i)).toBeInTheDocument();
-    expect(screen.getByText("Saint Thomas Rutherford Hospital Lab")).toBeInTheDocument();
-    expect(screen.getByText(/Clinical Medical Laboratory/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("615-327-9400"));
+    expect(screen.getByText(/filled in the billing phone/i)).toBeInTheDocument();
+
+    // None of the rest reaches the screen.
+    expect(screen.queryByText(/1035 14TH AVE N/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/NPI registry record/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Not the right one/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Matthew Walker Smyrna/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /billing page/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Clinic or Health Center/)).not.toBeInTheDocument();
+  });
+
+  it("does not claim to have filled a phone box that was already filled", async () => {
+    // BILL_READ puts a billing phone on the form, so there is nothing to
+    // fill and the note must not say otherwise.
+    mockFetch({
+      extract: BILL_READ,
+      contact: { status: 200, body: { ok: true, value: null, fallback: { providerName: "Riverside General", phone: "615-396-4100" } } },
+    });
+    const user = userEvent.setup();
+    renderStep();
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
+
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+
+    expect(await screen.findByText(/No email is published for this hospital/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("555-0100");
+  });
+
+  it("separates 'no email' from 'no such hospital'", async () => {
+    // Different problems: the first means type the email in, the second
+    // means the name or the address is wrong, which is the one thing the
+    // customer can actually fix.
+    mockFetch({ extract: BILL_READ, contact: { status: 200, body: { ok: true, value: null } } });
+    const user = userEvent.setup();
+    renderStep();
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
+
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+
+    expect(await screen.findByText(/No match for that hospital and address/i)).toBeInTheDocument();
   });
 
   it("reports a lookup that isn't available, and still lets them type it", async () => {
@@ -271,6 +258,7 @@ describe("CaseInformationStep", () => {
     });
     const user = userEvent.setup();
     renderStep();
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
 
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 

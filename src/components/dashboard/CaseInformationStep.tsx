@@ -68,111 +68,6 @@ const HOSPITAL: Field[] = [
   { key: "billingPhone", label: REQUIRED_LABELS.billingPhone, required: true },
 ];
 
-// What the lookup found when it could not find an email. Rendered rather
-// than dropped because it is the normal outcome: the billing line is how
-// the customer gets the address that the send actually requires.
-type ContactMatch = {
-  name: string;
-  facilityType: string | null;
-  mailingAddress: string | null;
-  phone: string | null;
-  city: string | null;
-  state: string | null;
-};
-
-type ContactHelp = {
-  providerName: string | null;
-  phone: string | null;
-  billingUrl: string | null;
-  notes: string;
-  mailingAddress: string | null;
-  facilityType: string | null;
-  npi: string | null;
-  otherMatches: ContactMatch[];
-};
-
-function ContactHelpBlock({ help }: { help: ContactHelp }) {
-  if (!help.phone && !help.billingUrl && !help.notes && !help.mailingAddress) return null;
-  return (
-    <div className="mt-1 space-y-0.5 text-xs text-gray-500">
-      {help.notes && <p>{help.notes}</p>}
-      {help.mailingAddress && (
-        <p>
-          <span className="font-medium text-[#003322]">
-            {help.providerName ?? "Billing address"}
-          </span>
-          {help.facilityType ? ` — ${help.facilityType}` : ""}
-          <br />
-          {help.mailingAddress}
-        </p>
-      )}
-      {help.phone && (
-        <p>
-          Billing line:{" "}
-          <a
-            href={`tel:${help.phone.replace(/[^0-9+]/g, "")}`}
-            className="font-medium text-[#0f7545] hover:underline"
-          >
-            {help.phone}
-          </a>
-        </p>
-      )}
-      {help.billingUrl && (
-        <p>
-          <a
-            href={help.billingUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-[#0f7545] hover:underline"
-          >
-            {help.providerName ? `${help.providerName} billing page` : "Hospital billing page"}
-          </a>
-        </p>
-      )}
-      {help.otherMatches.length > 0 && (
-        // A hospital registers several NPIs under one name -- the hospital,
-        // its lab, its clinic -- and a big system puts the same name on
-        // facilities in different towns. Showing the alternatives lets the
-        // customer catch a wrong pick instead of posting a dispute to a
-        // laboratory.
-        <details className="pt-0.5">
-          <summary className="cursor-pointer font-medium text-[#0f7545] hover:underline">
-            Not the right one? {help.otherMatches.length} other{" "}
-            {help.otherMatches.length === 1 ? "match" : "matches"}
-          </summary>
-          <ul className="mt-1 space-y-1 pl-3">
-            {help.otherMatches.map((match, index) => (
-              <li key={`${match.name}-${index}`}>
-                <span className="font-medium text-[#003322]">{match.name}</span>
-                {match.facilityType ? ` — ${match.facilityType}` : ""}
-                {match.mailingAddress && (
-                  <>
-                    <br />
-                    {match.mailingAddress}
-                  </>
-                )}
-                {match.phone && <> · {match.phone}</>}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-      {help.npi && (
-        <p>
-          <a
-            href={`https://npiregistry.cms.hhs.gov/provider-view/${help.npi}`}
-            target="_blank"
-            rel="noreferrer"
-            className="hover:underline"
-          >
-            Federal NPI registry record {help.npi}
-          </a>
-        </p>
-      )}
-    </div>
-  );
-}
-
 function Section({
   title,
   fields,
@@ -185,7 +80,7 @@ function Section({
   onSearch,
   searchingKey,
   notes,
-  help,
+  canSearch,
 }: {
   title: string;
   fields: Field[];
@@ -198,7 +93,11 @@ function Section({
   onSearch: (key: keyof CaseInformation) => void;
   searchingKey: keyof CaseInformation | null;
   notes: Partial<Record<keyof CaseInformation, string>>;
-  help: Partial<Record<keyof CaseInformation, ContactHelp>>;
+  // Whether the lookup has enough to go on. One hospital name covers
+  // facilities in different towns -- Matthew Walker is in both Nashville
+  // and Smyrna -- so without an address the search picks the wrong one and
+  // looks confident about it. The button waits for the address.
+  canSearch: boolean;
 }) {
   return (
     <section>
@@ -235,7 +134,8 @@ function Section({
                   <button
                     type="button"
                     onClick={() => onSearch(f.key)}
-                    disabled={searchingKey === f.key}
+                    disabled={searchingKey === f.key || !canSearch}
+                    title={canSearch ? undefined : "Add the hospital's address first"}
                     className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#0f7545] px-4 py-2 text-xs font-semibold text-[#0f7545] hover:bg-primary-50 disabled:opacity-60"
                   >
                     <SparkIcon />
@@ -244,8 +144,13 @@ function Section({
                 )}
               </div>
             )}
+            {f.searchable && !canSearch && (
+              <p className="mt-1 text-xs text-gray-500">
+                Add the hospital&apos;s address first — it&apos;s what tells two facilities with the
+                same name apart.
+              </p>
+            )}
             {notes[f.key] && <p className="mt-1 text-xs text-gray-500">{notes[f.key]}</p>}
-            {help[f.key] && <ContactHelpBlock help={help[f.key]!} />}
           </div>
         ))}
       </div>
@@ -290,7 +195,6 @@ export default function CaseInformationStep({
   const [reading, setReading] = useState(true);
   const [searching, setSearching] = useState<keyof CaseInformation | null>(null);
   const [searchNote, setSearchNote] = useState<Partial<Record<keyof CaseInformation, string>>>({});
-  const [searchHelp, setSearchHelp] = useState<Partial<Record<keyof CaseInformation, ContactHelp>>>({});
 
   // Everything that IS printed on the bill is read off it as soon as the
   // step opens, so the customer corrects rather than types. Only blanks are
@@ -322,9 +226,12 @@ export default function CaseInformationStep({
   // The billing-manager and support addresses aren't printed on a bill, so
   // these buttons look the hospital up instead of reading the document.
   async function searchByAi(key: keyof CaseInformation) {
+    // No address check here on purpose: the button is disabled on exactly
+    // this condition, so a guard would be unreachable and untestable. The
+    // route enforces the same rule where it can actually be reached, and
+    // its 400 renders through the error path below.
     setSearching(key);
     setSearchNote((n) => ({ ...n, [key]: "" }));
-    setSearchHelp((h) => ({ ...h, [key]: undefined }));
 
     const res = await fetch(`/api/dashboard/bills/${billId}/find-contact`, {
       method: "POST",
@@ -350,35 +257,31 @@ export default function CaseInformationStep({
 
     const found = String(body?.value ?? "").trim();
     if (!found) {
+      // No email is the normal outcome, not a failure: the federal registry
+      // covers essentially every US provider and has no email field at all,
+      // and only 3 of the 16 hospitals in the curated directory publish
+      // one. What does come back is a billing phone number, so put it in
+      // the box it belongs in rather than printing the lookup's findings
+      // under the field.
       const f = body?.fallback;
-      // "No email" and "nothing at all" are different outcomes and read
-      // very differently to someone stuck on this field. Hospitals hardly
-      // ever publish a billing email, so when the lookup comes back with
-      // the hospital's postal address and billing line it has done its job
-      // -- saying "we couldn't find an address" over the top of a real
-      // address is just wrong.
-      const foundSomething = Boolean(f && (f.mailingAddress || f.phone || f.billingUrl));
+      const phone = String(f?.phone ?? "").trim();
+      const filledPhone = Boolean(phone) && !values.billingPhone.trim();
+      if (filledPhone) {
+        setValues((v) => (v.billingPhone.trim() ? v : { ...v, billingPhone: phone }));
+      }
+      // Worth keeping these apart in one line each: "found the hospital,
+      // it publishes no email" means type the email in, while "found no
+      // such hospital" means the name or the address is wrong -- which is
+      // the thing the customer can actually fix.
+      const matched = Boolean(f && (f.providerName || f.npi || f.mailingAddress || phone));
       setSearchNote((n) => ({
         ...n,
-        [key]: foundSomething
-          ? "No email published — here's how to reach them."
-          : "We couldn't find an address for this hospital.",
+        [key]: filledPhone
+          ? "No email is published — filled in the billing phone instead."
+          : matched
+            ? "No email is published for this hospital — please type it in."
+            : "No match for that hospital and address — check both, or type the email in.",
       }));
-      if (f && (f.phone || f.billingUrl || f.notes || f.mailingAddress)) {
-        setSearchHelp((h) => ({
-          ...h,
-          [key]: {
-            providerName: f.providerName ?? null,
-            phone: f.phone ?? null,
-            billingUrl: f.billingUrl ?? null,
-            notes: String(f.notes ?? ""),
-            mailingAddress: f.mailingAddress ?? null,
-            facilityType: f.facilityType ?? null,
-            npi: f.npi ?? null,
-            otherMatches: Array.isArray(f.otherMatches) ? f.otherMatches : [],
-          },
-        }));
-      }
       return;
     }
     setValues((v) => (v[key]?.trim() ? v : { ...v, [key]: found }));
@@ -438,7 +341,7 @@ export default function CaseInformationStep({
         onSearch={searchByAi}
         searchingKey={searching}
         notes={searchNote}
-        help={searchHelp}
+        canSearch={Boolean(values.hospitalAddress.trim())}
       />
 
       <hr className="border-gray-200" />
@@ -455,7 +358,7 @@ export default function CaseInformationStep({
         onSearch={searchByAi}
         searchingKey={searching}
         notes={searchNote}
-        help={searchHelp}
+        canSearch={Boolean(values.hospitalAddress.trim())}
       />
 
       {previews.length > 0 && (
