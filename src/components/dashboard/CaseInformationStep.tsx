@@ -270,16 +270,26 @@ export default function CaseInformationStep({
         setValues((v) => (v.billingPhone.trim() ? v : { ...v, billingPhone: phone }));
       }
       // Worth keeping these apart in one line each: "found the hospital,
-      // it publishes no email" means type the email in, while "found no
-      // such hospital" means the name or the address is wrong -- which is
-      // the thing the customer can actually fix.
+      // could not confirm an email" means type the email in, while "found
+      // no such hospital" means the name or the address is wrong -- which
+      // is the thing the customer can actually fix.
+      //
+      // Neither line claims the hospital publishes no email, because a
+      // failed lookup is not evidence of that. Four real hospitals were
+      // tested against the verification chain and all four publish a
+      // billing address we could not confirm: one blocks our fetcher, one
+      // has a broken TLS chain, one puts the address on a domain that
+      // doesn't match its website, and one renders it with JavaScript so
+      // it is not in the HTML at all. The customer has a browser and can
+      // read every one of those pages, so point them at the page instead
+      // of telling them there is nothing there.
       const matched = Boolean(f && (f.providerName || f.npi || f.mailingAddress || phone));
       setSearchNote((n) => ({
         ...n,
         [key]: filledPhone
-          ? "No email is published — filled in the billing phone instead."
+          ? "Couldn't confirm an email — filled in the billing phone instead."
           : matched
-            ? "No email is published for this hospital — please type it in."
+            ? "Couldn't confirm an email — it's usually on the hospital's billing or \"pay my bill\" page."
             : "No match for that hospital and address — check both, or type the email in.",
       }));
       return;
