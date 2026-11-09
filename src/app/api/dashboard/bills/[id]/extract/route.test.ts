@@ -8,7 +8,8 @@ const getAiServiceConfig = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => serverMock.client) }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => adminMock.client) }));
-vi.mock("@/lib/ai-service", () => ({
+vi.mock("@/lib/ai-service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/ai-service")>()),
   processCase: (...a: unknown[]) => processCase(...a),
   getAiServiceConfig: () => getAiServiceConfig(),
 }));

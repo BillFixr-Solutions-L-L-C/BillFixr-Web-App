@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAiServiceConfig, processCase } from "@/lib/ai-service";
+import { AiServiceTimeoutError, getAiServiceConfig, processCase } from "@/lib/ai-service";
 import { mapAdminCaseAnalysis, mapBillAnalysis, mapCaseFields } from "@/lib/aiAnalysisMapping";
 import { guessContentType } from "@/lib/contentType";
 import { negotiationSummary, startNegotiationForCase, type StartableCase } from "@/lib/startNegotiation";
@@ -17,6 +17,13 @@ import type { AiCaseProcessingResponse } from "@/types/ai";
 // savings_found/appeal_letter_text/ai_summary_text/admin_analysis) — the
 // frontend already reads these with a mock fallback, so no page changes
 // are needed once real data lands here.
+// Reading a bill is OCR plus a model call behind a free-tier cold start, so
+// this needs minutes, not seconds. Stated explicitly rather than inherited:
+// the platform default has changed before, differs by plan, and is not
+// visible from the repo -- so a route that depends on it silently depends on
+// a setting nobody here can read.
+export const maxDuration = 300;
+
 export async function POST(request: Request) {
   // `force` backs the Re-scan button: read the bill again and replace the
   // analysis, rather than returning the one already stored.
@@ -104,7 +111,11 @@ export async function POST(request: Request) {
   if (!result) {
     const { data: fileBlob, error: downloadError } = await admin.storage.from("bills").download(bill.storage_url);
     if (downloadError || !fileBlob) {
-      return NextResponse.json({ error: "failed to load the stored bill file" }, { status: 500 });
+      console.error("bill download failed for case", caseId, downloadError);
+      return NextResponse.json(
+        { error: "failed to load the stored bill file", stage: "bill_download" },
+        { status: 500 },
+      );
     }
     try {
       result = await processCase(caseId, {
@@ -113,14 +124,31 @@ export async function POST(request: Request) {
       });
     } catch (err) {
       console.error("AI service processing failed for case", caseId, err);
-      return NextResponse.json({ error: "AI processing failed" }, { status: 502 });
+      // A timeout and a refusal are different problems with different
+      // fixes, and until now both arrived as the same 502 with the same
+      // sentence. `stage` is a fixed label, never the upstream error text,
+      // which can carry connection details.
+      if (err instanceof AiServiceTimeoutError) {
+        return NextResponse.json(
+          {
+            error: "Analyzing this bill took too long and was stopped. Please try again.",
+            stage: "ai_timeout",
+          },
+          { status: 504 },
+        );
+      }
+      return NextResponse.json({ error: "AI processing failed", stage: "ai_processing" }, { status: 502 });
     }
     await admin.from("bill_extractions").upsert({ bill_id: bill.id, result });
   }
 
   const extraction = result.processed_documents[0]?.extraction;
   if (!extraction) {
-    return NextResponse.json({ error: "AI service returned no extraction" }, { status: 502 });
+    console.error("AI service returned no extraction for case", caseId);
+    return NextResponse.json(
+      { error: "AI service returned no extraction", stage: "ai_no_extraction" },
+      { status: 502 },
+    );
   }
 
   const billAnalysis = mapBillAnalysis(extraction, result.analysis);

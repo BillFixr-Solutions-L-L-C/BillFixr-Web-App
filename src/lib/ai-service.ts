@@ -1,5 +1,34 @@
 import type { AiCaseProcessingResponse, AiHealthResponse, AiServiceConfig } from "@/types/ai";
 
+// Reading a bill is slow on purpose: the AI service downloads the file,
+// runs tesseract over it, then calls a model. On Render's free tier a cold
+// instance adds most of a minute before any of that starts. So this is
+// generous -- but it is not unbounded, which is what it was.
+//
+// An unbounded call is the reason a stalled case says nothing about why.
+// Without a timeout the request hangs until the platform kills the whole
+// function, which produces no error here, no log line naming the stage,
+// and a case parked at `scanning` forever. A timeout we own turns that into
+// an error we can attribute.
+const DEFAULT_TIMEOUT_MS = Number(process.env.AI_SERVICE_TIMEOUT_MS ?? 240_000);
+
+// A health check that hangs for four minutes is not a health check.
+const HEALTH_TIMEOUT_MS = Number(process.env.AI_SERVICE_HEALTH_TIMEOUT_MS ?? 20_000);
+
+/** The AI service did not answer in time. Distinct so callers can say so. */
+export class AiServiceTimeoutError extends Error {
+  constructor(
+    readonly path: string,
+    readonly timeoutMs: number,
+  ) {
+    // Deliberately no hostname in the message: this text can reach a
+    // client, and a previous audit finding was about leaking connection
+    // details that way.
+    super(`AI service did not respond within ${timeoutMs}ms.`);
+    this.name = "AiServiceTimeoutError";
+  }
+}
+
 function trimTrailingSlash(value: string): string {
   return value.endsWith("/") ? value.slice(0, -1) : value;
 }
@@ -17,7 +46,10 @@ export function getAiServiceConfig(): AiServiceConfig | null {
   };
 }
 
-export async function aiServiceFetch(path: string, init?: RequestInit): Promise<Response> {
+export async function aiServiceFetch(
+  path: string,
+  init?: RequestInit & { timeoutMs?: number },
+): Promise<Response> {
   const config = getAiServiceConfig();
 
   if (!config) {
@@ -29,15 +61,30 @@ export async function aiServiceFetch(path: string, init?: RequestInit): Promise<
     headers.set("X-API-Key", config.apiKey);
   }
 
-  return fetch(`${config.baseUrl}${path}`, {
-    ...init,
-    headers,
-    cache: "no-store",
-  });
+  // timeoutMs is ours, not RequestInit's -- it must not reach fetch.
+  const { timeoutMs, signal, ...rest } = init ?? {};
+  const budget = timeoutMs ?? DEFAULT_TIMEOUT_MS;
+
+  try {
+    return await fetch(`${config.baseUrl}${path}`, {
+      ...rest,
+      headers,
+      cache: "no-store",
+      // A caller that brought its own signal keeps control.
+      signal: signal ?? AbortSignal.timeout(budget),
+    });
+  } catch (err) {
+    // Both names appear in the wild: AbortSignal.timeout gives TimeoutError,
+    // while some runtimes surface the abort as AbortError.
+    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new AiServiceTimeoutError(path, budget);
+    }
+    throw err;
+  }
 }
 
 export async function getAiHealth(): Promise<AiHealthResponse> {
-  const response = await aiServiceFetch("/health");
+  const response = await aiServiceFetch("/health", { timeoutMs: HEALTH_TIMEOUT_MS });
 
   if (!response.ok) {
     throw new Error(`AI service health check failed with status ${response.status}.`);
