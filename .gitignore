@@ -49,6 +49,12 @@ BACKEND-PLAN.md
 /.claude/
 /CLAUDE.md
 /AGENTS.md
+# Same category, written by a newer skills installer than the lines above:
+# vendored third-party agent skills and the lockfile pinning them. Ignored
+# for the same reason /.claude/ is -- this is tooling for whoever is
+# working on the repo, not part of what ships.
+/.agents/
+/skills-lock.json
 
 .vercel
 .env*
