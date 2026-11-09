@@ -27,6 +27,12 @@ os.environ.pop("ENGINE_API_KEY", None)
 # on against recorded payloads instead of the live API.
 os.environ["NPPES_DISABLED"] = "1"
 
+# Likewise the web search for a billing email: it calls OpenRouter and then
+# fetches whatever page the model names. Off by default so no test can spend
+# money or depend on a hospital's website being up. test_contact_search.py
+# turns it back on against stubbed replies.
+os.environ["CONTACT_SEARCH_DISABLED"] = "1"
+
 _test_url = os.environ.pop("ENGINE_TEST_DATABASE_URL", "").strip()
 
 if _test_url:

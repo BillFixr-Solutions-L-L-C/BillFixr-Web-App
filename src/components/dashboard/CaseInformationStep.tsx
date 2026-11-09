@@ -285,7 +285,14 @@ export default function CaseInformationStep({
       return;
     }
     setValues((v) => (v[key]?.trim() ? v : { ...v, [key]: found }));
-    setSearchNote((n) => ({ ...n, [key]: "Found — check it's right." }));
+    // Say who published it. An address found on the web is only accepted
+    // when it appears on a page on its own domain, and naming that domain
+    // is what lets the customer see that rather than take it on faith.
+    const source = String(body?.emailSource ?? "").trim();
+    setSearchNote((n) => ({
+      ...n,
+      [key]: source ? `Found on ${source} — check it's right.` : "Found — check it's right.",
+    }));
   }
 
   const missing = missingRequiredInformation({

@@ -142,6 +142,24 @@ describe("CaseInformationStep", () => {
     expect(JSON.parse(call[1].body)).toMatchObject({ field: "supportEmail", hospitalName: "Riverside General" });
   });
 
+  it("names the domain an email was found on", async () => {
+    // An address that simply appears in a box is not a reason to trust it.
+    // It was accepted because it is published on a page on its own domain,
+    // and the note says which.
+    mockFetch({
+      extract: BILL_READ,
+      contact: { status: 200, body: { ok: true, value: "billing@mwchc.org", emailSource: "mwchc.org" } },
+    });
+    const user = userEvent.setup();
+    renderStep();
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
+
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+
+    await waitFor(() => expect(screen.getByLabelText(/^Billing Department Email/)).toHaveValue("billing@mwchc.org"));
+    expect(screen.getByText(/Found on mwchc\.org/i)).toBeInTheDocument();
+  });
+
   it("will not search until the hospital address is filled in", async () => {
     // The reason the button waits: one hospital name covers facilities in
     // different towns. Matthew Walker is in Nashville AND in Smyrna, and

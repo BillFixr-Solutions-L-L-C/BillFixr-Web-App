@@ -15,6 +15,12 @@ Two sources, in this order:
    US provider. It gives a mailing address, phone and fax for essentially
    any US facility, which is what makes this work for a hospital nobody has
    curated. It has no email field at all.
+3. A web search (engine/contact_search.py) -- for the email the first two
+   cannot give. Hospitals publish billing addresses on their own sites even
+   though no dataset collects them. The model must say which page it read
+   the address on, and that page is then fetched and checked here, so what
+   comes back is an address the provider published on its own domain, not
+   an address a model produced.
 
 So a directory hit and a registry hit answer different questions, and the
 registry never overwrites a curated field. A registry-only answer is enough
@@ -30,7 +36,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from . import nppes
+from . import contact_search, nppes
 from .nppes import ProviderCandidate
 
 DIRECTORY_PATH = os.getenv("PROVIDER_DIRECTORY_PATH") or os.path.join(os.path.dirname(__file__), "provider_directory.json")
@@ -56,6 +62,10 @@ class ProviderContact(BaseModel):
     # NPIs -- the hospital, its lab, its clinic -- so the caller confirms
     # rather than having one picked for them.
     candidates: List[ProviderCandidate] = []
+    # The page a searched-for email was read from, when the email came from
+    # the web rather than the directory. Kept so a wrong address can be
+    # traced to what published it.
+    email_source_url: Optional[str] = None
 
 
 def _normalize(text: str) -> str:
@@ -98,9 +108,23 @@ class ProviderContactFinder:
         if entry is None:
             return self._from_registry(provider_name, address, registry)
 
+        # A curated field is traced to the hospital's own page by hand, so
+        # it wins. The search only fills what the entry does not have.
+        searched = (
+            contact_search.search_emails(provider_name, address)
+            if not (entry.get("billing_email") and entry.get("support_email"))
+            else {}
+        )
+        billing = searched.get("billing")
+        support = searched.get("support")
+        billing_email = entry.get("billing_email") or (billing.email if billing else None)
+        support_email = entry.get("support_email") or (support.email if support else None)
+
         notes = entry.get("notes", "")
-        if not entry.get("billing_email"):
+        if not billing_email:
             notes = (notes + " " if notes else "") + "This hospital publishes no billing email. Use the phone number or its billing page, or enter an email yourself."
+        elif not entry.get("billing_email") and billing:
+            notes = (notes + " " if notes else "") + f"Billing email found on {billing.page_domain}."
         if not address and entry.get("states"):
             notes = (notes + " " if notes else "") + "No address was given, so confirm this is the right location."
 
@@ -111,11 +135,13 @@ class ProviderContactFinder:
         best = registry[0] if registry else None
         return ProviderContact(
             provider_name=entry["name"],
-            billing_email=entry.get("billing_email"),
-            support_email=entry.get("support_email"),
+            billing_email=billing_email,
+            support_email=support_email,
             phone=entry.get("phone") or (best.phone if best else None),
             billing_url=entry.get("billing_url"),
-            sources=entry.get("sources", []) + ([best.source_url] if best and best.source_url else []),
+            sources=entry.get("sources", [])
+            + ([best.source_url] if best and best.source_url else [])
+            + [f.source_url for f in (billing, support) if f],
             verification_status=entry.get("verification_status", "unverified"),
             notes=notes,
             mailing_address=best.mailing_address if best else None,
@@ -123,28 +149,65 @@ class ProviderContactFinder:
             facility_type=best.facility_type if best else None,
             fax=best.fax if best else None,
             candidates=registry,
+            email_source_url=(billing.source_url if billing and not entry.get("billing_email") else None),
         )
 
     def _from_registry(
         self, provider_name: str, address: Optional[str], registry: List[ProviderCandidate]
     ) -> ProviderContact:
-        """An answer built only from the NPI registry, for a hospital nobody has curated."""
+        """An answer for a hospital nobody has curated: the registry, plus a search for the email."""
+        # The registry has no email field, so this is the only way most
+        # hospitals get one at all. It is checked against the page it was
+        # published on before it reaches here -- see contact_search.
+        searched = contact_search.search_emails(provider_name, address)
+        billing = searched.get("billing")
+        support = searched.get("support")
+        found_note = ""
+        if billing:
+            found_note = f" Billing email found on {billing.page_domain}."
+        elif support:
+            found_note = f" Support email found on {support.page_domain}."
+
         if not registry:
-            return ProviderContact(
-                notes=(
-                    f"No billing contact was found for '{provider_name}', in our directory or in the "
-                    "federal NPI registry. BillFixr does not guess hospital contacts. Check the spelling "
-                    "against the name printed on the bill, or enter the billing email yourself."
+            if not (billing or support):
+                return ProviderContact(
+                    notes=(
+                        f"No billing contact was found for '{provider_name}', in our directory, in the "
+                        "federal NPI registry, or on the web. BillFixr does not guess hospital contacts. "
+                        "Check the spelling against the name printed on the bill, or enter the billing "
+                        "email yourself."
+                    )
                 )
+            # CMS does not know this provider under that name, but its own
+            # site publishes an address. That is enough to send to, and it
+            # is the only thing a send actually requires.
+            return ProviderContact(
+                provider_name=provider_name.strip(),
+                billing_email=billing.email if billing else None,
+                support_email=support.email if support else None,
+                sources=[f.source_url for f in (billing, support) if f],
+                verification_status="listed",
+                notes=(
+                    "Not found in the federal NPI registry, so there is no postal address or phone "
+                    "number for this one." + found_note
+                ).strip(),
+                email_source_url=(billing or support).source_url,
             )
 
         best = registry[0]
         notes = (
             f"Found in the federal NPI registry (NPI {best.npi})"
             + (f", listed as a {best.facility_type.lower()}" if best.facility_type else "")
-            + ". The registry carries no email address, so the postal address and phone number below are "
-            "what it has. Ring the billing line for an email, or post the letter."
+            + "."
         )
+        if billing or support:
+            notes += found_note
+        else:
+            notes += (
+                " The registry carries no email address and none was found on the hospital's own site, "
+                "so the postal address and phone number below are what it has. Ring the billing line "
+                "for an email, or post the letter."
+            )
         if len(registry) > 1:
             notes += f" {len(registry) - 1} other facility match this name - check this is the right one."
         if not address:
@@ -152,14 +215,17 @@ class ProviderContactFinder:
 
         return ProviderContact(
             provider_name=best.name,
-            billing_email=None,          # the registry has no email field at all
-            support_email=None,
+            billing_email=billing.email if billing else None,
+            support_email=support.email if support else None,
             phone=best.phone,
             billing_url=None,
-            sources=[best.source_url] if best.source_url else [],
-            # "listed", never "verified": the provider self-reports this to
-            # CMS and it goes stale. The registry shows a Chicago fax for a
-            # hospital in Tennessee.
+            sources=([best.source_url] if best.source_url else [])
+            + [f.source_url for f in (billing, support) if f],
+            # "listed", never "verified": the registry half is self-reported
+            # to CMS and goes stale -- it shows a Chicago fax for a hospital
+            # in Tennessee. A searched email is checked against the page
+            # that published it, and email_source_url says which page that
+            # was, but nobody has read it by hand either.
             verification_status="listed",
             notes=notes,
             mailing_address=best.mailing_address,
@@ -167,4 +233,5 @@ class ProviderContactFinder:
             facility_type=best.facility_type,
             fax=best.fax,
             candidates=registry,
+            email_source_url=(billing or support).source_url if (billing or support) else None,
         )

@@ -179,6 +179,52 @@ describe("POST /api/dashboard/bills/[id]/find-contact", () => {
     expect(body.fallback.npi).toBe("1164590386");
   });
 
+  it("says which domain published an email it found on the web", async () => {
+    // Most hospitals are not in the curated directory and the registry has
+    // no email field, so an email for one of them was found by searching.
+    // It is only accepted when it appears on a page on its own domain, and
+    // naming that domain is what lets the customer see that rather than
+    // take an address that simply appeared in a box.
+    owns();
+    getAutomationEngineConfig.mockReturnValue({ baseUrl: "http://engine" });
+    engineContact.mockResolvedValue({
+      billing_email: "billing@mwchc.org",
+      support_email: null,
+      phone: "615-984-4290",
+      provider_name: "Matthew Walker Comprehensive Health Center",
+      email_source_url: "https://mwchc.org/patient-billing",
+      candidates: [],
+    });
+    adminMock.queueResult("bills", { data: null, error: null });
+
+    const res = await POST(req({ field: "billingManagerEmail" }), { params });
+    const body = await res.json();
+
+    expect(body.value).toBe("billing@mwchc.org");
+    expect(body.emailSource).toBe("mwchc.org");
+  });
+
+  it("does not fall over on an unparseable source url", async () => {
+    owns();
+    getAutomationEngineConfig.mockReturnValue({ baseUrl: "http://engine" });
+    engineContact.mockResolvedValue({
+      billing_email: "billing@mwchc.org",
+      support_email: null,
+      phone: null,
+      provider_name: "Matthew Walker",
+      email_source_url: "not a url",
+      candidates: [],
+    });
+    adminMock.queueResult("bills", { data: null, error: null });
+
+    const res = await POST(req({ field: "billingManagerEmail" }), { params });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.value).toBe("billing@mwchc.org");
+    expect(body.emailSource).toBeNull();
+  });
+
   it("offers the other facilities that matched the name, without repeating the first", async () => {
     // One hospital registers several NPIs -- itself, its lab, its clinic --
     // at the same name and street. The customer has to be able to catch a
