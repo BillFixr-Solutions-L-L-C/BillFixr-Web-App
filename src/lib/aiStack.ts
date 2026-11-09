@@ -96,6 +96,12 @@ export type ProviderContact = {
   npi: string | null;
   facility_type: string | null;
   fax: string | null;
+  /**
+   * The page a searched-for email was read from. An email outside the
+   * curated directory was found on the web and only accepted because it
+   * appears on a page on its own domain; this says which page.
+   */
+  email_source_url: string | null;
   /** Facilities sharing the name, for the customer to choose between. */
   candidates: AutomationProviderCandidate[];
   /** Which backend actually answered, so a caller can say where a value came from. */
@@ -132,6 +138,7 @@ export async function findProviderContact(provider: {
       npi: contact.npi ?? null,
       facility_type: contact.facility_type ?? null,
       fax: contact.fax ?? null,
+      email_source_url: contact.email_source_url ?? null,
       candidates: contact.candidates ?? [],
       source: backend,
     };
@@ -150,6 +157,7 @@ export async function findProviderContact(provider: {
     npi: null,
     facility_type: null,
     fax: null,
+    email_source_url: null,
     candidates: [],
     source: backend,
   };

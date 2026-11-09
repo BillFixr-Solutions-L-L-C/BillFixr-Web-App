@@ -132,5 +132,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     await admin.from("bills").update({ [column]: value }).eq("id", id);
   }
 
-  return NextResponse.json({ ok: true, value });
+  // Where the address came from, when it was found on the web rather than
+  // taken from the curated directory. The form shows the domain, because
+  // "an email appeared in the box" is not a reason to trust it.
+  let emailSource: string | null = null;
+  try {
+    emailSource = contact.email_source_url ? new URL(contact.email_source_url).hostname : null;
+  } catch {
+    emailSource = null;
+  }
+  return NextResponse.json({ ok: true, value, emailSource });
 }

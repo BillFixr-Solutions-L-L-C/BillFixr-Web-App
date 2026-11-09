@@ -121,6 +121,8 @@ describe("findProviderContact", () => {
       npi: null,
       facility_type: null,
       fax: null,
+      // Curated, so nothing was searched for and there is no page behind it.
+      email_source_url: null,
       candidates: [],
       source: "automation-engine",
     });

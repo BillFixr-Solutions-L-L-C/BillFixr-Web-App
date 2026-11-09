@@ -148,7 +148,8 @@ async def health_check(check: str = ""):
 
     state = readiness.check()
     extra = {}
-    if "registry" in {part.strip() for part in check.split(",")}:
+    asked = {part.strip() for part in check.split(",")}
+    if "registry" in asked:
         # Opt-in, because it calls the NPI registry over the network and
         # Render polls this route. Asked for by name, it answers the one
         # question the test suite structurally cannot: the suite runs
@@ -158,6 +159,16 @@ async def health_check(check: str = ""):
         from engine import nppes
 
         extra["provider_registry"] = nppes.probe()
+
+    if "contact-search" in asked:
+        # Same reason, for the other half of a contact lookup. Every test of
+        # the email search runs against a stubbed reply, so a missing key or
+        # blocked egress to OpenRouter would show up only as "this hospital
+        # publishes no email" -- which is also what a genuine miss looks
+        # like. This one call costs a token, not a web search.
+        from engine import contact_search
+
+        extra["contact_search"] = contact_search.probe()
 
     return {
         "status": "healthy",
