@@ -263,9 +263,14 @@ def probe() -> Dict[str, Any]:
     """Can this deployment run a contact search at all? Never raises.
 
     Same reason as the registry probe: every test runs against a recorded
-    reply, so nothing else would notice that the key is missing or that
-    egress to OpenRouter is blocked -- both of which look exactly like a
-    hospital that publishes no email.
+    reply, so nothing else would notice that the key is missing, that egress
+    to OpenRouter is blocked, or that this account cannot use the web search
+    tool -- all three of which look exactly like a hospital that publishes
+    no email.
+
+    So the probe asks the way a real lookup asks, web search tool included.
+    That costs a search's worth of credit per call, which is why this is
+    opt-in via ?check=contact-search and not part of the route Render polls.
     """
     if os.getenv("CONTACT_SEARCH_DISABLED", "").strip():
         return {"reachable": False, "disabled": True}
@@ -274,7 +279,20 @@ def probe() -> Dict[str, Any]:
 
     started = time.time()
     try:
-        _chat({"model": MODEL, "messages": [{"role": "user", "content": "ping"}], "max_tokens": 1}, os.environ["OPENROUTER_API_KEY"])
+        data = _chat(
+            {
+                "model": MODEL,
+                "messages": [{"role": "user", "content": "Reply with the single word: ok"}],
+                # The same server tool a real lookup uses, at the smallest
+                # size it comes in. A plain chat ping would pass on a key
+                # that cannot run a web search at all -- and that is the
+                # failure this probe exists to catch, because it reaches the
+                # customer as "this hospital publishes no email".
+                "tools": [{"type": "openrouter:web_search", "parameters": {"max_results": 1}}],
+                "max_tokens": 16,
+            },
+            os.environ["OPENROUTER_API_KEY"],
+        )
     except Exception as err:  # noqa: BLE001 -- a health check reports, it does not fail
         return {
             "reachable": False,
@@ -282,9 +300,24 @@ def probe() -> Dict[str, Any]:
             "error": type(err).__name__,
             "elapsed_ms": int((time.time() - started) * 1000),
         }
+
+    # OpenRouter answers some rejections with HTTP 200 and an error in the
+    # body -- an unavailable tool among them. So a request that completed is
+    # not the same as a search this account is allowed to run.
+    rejected = data.get("error") if isinstance(data, dict) else None
+    if rejected:
+        message = rejected.get("message") if isinstance(rejected, dict) else rejected
+        return {
+            "reachable": False,
+            "disabled": False,
+            "error": str(message)[:200],
+            "elapsed_ms": int((time.time() - started) * 1000),
+        }
+
     return {
         "reachable": True,
         "disabled": False,
         "model": MODEL,
+        "web_search": True,
         "elapsed_ms": int((time.time() - started) * 1000),
     }
