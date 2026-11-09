@@ -27,7 +27,7 @@ export default async function AdminPaymentsPage() {
     <div>
       <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Transactions</h1>
 
-      <BillingSettingsCard initialPercentage={Number(settings?.success_fee_percentage ?? 30)} canWrite={canWrite} />
+      <BillingSettingsCard initialPercentage={Number(settings?.success_fee_percentage ?? 20)} canWrite={canWrite} />
 
       <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Commitment Fee</h2>
