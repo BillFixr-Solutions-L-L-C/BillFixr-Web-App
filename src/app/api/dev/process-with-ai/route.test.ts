@@ -13,7 +13,11 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(() => adminMock.client),
 }));
-vi.mock("@/lib/ai-service", () => ({
+// AiServiceTimeoutError comes from the real module: the route does an
+// `instanceof` check on it, and a stub class would make that check pass
+// here while failing in production.
+vi.mock("@/lib/ai-service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/ai-service")>()),
   getAiServiceConfig: (...args: unknown[]) => getAiServiceConfig(...args),
   processCase: (...args: unknown[]) => processCase(...args),
 }));
@@ -189,6 +193,28 @@ describe("POST /api/dev/process-with-ai", () => {
     const res = await POST(makeRequest({ caseId: "case-1" }));
 
     expect(res.status).toBe(502);
+    expect((await res.json()).stage).toBe("ai_processing");
+  });
+
+  it("separates a timeout from a refusal", async () => {
+    // Six cases sit at `scanning` in production and nothing records why.
+    // These two failures want different responses -- "try again" is right
+    // for a timeout and wrong for a service that answered with an error --
+    // and until now both arrived as the same 502 with the same sentence.
+    const { AiServiceTimeoutError } = await import("@/lib/ai-service");
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    queueCaseRow();
+    adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf bytes"]), error: null });
+    processCase.mockRejectedValue(new AiServiceTimeoutError("/v1/cases/process", 240_000));
+
+    const res = await POST(makeRequest({ caseId: "case-1" }));
+    const body = await res.json();
+
+    expect(res.status).toBe(504);
+    expect(body.stage).toBe("ai_timeout");
+    // The label is fixed text. The upstream message is not echoed, because
+    // it can carry connection details.
+    expect(JSON.stringify(body)).not.toContain("/v1/cases/process");
   });
 
   it("re-scans on force: drops the stored reading and calls the AI again", async () => {

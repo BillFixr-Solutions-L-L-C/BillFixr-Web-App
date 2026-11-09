@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAiServiceConfig, processCase } from "@/lib/ai-service";
+import { AiServiceTimeoutError, getAiServiceConfig, processCase } from "@/lib/ai-service";
 import { guessContentType } from "@/lib/contentType";
 import type { AiCaseProcessingResponse } from "@/types/ai";
 
@@ -13,6 +13,11 @@ import type { AiCaseProcessingResponse } from "@/types/ai";
 // parked in bill_extractions (service-role only) and stay behind the
 // commitment fee — process-with-ai reuses them afterwards rather than
 // paying for a second call.
+// Same reason as the analysis route: OCR plus a model call behind a
+// free-tier cold start. Stated here rather than inherited from a platform
+// default that is invisible from the repo.
+export const maxDuration = 300;
+
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
@@ -63,7 +68,23 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       });
     } catch (err) {
       console.error("AI extraction failed for bill", id, err);
-      return NextResponse.json({ error: "We couldn't read this document.", fields: null }, { status: 502 });
+      // A timeout is worth saying out loud: the customer is waiting on this
+      // one, and "try again" is genuinely the right advice for it, which it
+      // is not for a document we cannot read.
+      if (err instanceof AiServiceTimeoutError) {
+        return NextResponse.json(
+          {
+            error: "Reading this document took too long and was stopped. Please try again.",
+            fields: null,
+            stage: "ai_timeout",
+          },
+          { status: 504 },
+        );
+      }
+      return NextResponse.json(
+        { error: "We couldn't read this document.", fields: null, stage: "ai_processing" },
+        { status: 502 },
+      );
     }
     await admin.from("bill_extractions").upsert({ bill_id: id, result });
   }
