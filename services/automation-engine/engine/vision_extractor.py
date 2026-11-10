@@ -27,7 +27,7 @@ Your job is to examine images or documents of hospital, clinic, or physician med
 
 Always extract:
 1. Provider Details: Provider/Hospital/Clinic name, address, billing phone, and billing email or dispute address.
-2. Patient & Statement Details: Patient name, account or invoice number, statement date, date(s) of service.
+2. Patient & Statement Details: Patient name, the patient's or guarantor's mailing address as printed on the statement, account or invoice number, statement date, date(s) of service.
 3. Classification: Determine whether the bill is an 'itemized bill' (contains line-by-line procedures and individual amounts) or a 'summary bill' (only aggregated departmental sums like 'Lab: $500').
 4. Financials: Total billed charge, insurance adjustments/payments, and final patient balance due.
 5. Itemized Line Items: For every line item, extract:
@@ -47,6 +47,7 @@ Respond ONLY with a valid JSON object matching this structure:
   "provider_phone": "string",
   "provider_email": "string",
   "patient_name": "string",
+  "patient_address": "string",
   "account_number": "string",
   "statement_date": "YYYY-MM-DD",
   "date_of_service": "YYYY-MM-DD",

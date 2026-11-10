@@ -16,6 +16,45 @@ export type AutomationEngineFees = {
   completion_fee_rate: number;
 };
 
+// What POST /api/extract returns: the engine's own reading of the bill,
+// from services/automation-engine/engine/vision_extractor.py.
+//
+// Every field is optional because none of them is guaranteed. The engine
+// asks the vision model for this shape in the *prompt* and then parses
+// whatever JSON comes back (including repairing a truncated response) —
+// there is no enforced structured-output contract, so a field can be
+// absent, null, or the empty string the prompt's "string" placeholder
+// invites. Treat all three as "not found".
+export type EngineExtractionLineItem = {
+  line_id?: string | null;
+  date?: string | null;
+  cpt_code?: string | null;
+  revenue_code?: string | null;
+  description?: string | null;
+  quantity?: number | null;
+  charge_amount?: number | null;
+  category?: string | null;
+};
+
+export type EngineExtraction = {
+  id?: string | null;
+  provider_name?: string | null;
+  provider_address?: string | null;
+  provider_phone?: string | null;
+  provider_email?: string | null;
+  patient_name?: string | null;
+  patient_address?: string | null;
+  account_number?: string | null;
+  statement_date?: string | null;
+  date_of_service?: string | null;
+  is_itemized?: boolean | null;
+  total_billed?: number | null;
+  insurance_paid?: number | null;
+  patient_due?: number | null;
+  notes?: string | null;
+  line_items?: EngineExtractionLineItem[] | null;
+};
+
 // What POST /api/audit reads out of `bill_data`. These names are the
 // engine's, not the AI service's — see src/lib/engineBillData.ts for the
 // translation and why it has to exist. Every field here is read with a
