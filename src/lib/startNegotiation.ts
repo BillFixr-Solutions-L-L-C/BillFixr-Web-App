@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isBackendConfigured } from "@/lib/aiStack";
 import { auditBill, startNegotiation } from "@/lib/automation-engine";
-import { storedExtraction, toEngineBillData } from "@/lib/engineBillData";
+import { storedBillData } from "@/lib/engineBillData";
 import type { AutomationNegotiation } from "@/types/automation-engine";
 
 // Starting a negotiation is the one call in this app that makes the
@@ -74,11 +74,14 @@ export async function startNegotiationForCase(
   // step produced. Without it there is nothing to negotiate from.
   const { data: stored } = await admin
     .from("bill_extractions")
-    .select("result")
+    .select("engine_result, result")
     .eq("bill_id", caseRow.bill_id)
     .maybeSingle();
-  const extraction = storedExtraction(stored?.result);
-  if (!extraction) {
+  // Prefers the engine's own reading, which carries the CPT and revenue
+  // codes several audit rules are built on; falls back to the older
+  // ai-service reading so a bill read before 2026-11-10 still negotiates.
+  const billData = storedBillData(stored);
+  if (!billData) {
     return { started: false, blocked: "bill_not_read" };
   }
 
@@ -91,11 +94,11 @@ export async function startNegotiationForCase(
 
   let negotiation: AutomationNegotiation;
   try {
-    // Translated, not passed through: the engine reads flat `total_billed`
-    // and `cpt_code`, the extraction nests `total_charges.amount` and
-    // names it `service_code`. Untranslated it audits as a $0 bill with
-    // no charges and reports nothing wrong. See src/lib/engineBillData.ts.
-    const audit = await auditBill(toEngineBillData(extraction));
+    // Already in the engine's own shape -- flat `total_billed`, `cpt_code`
+    // -- whichever reading it came from. Handing the ai-service's nested
+    // shape over untranslated audits as a $0 bill with no charges and
+    // reports nothing wrong. See src/lib/engineBillData.ts.
+    const audit = await auditBill(billData);
     negotiation = await startNegotiation({
       auditResult: audit,
       // The opening position, not the one we expect to settle at — the
