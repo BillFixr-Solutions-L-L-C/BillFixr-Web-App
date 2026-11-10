@@ -38,6 +38,23 @@ export type CaseInformation = {
   billingPhone: string;
 };
 
+// The engine's answer, as the find-contact route projects it.
+type EngineRecord = {
+  providerName?: string | null;
+  phone?: string | null;
+  mailingAddress?: string | null;
+  npi?: string | null;
+  facilityType?: string | null;
+  billingUrl?: string | null;
+  notes?: string | null;
+  verificationStatus?: string | null;
+};
+
+function listFields(labels: string[]): string {
+  if (labels.length <= 1) return labels[0] ?? "";
+  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+}
+
 type Field = {
   key: keyof CaseInformation;
   label: string;
@@ -223,6 +240,47 @@ export default function CaseInformationStep({
     };
   }, [billId]);
 
+  // What the engine answered, put in the boxes it belongs in.
+  //
+  // The app is a projection of the engine here. A lookup that finds no
+  // published email is still a useful answer -- it carries the facility's
+  // official name, its central billing address and its phone number from
+  // the federal registry -- and all of that used to be fetched and thrown
+  // away, which is why the button looked like it did nothing.
+  //
+  // Overwriting is the part to be careful about. A "listed" match came
+  // from a name-prefix search of the registry, which is how a Smyrna bill
+  // reached the Nashville campus; it may fill a blank box but must not
+  // replace something the customer typed off their own bill. Only
+  // "verified" -- a human-checked directory entry -- outranks what is
+  // already there. Returns the labels of the boxes it changed.
+  function applyEngineRecord(record: EngineRecord | undefined | null): string[] {
+    if (!record) return [];
+    const trusted = record.verificationStatus === "verified";
+    const incoming: [keyof CaseInformation, string, string][] = [
+      ["hospitalName", String(record.providerName ?? "").trim(), "the hospital name"],
+      ["hospitalAddress", String(record.mailingAddress ?? "").trim(), "the billing address"],
+      ["billingPhone", String(record.phone ?? "").trim(), "the billing phone"],
+    ];
+
+    // Computed against the current values rather than inside the setState
+    // updater: React does not run an updater synchronously, so collecting
+    // the labels in there would return an empty list every time and the
+    // note would never name a box.
+    const changed: string[] = [];
+    const patch: Partial<CaseInformation> = {};
+    for (const [field, incomingValue, label] of incoming) {
+      if (!incomingValue) continue;
+      const current = String(values[field] ?? "").trim();
+      if (current && !trusted) continue;
+      if (current === incomingValue) continue;
+      patch[field] = incomingValue;
+      changed.push(label);
+    }
+    if (changed.length) setValues((v) => ({ ...v, ...patch }));
+    return changed;
+  }
+
   // The billing-manager and support addresses aren't printed on a bill, so
   // these buttons look the hospital up instead of reading the document.
   async function searchByAi(key: keyof CaseInformation) {
@@ -264,11 +322,7 @@ export default function CaseInformationStep({
       // the box it belongs in rather than printing the lookup's findings
       // under the field.
       const f = body?.fallback;
-      const phone = String(f?.phone ?? "").trim();
-      const filledPhone = Boolean(phone) && !values.billingPhone.trim();
-      if (filledPhone) {
-        setValues((v) => (v.billingPhone.trim() ? v : { ...v, billingPhone: phone }));
-      }
+      const filled = applyEngineRecord(f);
       // Worth keeping these apart in one line each: "found the hospital,
       // could not confirm an email" means type the email in, while "found
       // no such hospital" means the name or the address is wrong -- which
@@ -283,11 +337,11 @@ export default function CaseInformationStep({
       // it is not in the HTML at all. The customer has a browser and can
       // read every one of those pages, so point them at the page instead
       // of telling them there is nothing there.
-      const matched = Boolean(f && (f.providerName || f.npi || f.mailingAddress || phone));
+      const matched = Boolean(f && (f.providerName || f.npi || f.mailingAddress || f.phone));
       setSearchNote((n) => ({
         ...n,
-        [key]: filledPhone
-          ? "Couldn't confirm an email — filled in the billing phone instead."
+        [key]: filled.length
+          ? `Couldn't confirm an email — filled in ${listFields(filled)} from the provider registry.`
           : matched
             ? "Couldn't confirm an email — it's usually on the hospital's billing or \"pay my bill\" page."
             : "No match for that hospital and address — check both, or type the email in.",
@@ -295,6 +349,9 @@ export default function CaseInformationStep({
       return;
     }
     setValues((v) => (v[key]?.trim() ? v : { ...v, [key]: found }));
+    // An email does not mean the rest of the record is uninteresting: the
+    // same answer carries the registry's phone and billing address.
+    applyEngineRecord(body?.fallback);
     // Say who published it. An address found on the web is only accepted
     // when it appears on a page on its own domain, and naming that domain
     // is what lets the customer see that rather than take it on faith.
