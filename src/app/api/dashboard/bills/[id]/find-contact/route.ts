@@ -87,6 +87,36 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
   }
 
+  // The engine's whole answer, built once and returned whether or not it
+  // also carried an email. The app is a projection of the engine here: the
+  // registry record is the useful part of a lookup even when no address is
+  // published, and the form fills its boxes from this.
+  const record = {
+    providerName: contact.provider_name ?? null,
+    phone: contact.phone ?? null,
+    billingUrl: contact.billing_url ?? null,
+    notes: contact.notes ?? "",
+    mailingAddress: contact.mailing_address ?? null,
+    facilityType: contact.facility_type ?? null,
+    npi: contact.npi ?? null,
+    // "verified" means a human checked this entry in the curated
+    // directory. "listed" means the federal registry matched a name
+    // prefix, which is how a Smyrna bill reached the Nashville campus --
+    // so the form may fill a blank box from it but must not overwrite
+    // something the customer typed.
+    verificationStatus: contact.verification_status ?? null,
+    // Only the alternatives, so the UI can offer "not this one?"
+    // without repeating the facility it already named above.
+    otherMatches: (contact.candidates ?? []).slice(1, 4).map((candidate) => ({
+      name: candidate.name,
+      facilityType: candidate.facility_type,
+      mailingAddress: candidate.mailing_address,
+      phone: candidate.phone,
+      city: candidate.city,
+      state: candidate.state,
+    })),
+  };
+
   const value = (field === "billingManagerEmail" ? contact.billing_email : contact.support_email)?.trim() || null;
   if (!value) {
     // A miss on the EMAIL is the normal case, not an error, and it is not
@@ -98,29 +128,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // billing line and types the address in, which is the only thing that
     // actually unblocks a send, since the engine refuses to mail a letter
     // without one.
-    return NextResponse.json({
-      ok: true,
-      value: null,
-      fallback: {
-        providerName: contact.provider_name ?? null,
-        phone: contact.phone ?? null,
-        billingUrl: contact.billing_url ?? null,
-        notes: contact.notes ?? "",
-        mailingAddress: contact.mailing_address ?? null,
-        facilityType: contact.facility_type ?? null,
-        npi: contact.npi ?? null,
-        // Only the alternatives, so the UI can offer "not this one?"
-        // without repeating the facility it already named above.
-        otherMatches: (contact.candidates ?? []).slice(1, 4).map((candidate) => ({
-          name: candidate.name,
-          facilityType: candidate.facility_type,
-          mailingAddress: candidate.mailing_address,
-          phone: candidate.phone,
-          city: candidate.city,
-          state: candidate.state,
-        })),
-      },
-    });
+    return NextResponse.json({ ok: true, value: null, fallback: record });
   }
 
   // Persist the found address so the letter flow and the scan gate see it
@@ -141,5 +149,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } catch {
     emailSource = null;
   }
-  return NextResponse.json({ ok: true, value, emailSource });
+  return NextResponse.json({ ok: true, value, emailSource, fallback: record });
 }

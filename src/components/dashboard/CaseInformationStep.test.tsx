@@ -259,6 +259,75 @@ describe("CaseInformationStep", () => {
     expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("555-0100");
   });
 
+  it("puts the engine's registry record in the boxes it belongs in", async () => {
+    // The whole point of the button for most hospitals. No published email
+    // exists for them, but the federal registry still knows the facility's
+    // billing address and phone -- and all of that used to be fetched and
+    // discarded, which is why the button looked like it did nothing.
+    mockFetch({
+      extract: BILL_READ,
+      contact: {
+        status: 200,
+        body: {
+          ok: true,
+          value: null,
+          fallback: {
+            providerName: "Matthew Walker Comprehensive Health Center",
+            mailingAddress: "739 PRESIDENT PL, SMYRNA, TN 37167",
+            phone: "615-984-4290",
+            verificationStatus: "verified",
+          },
+        },
+      },
+    });
+    const user = userEvent.setup();
+    renderStep();
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
+
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+
+    // A human-checked entry outranks what the form already held.
+    await waitFor(() =>
+      expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("739 PRESIDENT PL, SMYRNA, TN 37167"),
+    );
+    expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("615-984-4290");
+    // And it says which boxes it touched, rather than printing findings.
+    expect(await screen.findByText(/filled in .*from the provider registry/i)).toBeInTheDocument();
+  });
+
+  it("a registry name-prefix match never overwrites what the customer typed", async () => {
+    // The Matthew Walker incident: the registry matches a name prefix
+    // nationwide, so a Smyrna bill can match the Nashville campus. A
+    // "listed" record may fill a blank box, never replace an address read
+    // off the customer's own bill.
+    mockFetch({
+      extract: BILL_READ,
+      contact: {
+        status: 200,
+        body: {
+          ok: true,
+          value: null,
+          fallback: {
+            providerName: "Matthew Walker Comprehensive Health Center",
+            mailingAddress: "1035 14TH AVE N, NASHVILLE, TN 37208",
+            phone: "615-327-9400",
+            verificationStatus: "listed",
+          },
+        },
+      },
+    });
+    const user = userEvent.setup();
+    renderStep();
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
+
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+
+    await screen.findByText(/Couldn't confirm an email/i);
+    // Both already held a value from the bill, so both are left alone.
+    expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd");
+    expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("555-0100");
+  });
+
   it("separates 'could not confirm' from 'no such hospital'", async () => {
     // Different problems: the first means type the email in, the second
     // means the name or the address is wrong, which is the one thing the
