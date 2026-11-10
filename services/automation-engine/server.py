@@ -127,6 +127,11 @@ async def start_autopilot_loop():
 
     asyncio.create_task(autopilot_loop())
 
+# Joins a transcribed document to a typed note so the two read as separate
+# paragraphs rather than running together mid-sentence.
+PARAGRAPH_BREAK = "\n\n"
+
+
 class AuditRequest(BaseModel):
     bill_data: Dict[str, Any]
     user_context: Optional[Dict[str, Any]] = None
@@ -481,95 +486,97 @@ async def upload_hospital_reply(
     reply_text: Optional[str] = Form(None),
     reply_type: Optional[str] = Form("auto")
 ):
+    """A hospital reply that arrived some way other than the engine's inbox:
+    a letter, a fax, a scan forwarded by support.
+
+    Rewritten 2026-11-10. It used to read the uploaded file into a variable,
+    discard it, and substitute the fixed string "[OCR Extracted from
+    <name>]: Scanned written response from hospital billing office." The
+    handler then keyword-matched *that sentence* and returned a hardcoded
+    category, a hardcoded summary ("Hospital offered revised settlement of
+    $250.00.") and a hardcoded FQHC pushback letter quoting $175.00 -- the
+    same answer for every reply, whatever the hospital wrote.
+
+    Now the document is transcribed by the vision model and handed to
+    analyze_hospital_response, which is the same real analysis that
+    /api/negotiations/{id}/inbound has always used for an emailed reply. One
+    path, whichever way the reply arrives.
+    """
     neg = NegotiationRepository.get_negotiation(negotiation_id)
     if not neg:
         raise HTTPException(status_code=404, detail="Negotiation not found.")
-    
-    extracted_text = ""
-    if file:
-        content = await file.read()
-        extracted_text = f"[OCR Extracted from {file.filename}]: Scanned written response from hospital billing office."
-    
-    if reply_text:
-        extracted_text = f"{extracted_text}\n{reply_text}".strip()
-    
-    if not extracted_text:
-        extracted_text = "Hospital billing department submitted written correspondence."
-    
+
+    content: Optional[bytes] = await file.read() if file else None
+
+    # A revised bill is a different object with its own checks -- it must
+    # match the agreed settlement figure -- and process_revised_bill reads
+    # the PDF itself. So this branch comes first and is left exactly as it
+    # was: transcribing here would spend a vision call on a document that is
+    # about to be read properly anyway.
     if reply_type == "revised_bill":
         if neg.get("status") != "SETTLEMENT_AGREED":
             raise HTTPException(status_code=400, detail="A revised bill can only be received after the settlement is agreed.")
-        pdf_bytes = content if file and file.filename.lower().endswith(".pdf") else None
+        pdf_bytes = content if file and (file.filename or "").lower().endswith(".pdf") else None
         updated = await process_revised_bill(
-            neg, reply_text or "", pdf_bytes, file.filename if file else "revised_bill.pdf"
+            neg,
+            reply_text or "",
+            pdf_bytes,
+            file.filename if file else "revised_bill.pdf",
         )
         return {"status": "success", "category": "REVISED_BILL", "negotiation": updated}
 
-    lower = extracted_text.lower()
-    if "no error" in lower or "accurate" in lower or "correct" in lower or reply_type == "no_error":
-        cat = "NO_ERROR_DETERMINATION"
-        summary = "Hospital billing committee audited charges and reported that billing is compliant with no coding errors found."
-        rec_action = (
-            "1. Primary Recommendation: Advise client to remit original balance ($450.00) or request interest-free 12-month installment plan.\n"
-            "2. AI Counter-Pushback: In parallel, BillFixr prepared a formal pushback asserting Section 330 FQHC statutory sliding-fee protections and prompt-pay cash settlement at $175.00."
+    transcript = ""
+    if content:
+        try:
+            transcript = await vision_extractor.read_document_text(
+                [(content, file.filename or "reply.pdf")]
+            )
+        except Exception as exc:
+            # Never silently substitute a placeholder for the document: that
+            # is precisely the bug this replaced. Say it could not be read.
+            raise HTTPException(
+                status_code=502,
+                detail=f"Could not read the uploaded document: {exc}",
+            ) from exc
+
+    # The customer's own typed note and the transcription are both the
+    # hospital's words as far as the analysis is concerned, so both are sent.
+    parts = [part for part in (transcript, (reply_text or "").strip()) if part]
+    message_text = PARAGRAPH_BREAK.join(parts)
+    if not message_text:
+        # Refused rather than invented. Previously this became "Hospital
+        # billing department submitted written correspondence." and was
+        # analysed as if the hospital had said it.
+        raise HTTPException(
+            status_code=400,
+            detail="Attach the reply as a file, or paste its text. Nothing was readable in what was sent.",
         )
-        pushback_draft = f"""# FORMAL RE-EXAMINATION REQUEST & STATUTORY FQHC HARDSHIP DISPUTE
 
-**Provider:** {neg['provider_name']}
-**Account #:** {neg['account_number']}
-**Reference:** {neg['tracking_code']}
+    try:
+        result = await negotiation_service.analyze_hospital_response(
+            negotiation_id=negotiation_id,
+            hospital_message_text=message_text,
+            sender_email=neg.get("hospital_email") or "billing@provider.example",
+            subject=f"RE: Medical Bill Determination (Fax/Paper Upload) [{neg['tracking_code']}]",
+            inbound_message_id=f"<{neg['tracking_code']}-reply-upload@billfixr.com>",
+            inbound_in_reply_to=neg.get("last_message_id") or neg.get("root_message_id"),
+            inbound_references=f"{neg.get('root_message_id') or ''} {neg.get('last_message_id') or neg.get('root_message_id') or ''}".strip(),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-Dear Patient Financial Services Committee,
-
-We acknowledge receipt of your determination stating no technical billing coding errors were identified on Account #{neg['account_number']}.
-
-However, under Section 330 of the Public Health Service Act (42 U.S.C. § 254b), Federally Qualified Health Centers are federally mandated to provide care on a Sliding Fee Discount Schedule commensurate with household income, and cannot refuse discount schedules or demand prohibitive payment from qualifying patients.
-
-Furthermore, we respectfully submit that immediate prompt-pay remittance of **$175.00** resolves this multi-year account in full, saving administrative collection costs while fulfilling your community health mission.
-
-Sincerely,
-BillFixr Patient Advocacy
-"""
-        new_status = "PROVIDER_NO_ERROR"
-    elif "counter" in lower or "$" in lower or reply_type == "counter":
-        cat = "COUNTER_OFFER"
-        summary = "Hospital offered revised settlement of $250.00."
-        rec_action = "Accept hospital offer or propose splitting difference at $175.00."
-        pushback_draft = "Counter-offer response pre-drafted."
-        new_status = "COUNTER_OFFER_RECEIVED"
-    else:
-        cat = "HOSPITAL_RESPONSE"
-        summary = "Hospital provided general correspondence regarding dispute."
-        rec_action = "Review documentation and submit clarification."
-        pushback_draft = "Clarification letter prepared."
-        new_status = "REPLY_RECEIVED"
-
-    root_msg_id = neg.get("root_message_id")
-    last_id = neg.get("last_message_id") or root_msg_id
-    reply_mid = f"<{neg['tracking_code']}-reply-upload@billfixr.com>"
-
-    NegotiationRepository.add_message(
-        negotiation_id=negotiation_id,
-        direction="INBOUND",
-        sender=f"{neg['provider_name']} (Fax / Paper Upload)",
-        recipient="BillFixr Patient Advocacy",
-        subject=f"RE: Medical Bill Determination (Fax/Paper Upload) [{neg['tracking_code']}]",
-        content_markdown=extracted_text,
-        analysis={"category": cat, "summary": summary, "new_status": new_status, "client_advice": "Advise client to pay original balance or deploy AI pushback."},
-        proposed_action={"recommendation": rec_action, "pushback_draft": pushback_draft},
-        status="RECEIVED",
-        message_id_header=reply_mid,
-        in_reply_to_header=last_id,
-        references_header=f"{root_msg_id} {last_id}"
-    )
-
+    analysis = result.get("analysis") or {}
     return {
         "status": "success",
-        "category": cat,
-        "summary": summary,
-        "recommendation": rec_action,
-        "pushback_draft": pushback_draft,
-        "negotiation": NegotiationRepository.get_negotiation(negotiation_id)
+        "category": analysis.get("category"),
+        "summary": analysis.get("summary"),
+        "recommendation": (result.get("proposed_action") or {}).get("recommendation"),
+        "transcribed_characters": len(transcript),
+        "negotiation": NegotiationRepository.get_negotiation(negotiation_id),
     }
 
 @app.post("/api/negotiations/{negotiation_id}/cadence/tick")
