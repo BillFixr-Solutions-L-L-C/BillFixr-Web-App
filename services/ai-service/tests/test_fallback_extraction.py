@@ -144,7 +144,7 @@ def test_pipeline_uses_ai_fallback_when_deterministic_extraction_needs_review() 
         provider_name = "openrouter"
         model = "test/model"
 
-        def extract_bill(self, text: str) -> MedicalBillExtraction:
+        def extract_bill(self, text: str, images: object = ()) -> MedicalBillExtraction:
             extraction = MedicalBillExtraction(document_type=DocumentType.hospital_bill)
             extraction.provider.name = "UVM MEDICAL CENTER"
             extraction.account_number = "AI12345"
@@ -179,7 +179,7 @@ def test_pipeline_calls_ai_even_when_deterministic_extraction_passes_validation(
         model = "test/model"
         called = False
 
-        def extract_bill(self, text: str) -> MedicalBillExtraction:
+        def extract_bill(self, text: str, images: object = ()) -> MedicalBillExtraction:
             FakeProvider.called = True
             extraction = MedicalBillExtraction(document_type=DocumentType.hospital_bill)
             extraction.provider.name = "MERCY GENERAL HOSPITAL"
@@ -217,7 +217,7 @@ def test_pipeline_keeps_the_cheap_path_when_explicitly_asked_for_it() -> None:
         model = "test/model"
         called = False
 
-        def extract_bill(self, text: str) -> MedicalBillExtraction:
+        def extract_bill(self, text: str, images: object = ()) -> MedicalBillExtraction:
             FakeProvider.called = True
             return MedicalBillExtraction(document_type=DocumentType.hospital_bill)
 
@@ -256,7 +256,7 @@ def test_ai_extraction_keeps_a_record_of_the_text_it_read() -> None:
         provider_name = "openrouter"
         model = "test/model"
 
-        def extract_bill(self, text: str) -> MedicalBillExtraction:
+        def extract_bill(self, text: str, images: object = ()) -> MedicalBillExtraction:
             return MedicalBillExtraction(document_type=DocumentType.hospital_bill)
 
     text = "Mercy General Hospital\nACCOUNT NUMBER: REGEX123\nAMOUNT DUE: $145.67\n"

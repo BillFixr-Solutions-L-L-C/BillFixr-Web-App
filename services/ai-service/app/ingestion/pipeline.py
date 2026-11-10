@@ -1,10 +1,11 @@
+from collections.abc import Sequence
 from pathlib import Path
 from uuid import UUID
 
 from app.ai.provider import ExtractionProvider
 from app.config import Settings
 from app.contracts import DocumentType, ExtractionResponse, MedicalBillExtraction
-from app.ingestion.documents import extract_text_from_file
+from app.ingestion.documents import collect_page_images, extract_text_from_file
 from app.validation import validate_extraction
 
 
@@ -13,7 +14,14 @@ class ExtractionPipeline:
         self.settings = settings
         self.provider = provider
 
-    def extract_from_text(self, *, case_id: UUID, text: str, use_ai: bool) -> ExtractionResponse:
+    def extract_from_text(
+        self,
+        *,
+        case_id: UUID,
+        text: str,
+        use_ai: bool,
+        images: Sequence[bytes] = (),
+    ) -> ExtractionResponse:
         warnings = []
         extraction = parse_bill_text_fallback(text)
         model_used = None
@@ -26,14 +34,22 @@ class ExtractionPipeline:
 
             if should_call_ai:
                 try:
-                    extraction = self.provider.extract_bill(text)
+                    extraction = self.provider.extract_bill(text, images)
+                    if images:
+                        warnings.append(f"vision_pages_sent={len(images)}")
                     # The model does not fill raw_text_excerpt, and the
                     # deterministic extraction it replaces did. Without
                     # this there is no record of the text the extraction
                     # was made from, which is the only way to tell a
                     # misread from a document that never said it.
+                    #
+                    # With no OCR text at all the honest record is that
+                    # there was none, not an empty string that reads like a
+                    # blank document -- the values came off the image.
                     if not extraction.raw_text_excerpt:
-                        extraction.raw_text_excerpt = text[:4000]
+                        extraction.raw_text_excerpt = text[:4000] or (
+                            "(no OCR text; extracted from the page image)" if images else ""
+                        )
                     model_used = self.provider.model
                     warnings.append(f"ai_provider={self.provider.provider_name}")
                     warnings.append("ai_extraction_used=true")
@@ -53,10 +69,19 @@ class ExtractionPipeline:
 
     def extract_from_file(self, *, case_id: UUID, document_id: UUID, path: Path, use_ai: bool) -> ExtractionResponse:
         text, extraction_method, warnings = extract_text_from_file(path, self.settings)
-        response = self.extract_from_text(case_id=case_id, text=text, use_ai=use_ai)
+        # Both readings of the same file. The images are what the model
+        # actually reads for a photo or a scan; the OCR text corroborates.
+        images, image_warnings = collect_page_images(path, self.settings)
+        response = self.extract_from_text(
+            case_id=case_id,
+            text=text,
+            use_ai=use_ai,
+            images=images,
+        )
         response.document_id = document_id
         response.warnings.append(f"text_extraction_method={extraction_method}")
         response.warnings.extend(warnings)
+        response.warnings.extend(image_warnings)
         return response
 
 

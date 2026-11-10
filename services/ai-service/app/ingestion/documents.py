@@ -58,6 +58,104 @@ def extract_text_from_file(path: Path, settings: Settings) -> tuple[str, str, li
     return "", "unsupported_binary", warnings
 
 
+def collect_page_images(path: Path, settings: Settings) -> tuple[list[bytes], list[str]]:
+    """The document's pages as JPEG bytes, for a model that can read them.
+
+    Returns ([], warnings) for anything that is not a page-shaped document
+    (a .txt or .csv has nothing to look at, and its text is already exact).
+
+    This is deliberately separate from extract_text_from_file: both run on
+    the same file, and the model is given both readings. Failing here is
+    never fatal -- the caller still has the OCR text.
+    """
+    warnings: list[str] = []
+    if not settings.enable_vision_extraction:
+        return [], warnings
+    if not path.exists():
+        return [], [f"File does not exist: {path}"]
+
+    suffix = path.suffix.lower()
+    try:
+        if suffix in IMAGE_EXTENSIONS:
+            encoded = _encode_for_vision(path.read_bytes(), settings)
+            return ([encoded] if encoded else []), warnings
+        if suffix == ".pdf":
+            return _pdf_page_images(path, settings, warnings), warnings
+    except Exception as exc:
+        # A document we cannot render is not a document we cannot read:
+        # the OCR/text path is independent and still ran.
+        warnings.append(f"Could not prepare page images for the model: {type(exc).__name__}: {exc}")
+        return [], warnings
+
+    return [], warnings
+
+
+def _encode_for_vision(data: bytes, settings: Settings) -> bytes | None:
+    """Downscale to the configured long edge and re-encode as JPEG.
+
+    A phone camera sends 4000px of mostly-paper. Downscaling is what keeps
+    a four-page request near a megabyte; it is not an accuracy tradeoff at
+    1600px, which still resolves printed 10pt text.
+    """
+    try:
+        import io
+
+        from PIL import Image
+    except ImportError:
+        return None
+
+    with Image.open(io.BytesIO(data)) as image:
+        # JPEG has no alpha, and a bill scanned to PNG often carries one.
+        if image.mode not in {"RGB", "L"}:
+            image = image.convert("RGB")
+        longest = max(image.size)
+        if longest > settings.vision_max_dimension:
+            scale = settings.vision_max_dimension / longest
+            image = image.resize(
+                (max(1, round(image.width * scale)), max(1, round(image.height * scale))),
+                Image.LANCZOS,
+            )
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG", quality=settings.vision_jpeg_quality, optimize=True)
+        return buffer.getvalue()
+
+
+def _pdf_page_images(path: Path, settings: Settings, warnings: list[str]) -> list[bytes]:
+    try:
+        import pypdfium2 as pdfium
+    except ImportError:
+        warnings.append("pypdfium2 is not installed; page images for the model skipped.")
+        return []
+
+    try:
+        pdf = pdfium.PdfDocument(str(path))
+    except Exception as exc:
+        warnings.append(f"Could not open the PDF to render pages for the model: {exc}")
+        return []
+
+    images: list[bytes] = []
+    page_count = min(len(pdf), max(0, settings.vision_max_pages))
+    if len(pdf) > page_count:
+        warnings.append(
+            f"Only the first {page_count} of {len(pdf)} pages were shown to the model; "
+            "the rest were read by OCR only."
+        )
+    for index in range(page_count):
+        try:
+            import io
+
+            rendered = pdf[index].render(scale=2).to_pil()
+            buffer = io.BytesIO()
+            rendered.save(buffer, format="PNG")
+            encoded = _encode_for_vision(buffer.getvalue(), settings)
+        except Exception as exc:
+            warnings.append(f"Could not render page {index + 1} for the model: {exc}")
+            continue
+        if encoded:
+            images.append(encoded)
+    return images
+
+
 def _extract_pdf(path: Path, settings: Settings, warnings: list[str]) -> tuple[str, str, list[str]]:
     text = _extract_pdf_text(path, warnings)
     if text.strip():

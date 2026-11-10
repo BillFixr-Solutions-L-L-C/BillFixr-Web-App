@@ -118,7 +118,7 @@ def story_demo_frontend() -> FileResponse:
 
 
 @app.get("/health")
-def health(settings: Settings = Depends(get_settings)) -> dict[str, str | bool]:
+def health(settings: Settings = Depends(get_settings)) -> dict[str, str | bool | int]:
     return {
         "status": "ok",
         "environment": settings.app_env,
@@ -127,6 +127,10 @@ def health(settings: Settings = Depends(get_settings)) -> dict[str, str | bool]:
         "ai_model": settings.openrouter_extraction_model if settings.openrouter_api_key else settings.openai_extraction_model,
         "ocr_enabled": settings.enable_ocr,
         "ocr_engine": settings.ocr_engine,
+        # Reported so "is the deployed build the one that reads the page
+        # image?" is answerable from outside, without reading the log.
+        "vision_extraction_enabled": settings.enable_vision_extraction,
+        "vision_max_pages": settings.vision_max_pages,
         "database_configured": bool(settings.database_path),
         "auth_enabled": bool(settings.local_api_key),
         # The verdict, so a deploy can be checked without reading the log.
