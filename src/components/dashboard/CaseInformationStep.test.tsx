@@ -328,6 +328,58 @@ describe("CaseInformationStep", () => {
     expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("555-0100");
   });
 
+  it("fills in an address the engine could not confirm, and says so", async () => {
+    // The point of the change: four real hospitals publish a billing
+    // address that this fetcher cannot verify -- one blocks it, one has a
+    // broken TLS chain, one uses a different mail domain, one renders the
+    // address with JavaScript. Showing the customer an empty box helped
+    // nobody. They have a browser and can open the page we could not.
+    mockFetch({
+      extract: BILL_READ,
+      contact: {
+        status: 200,
+        body: {
+          ok: true,
+          value: "patientbilling@partners.org",
+          emailSource: "massgeneralbrigham.org",
+          emailConfirmed: false,
+          emailUnconfirmedReason: "it is published on massgeneralbrigham.org, not on its own domain",
+        },
+      },
+    });
+    const user = userEvent.setup();
+    renderStep();
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
+
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+
+    // Filled, not withheld.
+    await waitFor(() =>
+      expect(screen.getByLabelText(/^Billing Department Email/)).toHaveValue("patientbilling@partners.org"),
+    );
+    // And labelled, so it is checked rather than trusted.
+    expect(await screen.findByText(/not confirmed/i)).toBeInTheDocument();
+    expect(screen.getByText(/not on its own domain/i)).toBeInTheDocument();
+  });
+
+  it("a confirmed address is not hedged", async () => {
+    mockFetch({
+      extract: BILL_READ,
+      contact: {
+        status: 200,
+        body: { ok: true, value: "billing@mwchc.org", emailSource: "mwchc.org", emailConfirmed: true },
+      },
+    });
+    const user = userEvent.setup();
+    renderStep();
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
+
+    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+
+    expect(await screen.findByText(/Found on mwchc\.org/i)).toBeInTheDocument();
+    expect(screen.queryByText(/not confirmed/i)).not.toBeInTheDocument();
+  });
+
   it("separates 'could not confirm' from 'no such hospital'", async () => {
     // Different problems: the first means type the email in, the second
     // means the name or the address is wrong, which is the one thing the

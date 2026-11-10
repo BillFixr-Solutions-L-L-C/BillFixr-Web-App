@@ -356,9 +356,20 @@ export default function CaseInformationStep({
     // when it appears on a page on its own domain, and naming that domain
     // is what lets the customer see that rather than take it on faith.
     const source = String(body?.emailSource ?? "").trim();
+    const confirmed = body?.emailConfirmed !== false;
+    const why = String(body?.emailUnconfirmedReason ?? "").trim();
+    // An unconfirmed address is filled in like any other, and labelled.
+    // Hiding it helped nobody: the customer has a browser and can open the
+    // page that defeated our checks, and an empty box tells them nothing.
     setSearchNote((n) => ({
       ...n,
-      [key]: source ? `Found on ${source} — check it's right.` : "Found — check it's right.",
+      [key]: confirmed
+        ? source
+          ? `Found on ${source} — check it's right.`
+          : "Found — check it's right."
+        : why
+          ? `Found${source ? ` on ${source}` : ""}, but not confirmed — ${why}. Check it before saving.`
+          : `Found${source ? ` on ${source}` : ""}, but not confirmed — check it before saving.`,
     }));
   }
 

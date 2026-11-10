@@ -149,5 +149,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } catch {
     emailSource = null;
   }
-  return NextResponse.json({ ok: true, value, emailSource, fallback: record });
+  return NextResponse.json({
+    ok: true,
+    value,
+    emailSource,
+    // Whether the engine could stand behind it. An address it found but
+    // could not check is still filled in -- the customer can open the page
+    // we could not -- and the form says so instead of pretending.
+    emailConfirmed: contact.email_confirmed !== false,
+    emailUnconfirmedReason: contact.email_unconfirmed_reason ?? null,
+    fallback: record,
+  });
 }

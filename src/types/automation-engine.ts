@@ -85,6 +85,9 @@ export type AutomationProviderContact = {
   // it appears on a page belonging to the same domain — this says which
   // page, so the customer can see who published the address.
   email_source_url: string | null;
+  /** False when the address was found but a check on it did not pass. */
+  email_confirmed: boolean;
+  email_unconfirmed_reason: string | null;
   // Other facilities that matched the same name. One hospital registers
   // several NPIs — the hospital, its lab, its clinic — so the customer
   // confirms which one rather than having one chosen for them.

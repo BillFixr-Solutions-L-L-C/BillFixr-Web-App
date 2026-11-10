@@ -66,6 +66,12 @@ class ProviderContact(BaseModel):
     # the web rather than the directory. Kept so a wrong address can be
     # traced to what published it.
     email_source_url: Optional[str] = None
+    # False when the address was found but a check on it did not pass. It
+    # is still returned: the customer can read the page we could not, and
+    # the alternative is showing them nothing. `email_unconfirmed_reason`
+    # says which check failed, in words meant for them.
+    email_confirmed: bool = True
+    email_unconfirmed_reason: Optional[str] = None
 
 
 def _normalize(text: str) -> str:
@@ -125,6 +131,8 @@ class ProviderContactFinder:
             notes = (notes + " " if notes else "") + "This hospital publishes no billing email. Use the phone number or its billing page, or enter an email yourself."
         elif not entry.get("billing_email") and billing:
             notes = (notes + " " if notes else "") + f"Billing email found on {billing.page_domain}."
+            if not billing.confirmed:
+                notes += f" It could not be confirmed because {billing.reason} - check it before sending."
         if not address and entry.get("states"):
             notes = (notes + " " if notes else "") + "No address was given, so confirm this is the right location."
 
@@ -150,6 +158,18 @@ class ProviderContactFinder:
             fax=best.fax if best else None,
             candidates=registry,
             email_source_url=(billing.source_url if billing and not entry.get("billing_email") else None),
+            # A curated address was checked by a person, so it stands on
+            # that regardless of what the search did.
+            email_confirmed=(
+                True
+                if entry.get("billing_email")
+                else (billing.confirmed if billing else True)
+            ),
+            email_unconfirmed_reason=(
+                billing.reason
+                if billing and not entry.get("billing_email") and not billing.confirmed
+                else None
+            ),
         )
 
     def _from_registry(
@@ -202,6 +222,12 @@ class ProviderContactFinder:
         )
         if billing or support:
             notes += found_note
+            picked = billing or support
+            if not picked.confirmed:
+                notes += (
+                    f" The address could not be confirmed because {picked.reason}"
+                    " - open the page and check it before sending."
+                )
         else:
             notes += (
                 " The registry carries no email address and none was found on the hospital's own site, "
@@ -234,4 +260,10 @@ class ProviderContactFinder:
             fax=best.fax,
             candidates=registry,
             email_source_url=(billing or support).source_url if (billing or support) else None,
+            email_confirmed=(billing or support).confirmed if (billing or support) else True,
+            email_unconfirmed_reason=(
+                (billing or support).reason
+                if (billing or support) and not (billing or support).confirmed
+                else None
+            ),
         )
