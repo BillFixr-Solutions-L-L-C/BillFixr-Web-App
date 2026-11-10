@@ -48,6 +48,39 @@ describe("lib/email", () => {
     );
   });
 
+  it("replies go to support by default, not to the sending mailbox", async () => {
+    // notifications@ is a real mailbox, so a reply with no reply-to set no
+    // longer bounces -- it lands somewhere nobody reads, which looks
+    // delivered to the customer and never is. 8 of the 11 send sites set
+    // no reply-to of their own.
+    process.env.RESEND_API_KEY = "re_dummy_key_for_unit_test";
+    const { sendEmail } = await import("./email");
+
+    await sendEmail({ to: "a@example.com", subject: "Welcome", html: "<p>Hi</p>" });
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ replyTo: "support@billfixr.com" }),
+    );
+  });
+
+  it("a caller's own reply-to still wins", async () => {
+    // send-letter sets the patient's address so a hospital replying reaches
+    // them directly; the default must never override that.
+    process.env.RESEND_API_KEY = "re_dummy_key_for_unit_test";
+    const { sendEmail } = await import("./email");
+
+    await sendEmail({
+      to: "billing@hospital.example",
+      subject: "Dispute",
+      html: "<p>...</p>",
+      replyTo: "patient@example.com",
+    });
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ replyTo: "patient@example.com" }),
+    );
+  });
+
   it("surfaces a Resend-reported failure", async () => {
     process.env.RESEND_API_KEY = "re_dummy_key_for_unit_test";
     send.mockResolvedValue({ data: null, error: { message: "domain not verified" } });
