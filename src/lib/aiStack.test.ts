@@ -123,6 +123,8 @@ describe("findProviderContact", () => {
       fax: null,
       // Curated, so nothing was searched for and there is no page behind it.
       email_source_url: null,
+      email_confirmed: true,
+      email_unconfirmed_reason: null,
       candidates: [],
       source: "automation-engine",
     });

@@ -66,27 +66,37 @@ def test_an_address_published_on_the_provider_s_own_page_is_accepted(monkeypatch
     assert "support" not in found
 
 
-def test_an_address_that_is_not_on_the_page_it_cites_is_dropped(monkeypatch):
-    """The failure this whole module exists to catch.
+def test_an_address_that_is_not_on_the_page_it_cites_is_returned_unconfirmed(monkeypatch):
+    """The failure this module exists to catch -- now surfaced, not hidden.
 
     A model asked for a billing email will produce `billing@<hospital>` and
     cite the hospital's real contact page, because that is what such a page
-    usually contains. Here it does not, so the answer goes in the bin.
+    usually contains. Here it does not. That used to be binned; it is now
+    handed over marked unconfirmed, because the page may simply render the
+    address with JavaScript, and the customer can read it in a browser.
     """
     install(monkeypatch, REPLY, {"https://mwchc.org/billing": "<html>Call us on 615-984-4290</html>"})
 
-    assert contact_search.search_emails("Matthew Walker", "Smyrna, TN") == {}
+    found = contact_search.search_emails("Matthew Walker", "Smyrna, TN")
+
+    assert found["billing"].email == "billing@mwchc.org"
+    assert found["billing"].confirmed is False
+    assert "does not appear" in found["billing"].reason
 
 
-def test_an_address_published_on_somebody_else_s_site_is_dropped(monkeypatch):
+def test_an_address_published_on_somebody_else_s_site_is_unconfirmed(monkeypatch):
     # The string is on the page, but the page is not the domain the address
-    # belongs to -- a directory site, a scraper, a forum post. That is not
-    # the hospital telling us where to write.
+    # belongs to -- a directory site, a scraper, a forum post. It may also
+    # be a health system on a legacy mail domain, which is common and
+    # legitimate, so this is reported rather than decided.
     reply = """{"billing": {"email": "billing@mwchc.org",
                             "source_url": "https://hospital-directory.example/tn/mwchc"}}"""
     install(monkeypatch, reply, {"https://hospital-directory.example/tn/mwchc": PAGE})
 
-    assert contact_search.search_emails("Matthew Walker", "Smyrna, TN") == {}
+    found = contact_search.search_emails("Matthew Walker", "Smyrna, TN")
+
+    assert found["billing"].confirmed is False
+    assert "hospital-directory.example" in found["billing"].reason
 
 
 def test_a_url_pointing_inside_the_network_is_never_fetched(monkeypatch):
@@ -109,14 +119,25 @@ def test_a_url_pointing_inside_the_network_is_never_fetched(monkeypatch):
     )
     monkeypatch.setattr(contact_search, "_fetch_page", fake_page)
 
-    assert contact_search.search_emails("Anywhere General", None) == {}
+    found = contact_search.search_emails("Anywhere General", None)
+
+    # Still never fetched -- that guard is absolute and does not relax with
+    # the rest. The address comes back unconfirmed rather than vanishing.
     assert fetched == [], "a loopback address must be refused before anything fetches it"
+    assert found["billing"].confirmed is False
+    assert "not a public web address" in found["billing"].reason
 
 
 def test_a_page_that_cannot_be_fetched_is_not_taken_on_trust(monkeypatch):
+    # A hospital that blocks this fetcher with a 403, or whose TLS chain
+    # will not verify, is the common case -- two of four real hospitals
+    # tested. Their published address is still worth showing, marked.
     install(monkeypatch, REPLY, {"https://mwchc.org/billing": OSError("connection reset")})
 
-    assert contact_search.search_emails("Matthew Walker", "Smyrna, TN") == {}
+    found = contact_search.search_emails("Matthew Walker", "Smyrna, TN")
+
+    assert found["billing"].confirmed is False
+    assert "could not be read" in found["billing"].reason
 
 
 def test_both_addresses_come_back_from_one_search(monkeypatch):

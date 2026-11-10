@@ -85,6 +85,11 @@ class EmailFind(BaseModel):
     # Why this is trustworthy, in the order the checks ran. Carried so a
     # support question about a wrong address can be answered.
     page_domain: str
+    # Whether every check passed. An address that fails one is still
+    # returned -- see _verify -- but never as a confirmed one.
+    confirmed: bool = True
+    # Plain words for why it could not be confirmed, shown to the customer.
+    reason: str = ""
 
 
 def _normalize(text: str) -> str:
@@ -177,30 +182,54 @@ def _parse(content: str) -> Dict[str, Any]:
 
 
 def _verify(email: str, source_url: str) -> Optional[EmailFind]:
-    """Accept the address only if the page it was claimed from actually carries it."""
+    """Check the address, and say so either way.
+
+    This used to return None whenever a check failed, which threw the
+    address away. In practice that meant throwing away almost all of them:
+    of four real hospitals tested, one blocks this fetcher with a 403, one
+    has a TLS chain that will not verify, one publishes on a domain that
+    does not match its website, and one renders the address with JavaScript
+    so it is not in the HTML at all. All four publish a billing address a
+    person can read in a browser, and the customer is a person with a
+    browser looking at a form they can edit.
+
+    So an address that fails a check now comes back marked `confirmed=
+    False` with a reason, and the person decides. What is still refused
+    outright is an address that is not an address, or one with no cited
+    source at all -- those are the shapes a model invents.
+
+    The private-network guard stays absolute: an unconfirmable address is
+    returned, but a URL pointing inside this network is never fetched.
+    """
     email = (email or "").strip().strip(".,;:<>()[]").lower()
     source_url = (source_url or "").strip()
+    # No email, not an email, or no page it came from: nothing to show.
     if not email or not _EMAIL_RE.fullmatch(email) or not source_url:
         return None
+
+    page_host = urllib.parse.urlparse(source_url).hostname or ""
+    unconfirmed = lambda why: EmailFind(  # noqa: E731
+        email=email, source_url=source_url, page_domain=page_host, confirmed=False, reason=why
+    )
+
     if not _is_public_url(source_url):
-        return None
+        # Never fetched. Returned unconfirmed so nothing disappears silently.
+        return unconfirmed("the page it cites is not a public web address")
 
     email_domain = _registrable(email.split("@", 1)[1])
-    page_host = urllib.parse.urlparse(source_url).hostname or ""
-    # The address has to be published on the domain it belongs to. This is
-    # what separates "the hospital says to write here" from "some page on
-    # the internet contains this string".
     if _registrable(page_host) != email_domain:
-        return None
+        # Common and often legitimate: a health system on a legacy mail
+        # domain, e.g. partners.org published on massgeneralbrigham.org.
+        return unconfirmed(f"it is published on {page_host}, not on its own domain")
 
     try:
         page = _fetch_page(source_url)
-    except Exception:  # noqa: BLE001 -- an unreachable page is a failed check, not an error
-        return None
+    except Exception as err:  # noqa: BLE001 -- a page we cannot read is a failed check, not an error
+        return unconfirmed(f"its page could not be read ({type(err).__name__})")
     if email not in page.lower():
-        return None
+        return unconfirmed("it does not appear in the page it cites")
 
-    return EmailFind(email=email, source_url=source_url, page_domain=page_host)
+    return EmailFind(email=email, source_url=source_url, page_domain=page_host, confirmed=True)
 
 
 def search_emails(provider_name: str, address: Optional[str] = None) -> Dict[str, EmailFind]:

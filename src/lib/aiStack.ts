@@ -102,6 +102,14 @@ export type ProviderContact = {
    * appears on a page on its own domain; this says which page.
    */
   email_source_url: string | null;
+  /**
+   * Engine-only. False when the address was found but could not be
+   * checked -- the page blocks us, its TLS fails, it renders the
+   * address with JavaScript, or it sits on a different domain. It is
+   * still shown: the customer can open the page we could not.
+   */
+  email_confirmed: boolean;
+  email_unconfirmed_reason: string | null;
   /** Facilities sharing the name, for the customer to choose between. */
   candidates: AutomationProviderCandidate[];
   /** Which backend actually answered, so a caller can say where a value came from. */
@@ -139,6 +147,8 @@ export async function findProviderContact(provider: {
       facility_type: contact.facility_type ?? null,
       fax: contact.fax ?? null,
       email_source_url: contact.email_source_url ?? null,
+      email_confirmed: contact.email_confirmed ?? true,
+      email_unconfirmed_reason: contact.email_unconfirmed_reason ?? null,
       candidates: contact.candidates ?? [],
       source: backend,
     };
@@ -158,6 +168,8 @@ export async function findProviderContact(provider: {
     facility_type: null,
     fax: null,
     email_source_url: null,
+    email_confirmed: true,
+    email_unconfirmed_reason: null,
     candidates: [],
     source: backend,
   };
