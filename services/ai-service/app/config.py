@@ -58,6 +58,34 @@ class Settings(BaseSettings):
     paddle_ocr_timeout_seconds: int = 20
     tesseract_cmd: str | None = None
 
+    # Send the page itself to the model, not just tesseract's reading of it.
+    #
+    # Why this exists: until 2026-11-10 a photographed bill was turned into
+    # text by tesseract and only that text was sent to the model. The
+    # configured model (openai/gpt-4o-mini) reads images directly, so the
+    # pixels were being thrown away for no reason. Measured on the six
+    # extractions in production at the time: one phone photo produced
+    # **zero** characters of OCR text, and the same PNG uploaded twice
+    # produced 561 characters once and 44 the next time. The model was then
+    # called with that -- or with an empty string -- and returned all-nulls,
+    # which is exactly the "it can't pick the characters" report.
+    #
+    # OCR is kept and still sent alongside the image: it costs nothing extra
+    # and gives the model a second reading of the same page to agree or
+    # disagree with.
+    enable_vision_extraction: bool = True
+    # A bill is one to four pages in practice, and each page is another
+    # image in the request. Beyond this the pages are OCR-only.
+    vision_max_pages: int = 4
+    # Long edge, in pixels. 2000 is deliberately the same ceiling the
+    # browser already applies in src/lib/billUpload.ts, so a photo uploaded
+    # through the app is passed through rather than resampled a second time
+    # -- re-compressing an already-compressed JPEG is pure loss on exactly
+    # the fine print that matters. On a letter page 2000px is about 180 DPI,
+    # which resolves 8pt type; a four-page bill stays under a megabyte.
+    vision_max_dimension: int = 2000
+    vision_jpeg_quality: int = 80
+
 
 @lru_cache
 def get_settings() -> Settings:
