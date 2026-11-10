@@ -248,6 +248,77 @@ export async function acceptOffer(negotiationId: string, acceptedAmount?: number
 // that is the only number it may accept. Use acceptOffer to settle at a figure of your own choosing.
 //
 // The engine answers 409 when nothing is held, or when a hold carries no agreed amount.
+// POST /api/negotiations/sync-inbox — makes the engine read its mailbox now.
+//
+// The engine polls IMAP every 30 seconds from an in-process task started at
+// startup. On Render's free tier the service spins down after ~15 minutes
+// idle and that task dies with it, so a hospital's reply sits unread until
+// something wakes the engine. This is the handle that both wakes it and
+// forces the poll.
+//
+// Returns the engine's own summary. Call it before deciding whether to send
+// another follow-up: chasing a provider that has already answered is the
+// worst thing this machinery can do.
+export async function syncEngineInbox(): Promise<{
+  status: string;
+  new_messages_processed: number;
+}> {
+  return readJson(
+    await automationEngineFetch("/api/negotiations/sync-inbox", jsonRequest("POST")),
+    "inbox sync",
+  );
+}
+
+// POST /api/negotiations/{id}/cadence/tick — sends the next 72-hour
+// follow-up.
+//
+// **This endpoint does not check the clock.** The engine's own
+// `autopilot_loop` checks the 72-hour gap in `_cadence_due()` before
+// ticking; the endpoint checks only the status and the review hold, then
+// increments and sends. So every caller must bring its own gap check —
+// see followUpDecision() in src/lib/followUpCadence.ts. Calling this on a
+// daily schedule without it sends a follow-up every day.
+//
+// The engine caps outbound follow-ups at three: past that, `cadence_tick`
+// drafts a non-response notice instead of sending another letter. That cap
+// is what bounds the damage if two callers ever race.
+export async function tickFollowUpCadence(negotiationId: string): Promise<{
+  status: string;
+  action?: string;
+  message?: string;
+}> {
+  return readJson(
+    await automationEngineFetch(
+      `/api/negotiations/${negotiationId}/cadence/tick`,
+      jsonRequest("POST"),
+    ),
+    "follow-up cadence tick",
+  );
+}
+
+// POST /api/negotiations/{id}/no-response/close — ends a case the provider
+// never answered.
+//
+// Until this was wired, a hospital that simply never replied left the case
+// at `awaiting_response` forever: the three 72-hour follow-ups went out, the
+// engine stopped, and nothing could finish it. For a provider that ignores
+// us — likely a large share of real cases — there was no ending at all.
+//
+// The engine itself applies no guard here; it will close whatever it is
+// given. The caller is responsible for checking the follow-ups are actually
+// exhausted and the provider really has not responded. See the route.
+export async function closeForNoResponse(
+  negotiationId: string,
+  reason?: string,
+): Promise<AutomationNegotiation> {
+  const response = await automationEngineFetch(
+    `/api/negotiations/${negotiationId}/no-response/close`,
+    jsonRequest("POST", { reason: reason ?? null }),
+  );
+  const data = await readJson<{ negotiation: AutomationNegotiation }>(response, "close for no response");
+  return data.negotiation;
+}
+
 export async function approveHeldSettlement(negotiationId: string): Promise<AutomationNegotiation> {
   const response = await automationEngineFetch(
     `/api/negotiations/${negotiationId}/review/approve`,
