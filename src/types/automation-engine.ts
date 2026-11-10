@@ -220,6 +220,10 @@ export type AutomationNegotiation = {
   hospital_email: string | null;
   support_email: string | null;
   auto_pilot_enabled: number;
+  /** How many of the three 72-hour follow-ups have gone out. 3 means the
+   *  sequence is exhausted, which is the only point at which a case may be
+   *  closed for non-response. */
+  cadence_step: number;
   commitment_paid: boolean;
   settled_amount: number | null;
   completion_fee: number | null;
