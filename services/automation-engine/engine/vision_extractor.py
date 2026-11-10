@@ -139,6 +139,85 @@ class VisionExtractor:
         """
         return await self.extract_bill_multi([(file_bytes, filename)])
 
+    async def read_document_text(self, files_data: list[tuple[bytes, str]]) -> str:
+        """
+        Transcribes an arbitrary document to plain text.
+
+        This exists for a hospital's *reply* -- a letter, a determination, a
+        faxed page -- which is not a bill and must not be forced through the
+        bill schema. The caller gets the words and decides what they mean.
+
+        Until 2026-11-10 /api/negotiations/{id}/reply/upload read the
+        uploaded file into a variable and then discarded it, substituting the
+        fixed string "[OCR Extracted from <name>]: Scanned written response
+        from hospital billing office." Everything downstream keyword-matched
+        that sentence, so every paper reply was categorised identically
+        whatever it actually said.
+
+        Returns "" when there is nothing to read. The caller must treat that
+        as "could not read it" and never as "the hospital said nothing".
+        """
+        if not self.api_key:
+            raise ValueError("OPENROUTER_API_KEY is not configured in .env")
+
+        processed = self.process_multiple_files(files_data)
+        if not processed:
+            return ""
+
+        # A PDF with a text layer comes back as [("text", ...)] already
+        # transcribed -- exact, free, and better than asking a model to read
+        # a picture of it.
+        if len(processed) == 1 and isinstance(processed[0], tuple) and processed[0][0] == "text":
+            return (processed[0][1] or "").strip()
+
+        user_content: list[Dict[str, Any]] = [
+            {
+                "type": "text",
+                "text": (
+                    f"This is a {len(processed)}-page letter or document from a hospital billing "
+                    "department. Transcribe every word of it to plain text, in reading order, "
+                    "including any amounts, dates, account numbers and reference codes exactly as "
+                    "printed. Do not summarise, interpret, correct or add anything. If a passage "
+                    "is illegible write [illegible]. Output the transcription only."
+                ),
+            }
+        ]
+        for img in processed:
+            if isinstance(img, str) and img.startswith("data:image"):
+                user_content.append({"type": "image_url", "image_url": {"url": img}})
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://billfixr.com",
+            "X-Title": "BillFixr AI Negotiator",
+        }
+        payload = {
+            "model": VISION_MODEL,
+            "messages": [{"role": "user", "content": user_content}],
+            # A transcription, so no room for invention.
+            "temperature": 0,
+            "max_tokens": 4000,
+        }
+
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            try:
+                resp = await client.post(OPENROUTER_URL, headers=headers, json=payload)
+                if resp.status_code != 200:
+                    payload["model"] = FALLBACK_VISION_MODEL
+                    resp = await client.post(OPENROUTER_URL, headers=headers, json=payload)
+            except Exception:
+                payload["model"] = FALLBACK_VISION_MODEL
+                resp = await client.post(OPENROUTER_URL, headers=headers, json=payload)
+
+            if resp.status_code != 200:
+                raise RuntimeError(
+                    f"OpenRouter API error (HTTP {resp.status_code}): {resp.text}"
+                )
+            result = resp.json()
+
+        return (result["choices"][0]["message"]["content"] or "").strip()
+
     async def extract_bill_multi(self, files_data: list[tuple[bytes, str]]) -> Dict[str, Any]:
         """
         Extracts structured medical bill metadata using multimodal AI (Gemini 2.5 Flash / Qwen 2.5 VL).
