@@ -248,6 +248,29 @@ export async function acceptOffer(negotiationId: string, acceptedAmount?: number
 // that is the only number it may accept. Use acceptOffer to settle at a figure of your own choosing.
 //
 // The engine answers 409 when nothing is held, or when a hold carries no agreed amount.
+// POST /api/negotiations/{id}/no-response/close — ends a case the provider
+// never answered.
+//
+// Until this was wired, a hospital that simply never replied left the case
+// at `awaiting_response` forever: the three 72-hour follow-ups went out, the
+// engine stopped, and nothing could finish it. For a provider that ignores
+// us — likely a large share of real cases — there was no ending at all.
+//
+// The engine itself applies no guard here; it will close whatever it is
+// given. The caller is responsible for checking the follow-ups are actually
+// exhausted and the provider really has not responded. See the route.
+export async function closeForNoResponse(
+  negotiationId: string,
+  reason?: string,
+): Promise<AutomationNegotiation> {
+  const response = await automationEngineFetch(
+    `/api/negotiations/${negotiationId}/no-response/close`,
+    jsonRequest("POST", { reason: reason ?? null }),
+  );
+  const data = await readJson<{ negotiation: AutomationNegotiation }>(response, "close for no response");
+  return data.negotiation;
+}
+
 export async function approveHeldSettlement(negotiationId: string): Promise<AutomationNegotiation> {
   const response = await automationEngineFetch(
     `/api/negotiations/${negotiationId}/review/approve`,
