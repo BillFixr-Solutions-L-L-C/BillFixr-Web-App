@@ -3,6 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AiServiceTimeoutError, getAiServiceConfig, processCase } from "@/lib/ai-service";
 import { mapAdminCaseAnalysis, mapBillAnalysis, mapCaseFields } from "@/lib/aiAnalysisMapping";
+import {
+  mapAdminCaseAnalysisFromEngine,
+  mapBillAnalysisFromEngine,
+  mapCaseFieldsFromEngine,
+} from "@/lib/engineAnalysisMapping";
+import { storedBillData } from "@/lib/engineBillData";
+import { auditBill, getNegotiation } from "@/lib/automation-engine";
 import { guessContentType } from "@/lib/contentType";
 import { negotiationSummary, startNegotiationForCase, type StartableCase } from "@/lib/startNegotiation";
 import type { AiCaseProcessingResponse } from "@/types/ai";
@@ -88,9 +95,9 @@ export async function POST(request: Request) {
   // Checked after the case itself: "you've already re-scanned" is the more
   // specific answer, and shouldn't be masked by a configuration problem on
   // our side.
-  if (!getAiServiceConfig()) {
-    return NextResponse.json({ error: "AI service is not configured." }, { status: 503 });
-  }
+  // Deliberately NOT checked yet: a bill the engine has already read does
+  // not need the ai-service at all, and refusing here would block the
+  // path that no longer uses it. The check moved to the branch that does.
 
   // The information step already had the AI read this document to fill in
   // the hospital details; that whole response was parked in
@@ -104,11 +111,27 @@ export async function POST(request: Request) {
 
   const { data: cached } = force
     ? { data: null }
-    : await admin.from("bill_extractions").select("result").eq("bill_id", bill.id).maybeSingle();
+    : await admin
+        .from("bill_extractions")
+        .select("engine_result, result")
+        .eq("bill_id", bill.id)
+        .maybeSingle();
+
+  // The engine's own reading is preferred, and it is already there: the
+  // information step wrote it when it read the bill for the form. This
+  // used to select only `result` -- the ai-service's shape, which the
+  // information step stopped writing -- so it always missed, downloaded
+  // the file again, and read every bill a second time through the weaker
+  // service. See src/lib/engineAnalysisMapping.ts.
+  const engineBillData = storedBillData(cached);
+  const usingEngine = Boolean(cached?.engine_result) && engineBillData !== null;
 
   let result = cached?.result as AiCaseProcessingResponse | undefined;
 
-  if (!result) {
+  if (!usingEngine && !result) {
+    if (!getAiServiceConfig()) {
+      return NextResponse.json({ error: "AI service is not configured." }, { status: 503 });
+    }
     const { data: fileBlob, error: downloadError } = await admin.storage.from("bills").download(bill.storage_url);
     if (downloadError || !fileBlob) {
       console.error("bill download failed for case", caseId, downloadError);
@@ -142,23 +165,44 @@ export async function POST(request: Request) {
     await admin.from("bill_extractions").upsert({ bill_id: bill.id, result });
   }
 
-  const extraction = result.processed_documents[0]?.extraction;
-  if (!extraction) {
-    console.error("AI service returned no extraction for case", caseId);
-    return NextResponse.json(
-      { error: "AI service returned no extraction", stage: "ai_no_extraction" },
-      { status: 502 },
-    );
-  }
+  let billAnalysis;
+  let errorsDetected: number;
+  let savingsFound: number;
+  let appealLetterText: string | null;
+  let aiSummaryText: string;
+  let adminAnalysis;
+  // Only the ai-service path has these to contribute; the engine's
+  // extraction already filled them on the information step.
+  let billFields: Record<string, unknown> = {};
 
-  const billAnalysis = mapBillAnalysis(extraction, result.analysis);
-  const { errorsDetected, savingsFound, appealLetterText, aiSummaryText } = mapCaseFields(result.analysis, result.draft);
-  const adminAnalysis = mapAdminCaseAnalysis(extraction, result.analysis, result.draft);
-
-  const { error: billUpdateError } = await admin
-    .from("bills")
-    .update({
-      analysis_result: billAnalysis,
+  if (usingEngine && engineBillData) {
+    // Audited by the engine, from the reading the engine already made.
+    // The savings quoted to the customer and the engine's own settlement
+    // offer are now two views of one `settlement_options` -- they used to
+    // be unrelated numbers that disagreed on the same bill.
+    let audit;
+    try {
+      audit = await auditBill(engineBillData);
+    } catch (err) {
+      console.error("Engine audit failed for case", caseId, err);
+      return NextResponse.json({ error: "We couldn't audit this bill.", stage: "engine_audit" }, { status: 502 });
+    }
+    billAnalysis = mapBillAnalysisFromEngine(engineBillData, audit);
+    ({ errorsDetected, savingsFound, appealLetterText, aiSummaryText } = mapCaseFieldsFromEngine(audit, null));
+    adminAnalysis = mapAdminCaseAnalysisFromEngine(engineBillData, audit, null);
+  } else {
+    const extraction = result?.processed_documents?.[0]?.extraction;
+    if (!extraction) {
+      console.error("AI service returned no extraction for case", caseId);
+      return NextResponse.json(
+        { error: "AI service returned no extraction", stage: "ai_no_extraction" },
+        { status: 502 },
+      );
+    }
+    billAnalysis = mapBillAnalysis(extraction, result!.analysis);
+    ({ errorsDetected, savingsFound, appealLetterText, aiSummaryText } = mapCaseFields(result!.analysis, result!.draft));
+    adminAnalysis = mapAdminCaseAnalysis(extraction, result!.analysis, result!.draft);
+    billFields = {
       service_date: extraction.date_of_service_start,
       statement_date: extraction.statement_date,
       // Fills the Hospital Information step. The customer can edit these
@@ -168,7 +212,12 @@ export async function POST(request: Request) {
       provider_email: bill.provider_email ?? extraction.provider.email,
       provider_phone: bill.provider_phone ?? extraction.provider.phone,
       provider_address: bill.provider_address ?? extraction.provider.address,
-    })
+    };
+  }
+
+  const { error: billUpdateError } = await admin
+    .from("bills")
+    .update({ analysis_result: billAnalysis, ...billFields })
     .eq("id", bill.id);
   if (billUpdateError) {
     return NextResponse.json({ error: billUpdateError.message }, { status: 500 });
@@ -197,6 +246,31 @@ export async function POST(request: Request) {
   // was moved to "awaiting_response" by the client asking for it, with
   // no letter behind the claim.
   const negotiation = await beginNegotiation(admin, startable);
+
+  // On the engine path the appeal letter is not a separate draft: the
+  // engine writes it and sends it as part of starting, so the stored
+  // letter is read back from the negotiation afterwards. That makes
+  // cases.appeal_letter_text the text the provider actually received,
+  // rather than a second draft nobody sent.
+  if (usingEngine && negotiation?.running) {
+    const { data: linked } = await admin.from("cases").select("negotiation_id").eq("id", caseId).maybeSingle();
+    if (linked?.negotiation_id) {
+      try {
+        const sent = await getNegotiation(linked.negotiation_id);
+        const letter = (sent.messages ?? []).find(
+          (m) => m.direction === "OUTBOUND" && m.content_markdown,
+        )?.content_markdown;
+        if (letter) {
+          appealLetterText = letter;
+          await admin.from("cases").update({ appeal_letter_text: letter }).eq("id", caseId);
+        }
+      } catch (err) {
+        // The letter went out either way; not having a copy of it stored
+        // is worth a log line, not a failed scan.
+        console.error("Could not store the sent letter for case", caseId, err);
+      }
+    }
+  }
 
   return NextResponse.json({ ok: true, errorsDetected, savingsFound, negotiation });
 }

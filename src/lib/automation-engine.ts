@@ -6,6 +6,7 @@ import type {
   AutomationNegotiation,
   AutomationProviderContact,
   EngineBillData,
+  EngineExtraction,
   StartNegotiationInput,
 } from "@/types/automation-engine";
 
@@ -30,7 +31,36 @@ export function getAutomationEngineConfig(): AutomationEngineConfig | null {
   };
 }
 
-export async function automationEngineFetch(path: string, init?: RequestInit): Promise<Response> {
+// Reading a bill is a vision-model call behind a free-tier cold start, so
+// it needs minutes. Every other engine call is a lookup or a database
+// write and should not be allowed to hang for that long.
+//
+// This exists because the same mistake was already made and fixed once on
+// the AI service client: without a timeout we own, the request hangs until
+// the platform kills the whole function, which produces no error here, no
+// log line naming the stage, and a bill stuck mid-read with nothing to say
+// why. See src/lib/ai-service.ts.
+const DEFAULT_TIMEOUT_MS = Number(process.env.AUTOMATION_ENGINE_TIMEOUT_MS ?? 60_000);
+const EXTRACT_TIMEOUT_MS = Number(process.env.AUTOMATION_ENGINE_EXTRACT_TIMEOUT_MS ?? 240_000);
+
+/** The engine did not answer in time. Distinct so a caller can say "try
+ *  again", which is right for a timeout and wrong for a refusal. */
+export class AutomationEngineTimeoutError extends Error {
+  constructor(
+    readonly path: string,
+    readonly timeoutMs: number,
+  ) {
+    // No hostname in the message: this text can reach a client, and a
+    // previous audit finding was about leaking connection details.
+    super(`Automation engine did not respond within ${timeoutMs}ms.`);
+    this.name = "AutomationEngineTimeoutError";
+  }
+}
+
+export async function automationEngineFetch(
+  path: string,
+  init?: RequestInit & { timeoutMs?: number },
+): Promise<Response> {
   const config = getAutomationEngineConfig();
 
   if (!config) {
@@ -42,11 +72,26 @@ export async function automationEngineFetch(path: string, init?: RequestInit): P
     headers.set("X-API-Key", config.apiKey);
   }
 
-  return fetch(`${config.baseUrl}${path}`, {
-    ...init,
-    headers,
-    cache: "no-store",
-  });
+  // timeoutMs is ours, not RequestInit's — it must not reach fetch.
+  const { timeoutMs, signal, ...rest } = init ?? {};
+  const budget = timeoutMs ?? DEFAULT_TIMEOUT_MS;
+
+  try {
+    return await fetch(`${config.baseUrl}${path}`, {
+      ...rest,
+      headers,
+      cache: "no-store",
+      // A caller that brought its own signal keeps control.
+      signal: signal ?? AbortSignal.timeout(budget),
+    });
+  } catch (err) {
+    // Both names appear in the wild: AbortSignal.timeout gives TimeoutError,
+    // while some runtimes surface the abort as AbortError.
+    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new AutomationEngineTimeoutError(path, budget);
+    }
+    throw err;
+  }
 }
 
 /** Thrown when the engine answers a call with a non-2xx status. Carries the
@@ -82,6 +127,43 @@ function jsonRequest(method: string, body?: unknown): RequestInit {
     headers: { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   };
+}
+
+// POST /api/extract — the engine reads the bill itself.
+//
+// This replaced the ai-service for reading an uploaded bill on 2026-11-10.
+// The ai-service ran the page through tesseract and sent only the resulting
+// text to a model, so a phone photo arrived as garbled characters or, in one
+// production case, as nothing at all. The engine has always sent the page
+// images straight to a vision model (gemini-2.5-flash, qwen2.5-vl as
+// fallback) and additionally returns CPT and revenue codes per line item,
+// which the audit rules need and the ai-service extraction never carried.
+//
+// `files` is the field name, plural, and the engine also accepts a single
+// `file`. One call per document is what this app does; the engine would
+// merge several into one reading.
+//
+// Known limits of the engine's own file handling, worth knowing before
+// blaming a blank answer on the model:
+//  - a PDF is read by pulling *embedded* images out of its first three
+//    pages, one per page. A PDF this app built from photos (see
+//    prepareBillFile in src/lib/billUpload.ts) is exactly that shape.
+//  - a PDF with a text layer and no embedded images falls back to its text.
+//  - a vector-drawn PDF with neither is refused outright, as a 500.
+export async function extractBill(file: {
+  filename: string;
+  bytes: Blob;
+}): Promise<EngineExtraction> {
+  const body = new FormData();
+  body.append("files", file.bytes, file.filename);
+
+  const response = await automationEngineFetch("/api/extract", {
+    method: "POST",
+    body,
+    timeoutMs: EXTRACT_TIMEOUT_MS,
+  });
+
+  return readJson(response, "bill extraction");
 }
 
 export async function getEngineHealth(): Promise<AutomationEngineHealth> {
@@ -166,6 +248,77 @@ export async function acceptOffer(negotiationId: string, acceptedAmount?: number
 // that is the only number it may accept. Use acceptOffer to settle at a figure of your own choosing.
 //
 // The engine answers 409 when nothing is held, or when a hold carries no agreed amount.
+// POST /api/negotiations/sync-inbox — makes the engine read its mailbox now.
+//
+// The engine polls IMAP every 30 seconds from an in-process task started at
+// startup. On Render's free tier the service spins down after ~15 minutes
+// idle and that task dies with it, so a hospital's reply sits unread until
+// something wakes the engine. This is the handle that both wakes it and
+// forces the poll.
+//
+// Returns the engine's own summary. Call it before deciding whether to send
+// another follow-up: chasing a provider that has already answered is the
+// worst thing this machinery can do.
+export async function syncEngineInbox(): Promise<{
+  status: string;
+  new_messages_processed: number;
+}> {
+  return readJson(
+    await automationEngineFetch("/api/negotiations/sync-inbox", jsonRequest("POST")),
+    "inbox sync",
+  );
+}
+
+// POST /api/negotiations/{id}/cadence/tick — sends the next 72-hour
+// follow-up.
+//
+// **This endpoint does not check the clock.** The engine's own
+// `autopilot_loop` checks the 72-hour gap in `_cadence_due()` before
+// ticking; the endpoint checks only the status and the review hold, then
+// increments and sends. So every caller must bring its own gap check —
+// see followUpDecision() in src/lib/followUpCadence.ts. Calling this on a
+// daily schedule without it sends a follow-up every day.
+//
+// The engine caps outbound follow-ups at three: past that, `cadence_tick`
+// drafts a non-response notice instead of sending another letter. That cap
+// is what bounds the damage if two callers ever race.
+export async function tickFollowUpCadence(negotiationId: string): Promise<{
+  status: string;
+  action?: string;
+  message?: string;
+}> {
+  return readJson(
+    await automationEngineFetch(
+      `/api/negotiations/${negotiationId}/cadence/tick`,
+      jsonRequest("POST"),
+    ),
+    "follow-up cadence tick",
+  );
+}
+
+// POST /api/negotiations/{id}/no-response/close — ends a case the provider
+// never answered.
+//
+// Until this was wired, a hospital that simply never replied left the case
+// at `awaiting_response` forever: the three 72-hour follow-ups went out, the
+// engine stopped, and nothing could finish it. For a provider that ignores
+// us — likely a large share of real cases — there was no ending at all.
+//
+// The engine itself applies no guard here; it will close whatever it is
+// given. The caller is responsible for checking the follow-ups are actually
+// exhausted and the provider really has not responded. See the route.
+export async function closeForNoResponse(
+  negotiationId: string,
+  reason?: string,
+): Promise<AutomationNegotiation> {
+  const response = await automationEngineFetch(
+    `/api/negotiations/${negotiationId}/no-response/close`,
+    jsonRequest("POST", { reason: reason ?? null }),
+  );
+  const data = await readJson<{ negotiation: AutomationNegotiation }>(response, "close for no response");
+  return data.negotiation;
+}
+
 export async function approveHeldSettlement(negotiationId: string): Promise<AutomationNegotiation> {
   const response = await automationEngineFetch(
     `/api/negotiations/${negotiationId}/review/approve`,

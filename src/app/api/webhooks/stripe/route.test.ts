@@ -47,6 +47,25 @@ beforeEach(() => {
   isBackendConfigured.mockReturnValue(true);
 });
 
+/** update() arguments across every builder created for `table`. */
+function updatesTo(table: string): unknown[][] {
+  return adminMock.from.mock.calls
+    .map((call, index) => ({ table: call[0], result: adminMock.from.mock.results[index] }))
+    .filter((entry) => entry.table === table)
+    .flatMap((entry) => {
+      const builder = entry.result?.value as Record<string, { mock?: { calls: unknown[][] } }>;
+      return builder?.update?.mock?.calls ?? [];
+    });
+}
+
+/** insert() arguments across every builder, in call order. */
+function insertsMade(): unknown[][] {
+  return adminMock.from.mock.results.flatMap((result) => {
+    const builder = result?.value as Record<string, { mock?: { calls: unknown[][] } }>;
+    return builder?.insert?.mock?.calls ?? [];
+  });
+}
+
 describe("POST /api/webhooks/stripe", () => {
   it("returns 400 when the signature doesn't verify", async () => {
     constructEvent.mockImplementation(() => {
@@ -84,7 +103,8 @@ describe("POST /api/webhooks/stripe", () => {
     queueDedupeOk();
     const event = makeEvent("payment_intent.succeeded", { id: "pi_1" });
     constructEvent.mockReturnValue(event);
-    adminMock.queueResult("payment_records", { data: { id: "rec-1", type: "commitment_fee", bill_id: "bill-1", status: "paid" }, error: null });
+    // Already paid AND already linked: there is genuinely nothing to do.
+    adminMock.queueResult("payment_records", { data: { id: "rec-1", type: "commitment_fee", bill_id: "bill-1", case_id: "case-1", status: "paid" }, error: null });
     adminMock.queueResult("cases", { data: { id: "case-1" }, error: null }); // case already exists
 
     const res = await POST(makeRequest("{}"));
@@ -94,6 +114,22 @@ describe("POST /api/webhooks/stripe", () => {
     // payment_records update is skipped, but the case reconciliation still
     // runs — that is what lets a retry finish a half-done run.
     expect(adminMock.from).toHaveBeenCalledTimes(3);
+  });
+
+  it("links a case that exists but was never linked to the payment", async () => {
+    // Exactly the state the old ordering left behind: paid, case created,
+    // case_id still null — so GET /api/payments/status reported paid with
+    // no case id and the client had nothing to start the analysis with.
+    queueDedupeOk();
+    constructEvent.mockReturnValue(makeEvent("payment_intent.succeeded", { id: "pi_1" }));
+    adminMock.queueResult("payment_records", { data: { id: "rec-1", type: "commitment_fee", bill_id: "bill-1", case_id: null, status: "paid" }, error: null });
+    adminMock.queueResult("cases", { data: { id: "case-1" }, error: null });
+    adminMock.queueResult("payment_records", { data: null, error: null }); // the link
+
+    const res = await POST(makeRequest("{}"));
+
+    expect(await res.json()).toEqual({ ok: true });
+    expect(updatesTo("payment_records")).toEqual([[{ case_id: "case-1" }]]);
   });
 
   it("still creates the case when a retry finds the payment already paid", async () => {
@@ -123,33 +159,56 @@ describe("POST /api/webhooks/stripe", () => {
     const event = makeEvent("payment_intent.succeeded", { id: "pi_1" });
     constructEvent.mockReturnValue(event);
     adminMock.queueResult("payment_records", { data: { id: "rec-1", type: "commitment_fee", bill_id: "bill-1", status: "pending" }, error: null }); // lookup
-    adminMock.queueResult("payment_records", { data: null, error: null }); // status update to paid
     adminMock.queueResult("cases", { data: null, error: null }); // no existing case
     adminMock.queueResult("bills", { data: { user_id: "user-1" }, error: null });
     adminMock.queueResult("cases", { data: { id: "case-new" }, error: null }); // insert
-    adminMock.queueResult("payment_records", { data: null, error: null }); // backfill case_id
+    adminMock.queueResult("payment_records", { data: null, error: null }); // link case_id
+    adminMock.queueResult("payment_records", { data: null, error: null }); // status update to paid
 
     const res = await POST(makeRequest("{}"));
 
     expect(await res.json()).toEqual({ ok: true });
-    // Calls in order: stripe_events, payment_records(lookup), payment_records(update),
-    // cases(check existing), bills(get user), cases(insert) <- index 5
-    const caseInsert = adminMock.from.mock.results[5].value.insert as ReturnType<typeof vi.fn>;
-    expect(caseInsert).toHaveBeenCalledWith({ bill_id: "bill-1", user_id: "user-1", status: "scanning" });
+    expect(insertsMade()).toContainEqual([{ bill_id: "bill-1", user_id: "user-1", status: "scanning" }]);
+  });
+
+  it("creates and links the case BEFORE marking the payment paid", async () => {
+    // The ordering is the fix. GET /api/payments/status reads `status` and
+    // `case_id` off this one row, and the dashboard moves on the instant it
+    // sees `paid` — so `paid` must not be visible until the case exists
+    // and is linked. Written the other way round, two real paid cases were
+    // stranded at `scanning` with no analysis on 2026-11-10/11.
+    queueDedupeOk();
+    constructEvent.mockReturnValue(makeEvent("payment_intent.succeeded", { id: "pi_1" }));
+    adminMock.queueResult("payment_records", { data: { id: "rec-1", type: "commitment_fee", bill_id: "bill-1", status: "pending" }, error: null });
+    adminMock.queueResult("cases", { data: null, error: null });
+    adminMock.queueResult("bills", { data: { user_id: "user-1" }, error: null });
+    adminMock.queueResult("cases", { data: { id: "case-new" }, error: null });
+    adminMock.queueResult("payment_records", { data: null, error: null });
+    adminMock.queueResult("payment_records", { data: null, error: null });
+
+    await POST(makeRequest("{}"));
+
+    const updates = updatesTo("payment_records");
+    const linkIndex = updates.findIndex((args) => (args[0] as Record<string, unknown>)?.case_id === "case-new");
+    const paidIndex = updates.findIndex((args) => (args[0] as Record<string, unknown>)?.status === "paid");
+    expect(linkIndex).toBeGreaterThanOrEqual(0);
+    expect(paidIndex).toBeGreaterThanOrEqual(0);
+    expect(linkIndex).toBeLessThan(paidIndex);
   });
 
   it("does not create a second case if one already exists for the bill", async () => {
     queueDedupeOk();
     const event = makeEvent("payment_intent.succeeded", { id: "pi_1" });
     constructEvent.mockReturnValue(event);
-    adminMock.queueResult("payment_records", { data: { id: "rec-1", type: "commitment_fee", bill_id: "bill-1", status: "pending" }, error: null });
-    adminMock.queueResult("payment_records", { data: null, error: null }); // status update
+    adminMock.queueResult("payment_records", { data: { id: "rec-1", type: "commitment_fee", bill_id: "bill-1", case_id: "existing-case", status: "pending" }, error: null });
     adminMock.queueResult("cases", { data: { id: "existing-case" }, error: null }); // already exists
+    adminMock.queueResult("payment_records", { data: null, error: null }); // status update
 
     const res = await POST(makeRequest("{}"));
 
     expect(await res.json()).toEqual({ ok: true });
-    expect(adminMock.from).toHaveBeenCalledTimes(4); // stripe_events, lookup, update, cases-check - stops there
+    // Only the stripe_events dedupe insert — no second case.
+    expect(insertsMade()).toHaveLength(1);
   });
 
   it("completes the case for a success_fee success", async () => {
