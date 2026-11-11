@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getBillDocuments } from "@/lib/billDocuments";
-import { MOCK_BILL_ANALYSIS, type BillAnalysis } from "@/lib/billAnalysis";
+import { EMPTY_BILL_ANALYSIS, type BillAnalysis } from "@/lib/billAnalysis";
 import DocumentAnalysisClient from "@/components/dashboard/DocumentAnalysisClient";
 import { EMPTY_VALUE, HEADER_FIELD_DEFS, type HeaderField, type HeaderKey } from "@/lib/headerInfo";
 import { isCaseCompleted } from "@/lib/caseStatus";
@@ -24,7 +24,10 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
     notFound();
   }
 
-  const analysis = (bill.analysis_result as BillAnalysis | null) ?? MOCK_BILL_ANALYSIS;
+  // An un-analysed bill falls back to an EMPTY analysis, not a mock one.
+  // This used to be MOCK_BILL_ANALYSIS, so a customer opening a bill we had
+  // not read was shown a fabricated record belonging to "Dave J. Collins".
+  const analysis = (bill.analysis_result as BillAnalysis | null) ?? EMPTY_BILL_ANALYSIS;
   const [doc] = await getBillDocuments(supabase, [
     { id: bill.id, filename: bill.filename, storage_url: bill.storage_url, status: bill.status, uploaded_at: "" },
   ]);
