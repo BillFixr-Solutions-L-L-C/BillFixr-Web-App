@@ -82,7 +82,7 @@ describe("followUpDecision", () => {
   });
 
   it("treats a missing cadence_step as none sent", () => {
-    const { cadence_step: _ignored, ...rest } = negotiation();
+    const rest = { status: negotiation().status, messages: negotiation().messages };
     expect(followUpDecision(rest as ReturnType<typeof negotiation>, NOW)).toEqual({
       due: true,
       nextStep: 1,

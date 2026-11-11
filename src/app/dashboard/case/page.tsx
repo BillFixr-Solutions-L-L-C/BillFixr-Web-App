@@ -75,18 +75,21 @@ export default function ActiveCasePage() {
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [successFeePercentage, setSuccessFeePercentage] = useState<number | null>(null);
 
-  // Extracted from the mount effect so the recovery below can re-read the
-  // rows after resuming an analysis, rather than patching local state with
-  // a guess at what the server now holds.
-  const loadCases = useCallback(async () => {
+  // Reads the rows and returns them rather than setting state itself.
+  //
+  // Split that way for two reasons: the recovery effect below needs to
+  // re-read after resuming an analysis rather than patching local state
+  // with a guess at what the server now holds, and a function that sets
+  // state synchronously cannot be called from an effect body
+  // (react-hooks/set-state-in-effect). Every caller applies the result
+  // after an await, which is what that rule is asking for.
+  const fetchCases = useCallback(async () => {
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    if (!user) return null;
+
     const [{ data }, { data: settings }] = await Promise.all([
       supabase
         .from("cases")
@@ -100,14 +103,27 @@ export default function ActiveCasePage() {
         .order("created_at", { ascending: false }),
       supabase.from("app_settings").select("success_fee_percentage").eq("id", 1).single(),
     ]);
-    setCases((data as unknown as CaseRow[]) ?? []);
-    if (settings?.success_fee_percentage != null) setSuccessFeePercentage(Number(settings.success_fee_percentage));
-    setLoading(false);
+    return {
+      rows: (data as unknown as CaseRow[]) ?? [],
+      successFee: settings?.success_fee_percentage != null ? Number(settings.success_fee_percentage) : null,
+    };
   }, []);
 
   useEffect(() => {
-    loadCases();
-  }, [loadCases]);
+    let cancelled = false;
+    (async () => {
+      const loaded = await fetchCases();
+      if (cancelled) return;
+      if (loaded) {
+        setCases(loaded.rows);
+        if (loaded.successFee != null) setSuccessFeePercentage(loaded.successFee);
+      }
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchCases]);
 
   // Formats the same way admins enter it (e.g. "30" or "27.5"), never a
   // trailing ".00" for the common whole-number case.
@@ -204,11 +220,6 @@ export default function ActiveCasePage() {
   // 815:3326) — derived from Resend's webhook events.
   const letterTracking = summarizeLetterEvents(letterEvents, selectedCase?.letter_sent_at ?? null);
 
-  // Step 3 "Follow" from services/automation-engine/INTEGRATION.md: the
-  // engine owns the negotiation's state, so the only way to know where a
-  // case actually stands is to ask it when the page opens. Only cases the
-  // engine is running have a negotiation_id, so everything else — and the
-  // whole app while the engine is undeployed — skips this entirely.
   // Recovery for a case that was paid for but never analysed.
   //
   // The analysis used to run in exactly one place: an effect on the upload
@@ -224,7 +235,9 @@ export default function ActiveCasePage() {
   // missed moment is no longer terminal. /api/dev/process-with-ai is
   // idempotent — it returns the stored analysis rather than re-paying for
   // one — so running it on open is safe for a case that already has it.
-  const [recovering, setRecovering] = useState(false);
+  //
+  // A ref, not state, so the effect body sets nothing synchronously and
+  // one case cannot be resumed twice by a re-render.
   const recoveryStartedRef = useRef<string | null>(null);
   useEffect(() => {
     if (!selectedCase) return;
@@ -238,29 +251,39 @@ export default function ActiveCasePage() {
     if (!stuck || recoveryStartedRef.current === selectedCase.id) return;
 
     recoveryStartedRef.current = selectedCase.id;
-    setRecovering(true);
+    const caseId = selectedCase.id;
+    let cancelled = false;
     (async () => {
-      try {
-        const res = await fetch("/api/dev/process-with-ai", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ caseId: selectedCase.id }),
-        });
-        if (!res.ok) {
-          // Left for the next open to try again rather than reported here:
-          // the customer did not ask for this and can do nothing about it.
-          recoveryStartedRef.current = null;
-          console.error("Could not resume the analysis for case", selectedCase.id, res.status);
-          return;
-        }
-        // Reload so the analysis, the status and the negotiation link all
-        // come from the server rather than being guessed at here.
-        await loadCases();
-      } finally {
-        setRecovering(false);
+      const res = await fetch("/api/dev/process-with-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caseId }),
+      }).catch(() => null);
+
+      if (!res?.ok) {
+        // Left for the next open to try again rather than reported on
+        // screen: the customer did not ask for this and can do nothing
+        // about it.
+        recoveryStartedRef.current = null;
+        console.error("Could not resume the analysis for case", caseId, res?.status ?? "network error");
+        return;
       }
+      // Re-read so the analysis, the status and the negotiation link all
+      // come from the server rather than being guessed at here.
+      const loaded = await fetchCases();
+      if (cancelled || !loaded) return;
+      setCases(loaded.rows);
     })();
-  }, [selectedCase, loadCases]);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCase, fetchCases]);
+
+  // Step 3 "Follow" from services/automation-engine/INTEGRATION.md: the
+  // engine owns the negotiation's state, so the only way to know where a
+  // case actually stands is to ask it when the page opens. Only cases the
+  // engine is running have a negotiation_id, so everything else — and the
+  // whole app while the engine is undeployed — skips this entirely.
 
   const [negotiation, setNegotiation] = useState<AutomationNegotiation | null>(null);
   useEffect(() => {
