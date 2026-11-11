@@ -63,6 +63,85 @@ _cache: Dict[str, Tuple[float, Dict[str, "EmailFind"]]] = {}
 
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 
+# --- what counts as a billing contact ------------------------------------
+#
+# An address is not a billing contact just because it is an address. On
+# 2026-11-11 a search for Matthew Walker Comprehensive Health Center
+# returned `shatiqua.jamerson@mwchc.org`, a named member of staff, read
+# off npin.cdc.gov -- the CDC's prevention-services directory, which has
+# nothing to do with billing. It reached the form as the hospital's
+# support email.
+#
+# Two things were missing. Nothing here knew that a personal mailbox is
+# the wrong kind of answer, and the domain check compares the email to the
+# page it was found on, so an address on the provider's own domain
+# published anywhere passes it.
+#
+# Writing to a named employee about someone else's medical bill is both
+# likely to go unanswered and a disclosure to a person who never asked for
+# it. So a personal-looking address is refused outright, confirmed or not.
+
+# Local parts a hospital actually uses for money.
+#
+# Split by length, because substring matching is only safe for a word long
+# enough to be unambiguous. "ar" (accounts receivable) as a substring
+# matches Maria, Mark, Barbara and Garcia -- a test caught it classifying
+# `maria-lopez@` as a billing department. Anything under six characters
+# must therefore appear as a whole dot/underscore/hyphen-delimited segment,
+# or be the entire local part.
+_ROLE_SUBSTRINGS = (
+    "billing", "billings", "patientaccounts", "patientaccount",
+    "patientbilling", "patientfinancial", "patientfinance",
+    "accounts", "accounting", "accountsreceivable",
+    "financialservices", "financialassistance", "finance",
+    "support", "customerservice", "customercare", "service",
+    "contact", "enquiries", "inquiries", "helpdesk",
+    "administration", "office", "reception",
+    "payments", "paymybill", "selfpay", "collections", "cashier",
+    "healthinfo", "medicalrecords", "privacy", "compliance",
+)
+_ROLE_SEGMENTS = frozenset(
+    {"ar", "hr", "pfs", "bill", "bills", "info", "help", "admin", "pay", "billoffice"}
+)
+_SEGMENT_SPLIT = re.compile(r"[._\-+]")
+
+# first.last, f.last, first_last, first-last: the shapes of a person.
+_PERSONAL_SHAPE = re.compile(r"^[a-z]+[._\-][a-z]{2,}\d{0,3}$")
+
+
+def _local_part(email: str) -> str:
+    return email.split("@", 1)[0].lower()
+
+
+def is_role_address(email: str) -> bool:
+    """True when the local part names a function rather than a person."""
+    local = _local_part(email)
+    squashed = re.sub(r"[^a-z]", "", local)
+    if any(word in squashed for word in _ROLE_SUBSTRINGS):
+        return True
+    segments = {part for part in _SEGMENT_SPLIT.split(local) if part}
+    segments.add(squashed)
+    return bool(segments & _ROLE_SEGMENTS)
+
+
+def is_personal_address(email: str) -> bool:
+    """True when the local part looks like somebody's name.
+
+    A role word anywhere in it wins: `billing.office` is punctuated like a
+    person and is not one, and `john.smith.billing` is a billing mailbox
+    whoever it belongs to.
+    """
+    if is_role_address(email):
+        return False
+    local = _local_part(email)
+    if _PERSONAL_SHAPE.match(local):
+        return True
+    # A bare single word that is not a role word -- `shatiqua`, `jsmith` --
+    # cannot be told from a person, and guessing in this direction is the
+    # expensive mistake.
+    return bool(re.fullmatch(r"[a-z]{2,}\d{0,3}", local)) and len(local) > 2
+
+
 SYSTEM_PROMPT = """You find the billing contact email for a US hospital or clinic.
 
 Rules:
@@ -207,6 +286,14 @@ def _verify(email: str, source_url: str) -> Optional[EmailFind]:
     if not email or not _EMAIL_RE.fullmatch(email) or not source_url:
         return None
 
+    # A named person is the wrong kind of answer and is refused outright,
+    # confirmed or not. The dispute letter carries a patient name, an
+    # account number and a balance; sending that to an employee who was
+    # listed in some directory is a disclosure to someone who never asked
+    # for it, and it will not be actioned either. See is_personal_address.
+    if is_personal_address(email):
+        return None
+
     page_host = urllib.parse.urlparse(source_url).hostname or ""
     unconfirmed = lambda why: EmailFind(  # noqa: E731
         email=email, source_url=source_url, page_domain=page_host, confirmed=False, reason=why
@@ -232,30 +319,8 @@ def _verify(email: str, source_url: str) -> Optional[EmailFind]:
     return EmailFind(email=email, source_url=source_url, page_domain=page_host, confirmed=True)
 
 
-def search_emails(provider_name: str, address: Optional[str] = None) -> Dict[str, EmailFind]:
-    """Billing and support email for one provider, or {} -- never a guess.
-
-    One search answers both, so pressing both buttons on the form costs one
-    search rather than two.
-    """
-    if os.getenv("CONTACT_SEARCH_DISABLED", "").strip():
-        return {}
-    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
-    if not api_key or not (provider_name or "").strip():
-        return {}
-
-    key = f"{_normalize(provider_name)}|{_normalize(address or '')}"
-    hit = _cache.get(key)
-    if hit and time.time() - hit[0] < CACHE_TTL_SECONDS:
-        return hit[1]
-
-    question = f"Hospital or clinic: {provider_name.strip()}"
-    if (address or "").strip():
-        # The address is what keeps this on the right building. Searching a
-        # name alone returned the Nashville campus for a Smyrna clinic.
-        question += f"\nAddress on the bill: {address.strip()}"
-    question += "\n\nFind the billing department email, and the patient support email if there is one."
-
+def _ask(question: str, api_key: str) -> Dict[str, "EmailFind"]:
+    """One search. Returns whatever survived verification, which may be {}."""
     payload = {
         "model": MODEL,
         "messages": [
@@ -265,10 +330,9 @@ def search_emails(provider_name: str, address: Optional[str] = None) -> Dict[str
         "tools": [{"type": "openrouter:web_search", "parameters": {"max_results": MAX_RESULTS}}],
         "temperature": 0,
     }
-
     try:
         data = _chat(payload, api_key)
-    except Exception:  # noqa: BLE001 -- the lookup degrades to "no email", which is a normal answer
+    except Exception:  # noqa: BLE001 -- a failed attempt is "no email", which is a normal answer
         return {}
 
     choices = data.get("choices") or []
@@ -283,6 +347,88 @@ def search_emails(provider_name: str, address: Optional[str] = None) -> Dict[str
         checked = _verify(str(block.get("email") or ""), str(block.get("source_url") or ""))
         if checked:
             found[kind] = checked
+    return found
+
+
+def _better(candidate: Optional["EmailFind"], incumbent: Optional["EmailFind"]) -> bool:
+    """Is `candidate` a better answer than what we already have?
+
+    Confirmed beats unconfirmed; anything beats nothing. Both are already
+    role addresses by the time they reach here -- _verify refuses personal
+    ones -- so this only has to rank how well each was checked.
+    """
+    if candidate is None:
+        return False
+    if incumbent is None:
+        return True
+    return bool(candidate.confirmed) and not incumbent.confirmed
+
+
+def search_emails(provider_name: str, address: Optional[str] = None) -> Dict[str, EmailFind]:
+    """Billing and support email for one provider, or {} -- never a guess.
+
+    Searches more than once. The first pass is a plain question and finds
+    the easy cases; if it comes back without a confirmed billing address,
+    two further passes aim at where hospitals actually publish one -- the
+    "pay my bill" page, and patient financial services -- before giving up.
+
+    What it will not do is keep asking until the model produces something.
+    Every answer still goes through _verify, a personal mailbox is refused
+    outright, and running out of attempts with nothing found is a correct
+    outcome: the customer types the address in. A wrong address that looks
+    right is not recoverable, and a letter sent to one discloses a
+    patient's bill to a stranger.
+
+    Each pass costs a web search, so it stops the moment it has a
+    confirmed billing address, and the whole thing is cached per provider.
+    """
+    if os.getenv("CONTACT_SEARCH_DISABLED", "").strip():
+        return {}
+    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if not api_key or not (provider_name or "").strip():
+        return {}
+
+    key = f"{_normalize(provider_name)}|{_normalize(address or '')}"
+    hit = _cache.get(key)
+    if hit and time.time() - hit[0] < CACHE_TTL_SECONDS:
+        return hit[1]
+
+    name = provider_name.strip()
+    # The address is what keeps this on the right building. Searching a
+    # name alone returned the Nashville campus for a Smyrna clinic.
+    where = f"\nAddress on the bill: {address.strip()}" if (address or "").strip() else ""
+
+    # Each attempt looks somewhere different. Repeating the same question
+    # would only re-roll the same answer at the same cost.
+    attempts = [
+        f"Hospital or clinic: {name}{where}\n\n"
+        "Find the billing department email, and the patient support email if there is one.",
+
+        f"Hospital or clinic: {name}{where}\n\n"
+        "Look specifically at this provider's own website: its \"Pay My Bill\", \"Billing\", "
+        "\"Patient Billing\" or \"Contact Us\" page. Report the billing email address printed "
+        "on that page, and the page's URL. A department mailbox only -- do not report an "
+        "individual member of staff's address.",
+
+        f"Hospital or clinic: {name}{where}\n\n"
+        "Look for this provider's Patient Financial Services, Patient Accounts or Business "
+        "Office contact details, on its own website. Report the department email address and "
+        "the exact page URL. Do not report a named person's address, and do not guess.",
+    ]
+    max_attempts = max(1, min(len(attempts), int(os.getenv("CONTACT_SEARCH_MAX_ATTEMPTS", "3"))))
+
+    found: Dict[str, EmailFind] = {}
+    for question in attempts[:max_attempts]:
+        result = _ask(question, api_key)
+        for kind in ("billing", "support"):
+            if _better(result.get(kind), found.get(kind)):
+                found[kind] = result[kind]
+        # A confirmed billing address is the answer this exists to get.
+        # Anything further would be spending a search to improve a field
+        # that is already as good as this can make it.
+        billing = found.get("billing")
+        if billing and billing.confirmed:
+            break
 
     _cache[key] = (time.time(), found)
     return found
