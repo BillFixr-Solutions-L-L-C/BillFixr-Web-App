@@ -43,6 +43,15 @@ type EngineRecord = {
   providerName?: string | null;
   phone?: string | null;
   mailingAddress?: string | null;
+  // Where to POST a dispute, which is a different question from
+  // mailingAddress -- that is where the provider is registered with CMS,
+  // usually the clinic. For a hospital that publishes no billing email,
+  // and most do not, this is the whole answer.
+  billingAddress?: string | null;
+  billingAddressSource?: string | null;
+  billingAddressConfirmed?: boolean;
+  billingAddressReason?: string | null;
+  billingAddressIsRemitTo?: boolean;
   npi?: string | null;
   facilityType?: string | null;
   billingUrl?: string | null;
@@ -259,7 +268,16 @@ export default function CaseInformationStep({
     const trusted = record.verificationStatus === "verified";
     const incoming: [keyof CaseInformation, string, string][] = [
       ["hospitalName", String(record.providerName ?? "").trim(), "the hospital name"],
-      ["hospitalAddress", String(record.mailingAddress ?? "").trim(), "the billing address"],
+      // The address the provider asks patients to post billing mail to
+      // wins over the registry's. The registry holds where it is
+      // REGISTERED with CMS, which for a health system is the clinic, not
+      // the office that opens billing post -- a dispute sent there is
+      // read by a receptionist, if at all.
+      [
+        "hospitalAddress",
+        String(record.billingAddress ?? record.mailingAddress ?? "").trim(),
+        "the billing address",
+      ],
       ["billingPhone", String(record.phone ?? "").trim(), "the billing phone"],
     ];
 
@@ -328,22 +346,36 @@ export default function CaseInformationStep({
       // no such hospital" means the name or the address is wrong -- which
       // is the thing the customer can actually fix.
       //
-      // Neither line claims the hospital publishes no email, because a
-      // failed lookup is not evidence of that. Four real hospitals were
-      // tested against the verification chain and all four publish a
-      // billing address we could not confirm: one blocks our fetcher, one
-      // has a broken TLS chain, one puts the address on a domain that
-      // doesn't match its website, and one renders it with JavaScript so
-      // it is not in the HTML at all. The customer has a browser and can
-      // read every one of those pages, so point them at the page instead
-      // of telling them there is nothing there.
+      // This used to refuse to say "no billing email", on the grounds that
+      // one failed lookup is not evidence of absence — four real hospitals
+      // were tested and all four publish an address we could not confirm.
+      // That reasoning was written when the search made a single general
+      // pass. It now makes three, aimed in turn at the provider's billing
+      // page and its patient-financial-services page, and a personal
+      // mailbox is refused rather than offered. After that, "we could not
+      // find one" is worth saying plainly: most clinics genuinely do not
+      // publish a billing email, and leaving the customer to hunt for a
+      // page that does not exist is worse than telling them.
+      //
+      // What makes it safe to say is the second half. A hospital with no
+      // email still has somewhere to post a letter, and that is the thing
+      // that actually unblocks the case — so the address is named, not
+      // merely implied.
       const matched = Boolean(f && (f.providerName || f.npi || f.mailingAddress || f.phone));
+      const postal = String(f?.billingAddress ?? f?.mailingAddress ?? "").trim();
+      const postalIsRemitTo = Boolean(f?.billingAddress && f?.billingAddressIsRemitTo);
+      const noEmail = postal
+        ? postalIsRemitTo
+          ? `This hospital doesn't publish a billing email. Post it instead — it asks for billing mail at ${postal}.`
+          : `This hospital doesn't publish a billing email, but it does have an address: ${postal}. Post it there.`
+        : "This hospital doesn't publish a billing email — ring the billing line and ask where to send it.";
+
       setSearchNote((n) => ({
         ...n,
         [key]: filled.length
-          ? `Couldn't confirm an email — filled in ${listFields(filled)} from the provider registry.`
+          ? `${noEmail} Filled in ${listFields(filled)} from the provider registry.`
           : matched
-            ? "Couldn't confirm an email — it's usually on the hospital's billing or \"pay my bill\" page."
+            ? noEmail
             : "No match for that hospital and address — check both, or type the email in.",
       }));
       return;
@@ -410,8 +442,11 @@ export default function CaseInformationStep({
 
   return (
     <div className="space-y-10">
+      {/* "of", not "off". Both are correct English -- reading a value off
+          a document is idiomatic -- but the doubled letter reads as a typo
+          on screen, and it was read as one. */}
       {reading && (
-        <p className="text-center text-sm text-gray-500">Reading the details off your bill…</p>
+        <p className="text-center text-sm text-gray-500">Reading the details of your bill…</p>
       )}
 
       <Section

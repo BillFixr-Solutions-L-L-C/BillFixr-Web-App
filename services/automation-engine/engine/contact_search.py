@@ -59,7 +59,7 @@ PAGE_TIMEOUT_SECONDS = float(os.getenv("CONTACT_SEARCH_PAGE_TIMEOUT_SECONDS", "8
 MAX_PAGE_BYTES = 2_000_000
 
 CACHE_TTL_SECONDS = 60 * 60 * 24
-_cache: Dict[str, Tuple[float, Dict[str, "EmailFind"]]] = {}
+_cache: Dict[str, Tuple[float, Dict[str, Any]]] = {}
 
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 
@@ -142,20 +142,52 @@ def is_personal_address(email: str) -> bool:
     return bool(re.fullmatch(r"[a-z]{2,}\d{0,3}", local)) and len(local) > 2
 
 
-SYSTEM_PROMPT = """You find the billing contact email for a US hospital or clinic.
+SYSTEM_PROMPT = """You find how to contact a US hospital or clinic about a bill:
+an email address, and the postal address a payment or a billing dispute should be sent to.
 
 Rules:
-- Search the web. Only report an email address you have actually seen on a page.
-- The address must be published on the provider's OWN website.
-- Never construct, pattern-match or guess an address. "billing@" plus the
-  hospital's domain is a guess unless you have seen that exact address.
-- If you cannot find one, say so. Finding nothing is a correct answer.
+- Search the web. Only report something you have actually seen on a page.
+- It must be published on the provider's OWN website.
+- Never construct, pattern-match or guess. "billing@" plus the hospital's
+  domain is a guess unless you have seen that exact address.
+- Report a department mailbox, never an individual member of staff.
+- For the postal address, report the one the provider tells patients to send
+  payments or billing correspondence to -- a "remit to", "mail your payment
+  to" or patient-accounts address. This is often NOT the hospital's street
+  address: large systems use a separate billing office or a PO box. If the
+  only address published is the hospital's own location, report that and say
+  so in `is_remit_to`.
+- If you cannot find something, say so. Finding nothing is a correct answer.
 
 Reply with JSON only, no prose and no code fences:
-{"billing": {"email": "...", "source_url": "..."}, "support": {"email": "...", "source_url": "..."}}
+{"billing": {"email": "...", "source_url": "..."},
+ "support": {"email": "...", "source_url": "..."},
+ "billing_address": {"address": "...", "source_url": "...", "is_remit_to": true}}
 
-Use null for either key you could not find. source_url must be the exact
-page you read the address on."""
+Use null for any key you could not find. source_url must be the exact page
+you read it on. Give the address on one line, including the ZIP code."""
+
+
+class AddressFind(BaseModel):
+    """A postal address to send a billing dispute to.
+
+    Separate from the NPI registry's `mailing_address`, which is where the
+    provider is registered -- usually the clinic itself. A health system
+    tells patients to post payments somewhere else entirely: Mass General
+    Brigham asks for mail to Patient Billing Solutions in Somerville, not
+    to the hospital. Sending a dispute to the front desk of a hospital is
+    how it goes unread.
+    """
+
+    address: str
+    source_url: str
+    page_domain: str
+    # True when the provider presents this as where to send payments or
+    # billing correspondence, rather than it being merely its street
+    # address. The model is asked to distinguish them.
+    is_remit_to: bool = False
+    confirmed: bool = True
+    reason: str = ""
 
 
 class EmailFind(BaseModel):
@@ -260,6 +292,96 @@ def _parse(content: str) -> Dict[str, Any]:
         return {}
 
 
+_ZIP_RE = re.compile(r"\b\d{5}(?:-\d{4})?\b")
+
+
+def _squash(text: str) -> str:
+    """Lowercase, strip punctuation, collapse whitespace.
+
+    A page writes an address across several lines, inside tags, with or
+    without a comma after the city. Comparing the raw strings fails on
+    formatting alone, which would reject addresses that are plainly there.
+    """
+    return " ".join(re.sub(r"[^a-z0-9 ]+", " ", (text or "").lower()).split())
+
+
+def _verify_address(address: str, source_url: str, is_remit_to: bool) -> Optional[AddressFind]:
+    """Check a postal address, and say so either way.
+
+    Same contract as _verify for emails: an address that fails a check is
+    still returned, marked unconfirmed with a reason, because the customer
+    can open the page we could not. What is refused outright is an address
+    with no ZIP code or no cited source -- the shapes of something invented
+    rather than read.
+    """
+    address = " ".join((address or "").split())
+    source_url = (source_url or "").strip()
+    if not address or not source_url:
+        return None
+
+    zip_match = _ZIP_RE.search(address)
+    # No ZIP is the giveaway. A real US billing address printed for
+    # patients to post to always carries one, and a model asked for an
+    # address it has not seen tends to produce a street and a city.
+    if not zip_match:
+        return None
+
+    page_host = urllib.parse.urlparse(source_url).hostname or ""
+
+    def unconfirmed(why: str) -> AddressFind:
+        return AddressFind(
+            address=address,
+            source_url=source_url,
+            page_domain=page_host,
+            is_remit_to=is_remit_to,
+            confirmed=False,
+            reason=why,
+        )
+
+    if not _is_public_url(source_url):
+        return unconfirmed("the page it cites is not a public web address")
+
+    try:
+        page = _fetch_page(source_url)
+    except Exception as err:  # noqa: BLE001 -- a page we cannot read is a failed check
+        return unconfirmed(f"its page could not be read ({type(err).__name__})")
+
+    # The ZIP and something else both have to appear. The ZIP alone is
+    # weak -- it covers a whole district -- so a second token from the
+    # address has to be on the page too.
+    #
+    # That second token is NOT "the number the address starts with": a
+    # billing address routinely starts with a department, as in "Patient
+    # Billing Solutions, 399 Revolution Drive", or with "PO Box". An
+    # earlier version anchored to the first character and rejected every
+    # such address as unverifiable. So: any number in the address other
+    # than the ZIP, and failing that its longest word.
+    squashed_page = _squash(page)
+    padded_page = f" {squashed_page} "
+    zip_code = zip_match.group(0)
+    has_zip = _squash(zip_code) in squashed_page
+
+    zip_digits = set(re.findall(r"\d+", zip_code))
+    numbers = [n for n in re.findall(r"\d{1,6}", address) if n not in zip_digits]
+    if numbers:
+        has_second = any(f" {n} " in padded_page for n in numbers)
+    else:
+        # A rural address with no number at all. Fall back to its longest
+        # word, which is the street or the department name.
+        words = sorted((w for w in _squash(address).split() if len(w) >= 5), key=len, reverse=True)
+        has_second = bool(words) and f" {words[0]} " in padded_page
+
+    if not (has_zip and has_second):
+        return unconfirmed("it does not appear on the page it cites")
+
+    return AddressFind(
+        address=address,
+        source_url=source_url,
+        page_domain=page_host,
+        is_remit_to=is_remit_to,
+    )
+
+
 def _verify(email: str, source_url: str) -> Optional[EmailFind]:
     """Check the address, and say so either way.
 
@@ -339,7 +461,7 @@ def _ask(question: str, api_key: str) -> Dict[str, "EmailFind"]:
     content = (choices[0].get("message", {}).get("content") if choices else "") or ""
     parsed = _parse(content)
 
-    found: Dict[str, EmailFind] = {}
+    found: Dict[str, Any] = {}
     for kind in ("billing", "support"):
         block = parsed.get(kind)
         if not isinstance(block, dict):
@@ -347,7 +469,29 @@ def _ask(question: str, api_key: str) -> Dict[str, "EmailFind"]:
         checked = _verify(str(block.get("email") or ""), str(block.get("source_url") or ""))
         if checked:
             found[kind] = checked
+
+    postal = parsed.get("billing_address")
+    if isinstance(postal, dict):
+        checked_address = _verify_address(
+            str(postal.get("address") or ""),
+            str(postal.get("source_url") or ""),
+            bool(postal.get("is_remit_to")),
+        )
+        if checked_address:
+            found["billing_address"] = checked_address
     return found
+
+
+def _better_address(candidate: Optional["AddressFind"], incumbent: Optional["AddressFind"]) -> bool:
+    """A remit-to address beats the hospital's street address; confirmed
+    beats unconfirmed; anything beats nothing."""
+    if candidate is None:
+        return False
+    if incumbent is None:
+        return True
+    if candidate.is_remit_to != incumbent.is_remit_to:
+        return candidate.is_remit_to
+    return bool(candidate.confirmed) and not incumbent.confirmed
 
 
 def _better(candidate: Optional["EmailFind"], incumbent: Optional["EmailFind"]) -> bool:
@@ -364,7 +508,7 @@ def _better(candidate: Optional["EmailFind"], incumbent: Optional["EmailFind"]) 
     return bool(candidate.confirmed) and not incumbent.confirmed
 
 
-def search_emails(provider_name: str, address: Optional[str] = None) -> Dict[str, EmailFind]:
+def search_emails(provider_name: str, address: Optional[str] = None) -> Dict[str, Any]:
     """Billing and support email for one provider, or {} -- never a guess.
 
     Searches more than once. The first pass is a plain question and finds
@@ -417,12 +561,14 @@ def search_emails(provider_name: str, address: Optional[str] = None) -> Dict[str
     ]
     max_attempts = max(1, min(len(attempts), int(os.getenv("CONTACT_SEARCH_MAX_ATTEMPTS", "3"))))
 
-    found: Dict[str, EmailFind] = {}
+    found: Dict[str, Any] = {}
     for question in attempts[:max_attempts]:
         result = _ask(question, api_key)
         for kind in ("billing", "support"):
             if _better(result.get(kind), found.get(kind)):
                 found[kind] = result[kind]
+        if _better_address(result.get("billing_address"), found.get("billing_address")):
+            found["billing_address"] = result["billing_address"]
         # A confirmed billing address is the answer this exists to get.
         # Anything further would be spending a search to improve a field
         # that is already as good as this can make it.

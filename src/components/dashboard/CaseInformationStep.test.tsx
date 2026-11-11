@@ -229,8 +229,13 @@ describe("CaseInformationStep", () => {
     await waitFor(() => expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("615-327-9400"));
     expect(screen.getByText(/filled in the billing phone/i)).toBeInTheDocument();
 
-    // None of the rest reaches the screen.
-    expect(screen.queryByText(/1035 14TH AVE N/)).not.toBeInTheDocument();
+    // The address IS named now. A hospital that publishes no billing
+    // email still has somewhere to post a letter, and that is the thing
+    // that unblocks the case -- so it is stated rather than implied.
+    expect(screen.getByText(/doesn't publish a billing email/i)).toBeInTheDocument();
+    expect(screen.getByText(/1035 14TH AVE N/)).toBeInTheDocument();
+
+    // The rest of the lookup's workings still stay off the screen.
     expect(screen.queryByText(/NPI registry record/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Not the right one/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Matthew Walker Smyrna/)).not.toBeInTheDocument();
@@ -251,7 +256,7 @@ describe("CaseInformationStep", () => {
 
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
-    expect(await screen.findByText(/Couldn't confirm an email/i)).toBeInTheDocument();
+    expect(await screen.findByText(/doesn't publish a billing email/i)).toBeInTheDocument();
     // Deliberately not "publishes no email": a failed lookup is not evidence
     // the hospital publishes none, and every real hospital tested so far
     // publishes one we could not verify.
@@ -322,7 +327,7 @@ describe("CaseInformationStep", () => {
 
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
-    await screen.findByText(/Couldn't confirm an email/i);
+    await screen.findByText(/doesn't publish a billing email/i);
     // Both already held a value from the bill, so both are left alone.
     expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd");
     expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("555-0100");

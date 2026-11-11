@@ -97,6 +97,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     billingUrl: contact.billing_url ?? null,
     notes: contact.notes ?? "",
     mailingAddress: contact.mailing_address ?? null,
+    // Where to POST a dispute, which is a different question from where
+    // the provider is registered. For a hospital that publishes no email
+    // -- most of them -- this is the only route to its billing office.
+    billingAddress: contact.billing_address ?? null,
+    billingAddressSource: contact.billing_address_source_url ?? null,
+    billingAddressConfirmed: contact.billing_address_confirmed !== false,
+    billingAddressReason: contact.billing_address_unconfirmed_reason ?? null,
+    billingAddressIsRemitTo: contact.billing_address_is_remit_to === true,
     facilityType: contact.facility_type ?? null,
     npi: contact.npi ?? null,
     // "verified" means a human checked this entry in the curated

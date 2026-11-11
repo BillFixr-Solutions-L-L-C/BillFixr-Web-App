@@ -55,6 +55,20 @@ class ProviderContact(BaseModel):
     # is available for almost every US provider, so it is what a customer
     # whose hospital publishes no email is left with.
     mailing_address: Optional[str] = None
+    # Where the provider tells patients to POST a payment or a billing
+    # dispute. Distinct from mailing_address, which is where it is
+    # registered -- usually the clinic itself. A health system routes
+    # billing mail somewhere else entirely, and a dispute sent to a
+    # hospital's front desk goes unread. Null when none was found.
+    billing_address: Optional[str] = None
+    billing_address_source_url: Optional[str] = None
+    # False when the address was found but could not be checked against
+    # the page that published it. Still returned, same as an email.
+    billing_address_confirmed: bool = True
+    billing_address_unconfirmed_reason: Optional[str] = None
+    # True when it is presented as a "remit to"/"mail your payment to"
+    # address rather than simply the provider's street address.
+    billing_address_is_remit_to: bool = False
     npi: Optional[str] = None
     facility_type: Optional[str] = None
     fax: Optional[str] = None
@@ -182,6 +196,7 @@ class ProviderContactFinder:
         searched = contact_search.search_emails(provider_name, address)
         billing = searched.get("billing")
         support = searched.get("support")
+        postal = searched.get("billing_address")
         found_note = ""
         if billing:
             found_note = f" Billing email found on {billing.page_domain}."
@@ -189,7 +204,7 @@ class ProviderContactFinder:
             found_note = f" Support email found on {support.page_domain}."
 
         if not registry:
-            if not (billing or support):
+            if not (billing or support or postal):
                 return ProviderContact(
                     notes=(
                         f"No billing contact was found for '{provider_name}', in our directory, in the "
@@ -211,7 +226,14 @@ class ProviderContactFinder:
                     "Not found in the federal NPI registry, so there is no postal address or phone "
                     "number for this one." + found_note
                 ).strip(),
-                email_source_url=(billing or support).source_url,
+                email_source_url=(billing or support).source_url if (billing or support) else None,
+                billing_address=postal.address if postal else None,
+                billing_address_source_url=postal.source_url if postal else None,
+                billing_address_confirmed=postal.confirmed if postal else True,
+                billing_address_unconfirmed_reason=(
+                    postal.reason if postal and not postal.confirmed else None
+                ),
+                billing_address_is_remit_to=postal.is_remit_to if postal else False,
             )
 
         best = registry[0]
@@ -220,6 +242,14 @@ class ProviderContactFinder:
             + (f", listed as a {best.facility_type.lower()}" if best.facility_type else "")
             + "."
         )
+        if postal:
+            notes += (
+                f" Billing mail goes to: {postal.address}."
+                if postal.is_remit_to
+                else f" Address published on {postal.page_domain}: {postal.address}."
+            )
+            if not postal.confirmed:
+                notes += f" That address could not be confirmed because {postal.reason}."
         if billing or support:
             notes += found_note
             picked = billing or support
@@ -266,4 +296,11 @@ class ProviderContactFinder:
                 if (billing or support) and not (billing or support).confirmed
                 else None
             ),
+            billing_address=postal.address if postal else None,
+            billing_address_source_url=postal.source_url if postal else None,
+            billing_address_confirmed=postal.confirmed if postal else True,
+            billing_address_unconfirmed_reason=(
+                postal.reason if postal and not postal.confirmed else None
+            ),
+            billing_address_is_remit_to=postal.is_remit_to if postal else False,
         )
