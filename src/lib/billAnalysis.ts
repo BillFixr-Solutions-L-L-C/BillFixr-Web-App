@@ -1,8 +1,9 @@
-// Step 7: the real shape `bills.analysis_result` will hold once the
-// OCR/error-detection workstream populates it. Always null today — every
-// field below is the exact content the page already showed as a hardcoded
-// mock, kept as the fallback so nothing visibly changes until real data
-// exists.
+// The shape `bills.analysis_result` holds once a bill has been analysed.
+//
+// It is no longer always null: the first bill to go all the way through
+// this pipeline was analysed on 2026-11-11, so real analyses exist now and
+// the "nothing visibly changes until real data exists" reasoning behind the
+// old mock fallback has expired with it.
 export type BillAnalysis = {
   analysisSummary: string;
   memberName: string;
@@ -38,6 +39,16 @@ export type BillIssue = {
   potentialSavings: string | null;
 };
 
+/**
+ * A FIXTURE FOR TESTS. Never render this to a customer.
+ *
+ * It was the fallback on /dashboard/documents/[id] for any bill without an
+ * analysis, which meant a real customer opening their own un-analysed bill
+ * was shown a complete fabricated medical record: patient "Dave J.
+ * Collins", member id "UCH-810-4474", four invented clinical line items,
+ * ten errors found and $2,500 of savings. None of it theirs, all of it
+ * presented as theirs. Use EMPTY_BILL_ANALYSIS for that case instead.
+ */
 export const MOCK_BILL_ANALYSIS: BillAnalysis = {
   analysisSummary:
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin ultricies fringilla diam, a egestas tellus ultricies et. Maecenas nec erat non nulla commodo ultricies at eu nisl. Proin egestas, nisi a tristique commodo, libero nulla convallis felis, eget pretium tellus tortor id nisl. Aliquam a auctor nisi. Maecenas",
@@ -71,4 +82,27 @@ export const MOCK_BILL_ANALYSIS: BillAnalysis = {
   ],
   overBilled: "$5590",
   adjustedCharges: "$2500",
+};
+
+/**
+ * What to show for a bill that has not been analysed: the same shape, with
+ * nothing invented in it. Blank strings and empty lists render as the
+ * page's own empty states, which is the truth — this bill has not been
+ * read yet — rather than someone else's bill.
+ */
+export const EMPTY_BILL_ANALYSIS: BillAnalysis = {
+  analysisSummary: "",
+  memberName: "",
+  memberId: "",
+  group: "",
+  claimNumber: "",
+  accountNumber: "",
+  amountBreakdown: [],
+  lineItems: [],
+  errorsFound: 0,
+  estimatedSavings: "",
+  detectedIssues: [],
+  issues: [],
+  overBilled: "",
+  adjustedCharges: "",
 };

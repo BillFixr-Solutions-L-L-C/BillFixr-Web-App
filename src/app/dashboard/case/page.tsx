@@ -511,7 +511,11 @@ export default function ActiveCasePage() {
               )}
             </div>
             <div className="relative mt-4 overflow-hidden">
-              <BillPreview />
+              <BillPreview
+                src={activeBillDoc?.previewUrl ?? null}
+                isImage={activeBillDoc?.isImage ?? true}
+                fileName={activeBillDoc?.filename ?? null}
+              />
               <WatermarkOverlay />
             </div>
           </div>
@@ -541,7 +545,11 @@ export default function ActiveCasePage() {
                     className="pointer-events-none h-[320px] w-full rounded-lg border border-gray-100"
                   />
                 ) : (
-                  <BillPreview />
+                  // No adjusted bill exists until the provider sends one,
+                  // so there is nothing real to show. It used to render a
+                  // fabricated statement here, behind a blur, which read as
+                  // a preview of a document that does not exist.
+                  <BillPreview fileName={null} />
                 )}
               </div>
               <div className="absolute inset-0 flex items-center justify-center">

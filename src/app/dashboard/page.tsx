@@ -46,12 +46,35 @@ const emptyStats = {
   appealsGenerated: "0",
 };
 
-const finalStats = {
-  billsAnalyzed: "1",
-  savingsFound: "$2,345",
-  errorsDetected: "2",
-  appealsGenerated: "1",
-};
+// There is no `finalStats` constant any more, deliberately.
+//
+// It used to be { billsAnalyzed: "1", savingsFound: "$2,345",
+// errorsDetected: "2", appealsGenerated: "1" } and was shown verbatim the
+// moment a bill reached the negotiating stage. On the first real run
+// through this flow (2026-11-11) the analysis found **$0.00** of savings
+// and the screen told the customer $2,345. The provider column beside it
+// read "Crown health..." while the bill was from North Valley Hospital.
+//
+// A placeholder that only appears on an empty screen is a placeholder. One
+// that appears on top of a real analysed bill, in the same shape as the
+// real answer, is the product lying to someone who has paid. The numbers
+// below come from the analysis response instead.
+function formatMoney(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return "—";
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  });
+}
+
+// A real 0 and a missing value are different things and must not collapse
+// into the same display: "$0" means the analysis found nothing to save,
+// "—" means nobody has worked it out.
+function numberOrNull(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 export default function DashboardHome() {
   const [stage, setStage] = useState<Stage>("upload");
@@ -240,6 +263,13 @@ export default function DashboardHome() {
   // `await`, i.e. genuinely async from React's perspective.
   const scanStartedRef = useRef<string | null>(null);
 
+  // What the analysis actually found, straight from the route's response.
+  // Null until it has answered, so the cards can say "—" rather than a
+  // number nobody computed.
+  const [analysis, setAnalysis] = useState<{ errorsDetected: number | null; savingsFound: number | null } | null>(
+    null,
+  );
+
   async function runScan(forCaseId: string) {
     const analysisRes = await fetch("/api/dev/process-with-ai", {
       method: "POST",
@@ -267,6 +297,12 @@ export default function DashboardHome() {
       return;
     }
 
+    // The route already returns both figures. They were being thrown away
+    // and the screen showed a hardcoded $2,345 instead.
+    setAnalysis({
+      errorsDetected: numberOrNull(analysisBody?.errorsDetected),
+      savingsFound: numberOrNull(analysisBody?.savingsFound),
+    });
     setStage("negotiating");
   }
 
@@ -285,7 +321,18 @@ export default function DashboardHome() {
   }
 
   const hasFile = stage === "scanning" || stage === "negotiating";
-  const stats = stage === "negotiating" ? finalStats : emptyStats;
+  const stats =
+    stage === "negotiating"
+      ? {
+          billsAnalyzed: "1",
+          savingsFound: formatMoney(analysis?.savingsFound ?? null),
+          errorsDetected: analysis?.errorsDetected === null || analysis === null ? "—" : String(analysis.errorsDetected),
+          // The engine drafts the dispute letter as part of starting the
+          // negotiation, and the stage only becomes `negotiating` once it
+          // confirms one is running — so by here there is exactly one.
+          appealsGenerated: "1",
+        }
+      : emptyStats;
 
   return (
     <div>
@@ -368,8 +415,12 @@ export default function DashboardHome() {
                 </thead>
                 <tbody>
                   <tr className="border-t border-gray-50">
-                    <td className="px-4 py-3 text-gray-800">{fileName || "Crown Med Hosp..."}</td>
-                    <td className="px-4 py-3 text-gray-600">Crown health...</td>
+                    <td className="px-4 py-3 text-gray-800">{fileName || "—"}</td>
+                    {/* The provider the bill was actually read as, or that
+                        the customer typed on the information step. It used
+                        to be the literal string "Crown health...", shown
+                        next to a real analysed bill from somewhere else. */}
+                    <td className="px-4 py-3 text-gray-600">{caseInformation.hospitalName || "—"}</td>
                     <td className="px-4 py-3 text-gray-600">
                       {uploadedAt
                         ? new Date(uploadedAt).toLocaleDateString("en-US", {
@@ -380,8 +431,12 @@ export default function DashboardHome() {
                         : "—"}
                     </td>
                     <td className="px-4 py-3 font-medium text-accent-600">Negotiating</td>
-                    <td className="px-4 py-3 font-medium text-red-500">2 found</td>
-                    <td className="px-4 py-3 text-gray-800">$2,345</td>
+                    <td className="px-4 py-3 font-medium text-red-500">
+                      {analysis?.errorsDetected === null || analysis === null
+                        ? "—"
+                        : `${analysis.errorsDetected} found`}
+                    </td>
+                    <td className="px-4 py-3 text-gray-800">{formatMoney(analysis?.savingsFound ?? null)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -609,8 +664,12 @@ export default function DashboardHome() {
             >
               ✕
             </button>
-            <p className="mb-4 text-sm font-semibold text-gray-800">{fileName || "Crown Med Hosp..."}</p>
-            <BillPreview />
+            <p className="mb-4 text-sm font-semibold text-gray-800">{fileName || "Your bill"}</p>
+            <BillPreview
+              src={filePreviews[0] ?? null}
+              isImage={pendingFile?.type.startsWith("image/") ?? false}
+              fileName={fileName}
+            />
           </div>
         </div>
       )}
