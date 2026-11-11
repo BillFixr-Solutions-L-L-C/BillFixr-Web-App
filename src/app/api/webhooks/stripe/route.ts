@@ -110,20 +110,33 @@ async function handleSucceeded(admin: ReturnType<typeof createAdminClient>, inte
     }
   }
 
-  if (record.status !== "paid") {
-    const { error: payError } = await admin
-      .from("payment_records")
-      .update({ status: "paid", card_brand: cardBrand, card_last4: cardLast4 })
-      .eq("id", record.id);
-    if (payError) throw new Error(`Failed to mark payment paid: ${payError.message}`);
-  }
-
+  // The case is created and linked BEFORE the payment is marked paid.
+  //
+  // The order used to be the other way round, and it stranded real paid
+  // cases. GET /api/payments/status reports `status` and `case_id` from
+  // this same row, and the dashboard polls it every 1.5s and moves on the
+  // instant it sees `paid`. With `paid` written first there was a window --
+  // a case insert plus two more round trips wide -- in which the client was
+  // told "paid" while `case_id` was still null and the `cases` row was not
+  // yet committed. The dashboard then advanced to its `scanning` stage with
+  // no case id, and the effect that kicks off the analysis is gated on
+  // having one, so the bill was never analysed and no negotiation was ever
+  // started. Nothing recovered it: the stage is client-only state that
+  // resets on reload, and the admin retry button is deliberately inert.
+  //
+  // Observed twice in production on 2026-11-10/11: both cases sat at
+  // `scanning` with a paid $5 fee, no analysis, no negotiation.
+  //
+  // Writing `paid` last makes it mean what the client reads it as: the case
+  // exists and is linked. Everything here is safe to repeat, so a retry
+  // after a half-finished run still completes.
   if (record.type === "commitment_fee" && record.bill_id) {
     // Defense in depth on top of the event-dedupe table above: never
     // create a second case for the same bill even if this handler somehow
     // runs twice for one payment.
     const { data: existingCase } = await admin.from("cases").select("id").eq("bill_id", record.bill_id).maybeSingle();
-    if (!existingCase) {
+    let caseId = existingCase?.id as string | undefined;
+    if (!caseId) {
       const { data: bill } = await admin.from("bills").select("user_id").eq("id", record.bill_id).maybeSingle();
       if (!bill) {
         throw new Error(`Paid commitment fee for a bill that no longer exists: ${record.bill_id}`);
@@ -138,9 +151,30 @@ async function handleSucceeded(admin: ReturnType<typeof createAdminClient>, inte
       if (caseError || !newCase) {
         throw new Error(`Failed to create case for paid bill ${record.bill_id}: ${caseError?.message ?? "no row returned"}`);
       }
-      await admin.from("payment_records").update({ case_id: newCase.id }).eq("id", record.id);
+      caseId = newCase.id;
     }
-  } else if (record.type === "success_fee" && record.case_id) {
+    // Linked before `paid` is written, for the same reason: this is the
+    // field the client reads the case id out of.
+    if (!record.case_id) {
+      const { error: linkError } = await admin
+        .from("payment_records")
+        .update({ case_id: caseId })
+        .eq("id", record.id);
+      if (linkError) {
+        throw new Error(`Failed to link case ${caseId} to payment ${record.id}: ${linkError.message}`);
+      }
+    }
+  }
+
+  if (record.status !== "paid") {
+    const { error: payError } = await admin
+      .from("payment_records")
+      .update({ status: "paid", card_brand: cardBrand, card_last4: cardLast4 })
+      .eq("id", record.id);
+    if (payError) throw new Error(`Failed to mark payment paid: ${payError.message}`);
+  }
+
+  if (record.type === "success_fee" && record.case_id) {
     // Paying the success fee is what actually completes a case in the
     // resolved -> payment_pending -> paid -> closed state machine.
     const { data: completedCase, error: caseError } = await admin
