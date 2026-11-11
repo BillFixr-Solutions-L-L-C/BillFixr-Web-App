@@ -11,6 +11,7 @@ import FlowCard from "@/components/dashboard/FlowCard";
 import BillPreview from "@/components/dashboard/BillPreview";
 import { createClient } from "@/lib/supabase/client";
 import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
+import { stepAfterPayment } from "@/lib/postPaymentStep";
 import { prepareBillFile } from "@/lib/billUpload";
 import CaseInformationStep, { type CaseInformation } from "@/components/dashboard/CaseInformationStep";
 
@@ -202,20 +203,28 @@ export default function DashboardHome() {
     const result = await pollPaymentStatus(intentId);
     setConfirmingPayment(false);
 
-    if (result.status === "failed") {
-      setPaymentError("Payment failed. Please try again.");
-      return;
+    // The poll already carries the case id — GET /api/payments/status
+    // returns it off the same `payment_records` row it reads the status
+    // from — so it is taken from there rather than racing the webhook with
+    // a second query. The `cases` lookup remains only as a fallback for a
+    // payment marked paid before the webhook learned to link the case.
+    let fallbackCaseId: string | null = null;
+    if (result.status === "paid" && !result.caseId) {
+      const supabase = createClient();
+      const { data: caseRow } = await supabase.from("cases").select("id").eq("bill_id", billId).maybeSingle();
+      fallbackCaseId = caseRow?.id ?? null;
     }
-    if (result.status === "pending") {
-      // Webhook hasn't landed yet within our poll window — stay on the
-      // payment screen; a retry can reuse the same intent.
-      setPaymentError("Still confirming your payment — please wait a moment and try again.");
+
+    // The decision — including the refusal to enter a stage that cannot
+    // progress — lives in src/lib/postPaymentStep.ts, where it can be
+    // tested without rendering this page.
+    const step = stepAfterPayment(result, fallbackCaseId);
+    if (!step.proceed) {
+      setPaymentError(step.message);
       return;
     }
 
-    const supabase = createClient();
-    const { data: caseRow } = await supabase.from("cases").select("id").eq("bill_id", billId).maybeSingle();
-    if (caseRow) setCaseId(caseRow.id);
+    setCaseId(step.caseId);
     setStage("scanning");
   }
 

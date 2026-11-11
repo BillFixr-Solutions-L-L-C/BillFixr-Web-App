@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import PageHeading from "@/components/dashboard/PageHeading";
 import PaymentForm from "@/components/dashboard/PaymentForm";
@@ -75,35 +75,39 @@ export default function ActiveCasePage() {
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [successFeePercentage, setSuccessFeePercentage] = useState<number | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-      const [{ data }, { data: settings }] = await Promise.all([
-        supabase
-          .from("cases")
-          .select(
-            "id, status, bills(filename, storage_url, uploaded_at, provider_name), errors_detected, savings_found, appeal_letter_text, ai_summary_text, letter_sent_at, adjusted_total, negotiation_id",
-          )
-          .eq("user_id", user.id)
-          // Completed cases live on their own page (/dashboard/completed).
-          // The just-paid confirmation still shows here from local state.
-          .not("status", "in", `(${COMPLETED_STATUSES.join(",")})`)
-          .order("created_at", { ascending: false }),
-        supabase.from("app_settings").select("success_fee_percentage").eq("id", 1).single(),
-      ]);
-      setCases((data as unknown as CaseRow[]) ?? []);
-      if (settings?.success_fee_percentage != null) setSuccessFeePercentage(Number(settings.success_fee_percentage));
+  // Extracted from the mount effect so the recovery below can re-read the
+  // rows after resuming an analysis, rather than patching local state with
+  // a guess at what the server now holds.
+  const loadCases = useCallback(async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
       setLoading(false);
+      return;
     }
-    load();
+    const [{ data }, { data: settings }] = await Promise.all([
+      supabase
+        .from("cases")
+        .select(
+          "id, status, bills(filename, storage_url, uploaded_at, provider_name), errors_detected, savings_found, appeal_letter_text, ai_summary_text, letter_sent_at, adjusted_total, negotiation_id",
+        )
+        .eq("user_id", user.id)
+        // Completed cases live on their own page (/dashboard/completed).
+        // The just-paid confirmation still shows here from local state.
+        .not("status", "in", `(${COMPLETED_STATUSES.join(",")})`)
+        .order("created_at", { ascending: false }),
+      supabase.from("app_settings").select("success_fee_percentage").eq("id", 1).single(),
+    ]);
+    setCases((data as unknown as CaseRow[]) ?? []);
+    if (settings?.success_fee_percentage != null) setSuccessFeePercentage(Number(settings.success_fee_percentage));
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    loadCases();
+  }, [loadCases]);
 
   // Formats the same way admins enter it (e.g. "30" or "27.5"), never a
   // trailing ".00" for the common whole-number case.
@@ -205,6 +209,59 @@ export default function ActiveCasePage() {
   // case actually stands is to ask it when the page opens. Only cases the
   // engine is running have a negotiation_id, so everything else — and the
   // whole app while the engine is undeployed — skips this entirely.
+  // Recovery for a case that was paid for but never analysed.
+  //
+  // The analysis used to run in exactly one place: an effect on the upload
+  // screen, fired once, gated on a case id the client had just raced the
+  // Stripe webhook for. Lose that race and the case landed here at
+  // `scanning` with no analysis and no negotiation, and nothing in the
+  // product could ever start it — the upload screen's stage is client-only
+  // state that resets on reload, and the admin retry button is inert by
+  // design. Two real paid cases were stranded that way on 2026-11-10/11.
+  //
+  // The webhook ordering fix stops new ones happening. This is what gets
+  // the existing ones moving, and the second chance that means a single
+  // missed moment is no longer terminal. /api/dev/process-with-ai is
+  // idempotent — it returns the stored analysis rather than re-paying for
+  // one — so running it on open is safe for a case that already has it.
+  const [recovering, setRecovering] = useState(false);
+  const recoveryStartedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!selectedCase) return;
+    // Only a case that is genuinely stuck before the analysis: still
+    // scanning, no negotiation, and nothing read yet.
+    const stuck =
+      selectedCase.status === "scanning" &&
+      !selectedCase.negotiation_id &&
+      selectedCase.errors_detected === null &&
+      !selectedCase.appeal_letter_text;
+    if (!stuck || recoveryStartedRef.current === selectedCase.id) return;
+
+    recoveryStartedRef.current = selectedCase.id;
+    setRecovering(true);
+    (async () => {
+      try {
+        const res = await fetch("/api/dev/process-with-ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caseId: selectedCase.id }),
+        });
+        if (!res.ok) {
+          // Left for the next open to try again rather than reported here:
+          // the customer did not ask for this and can do nothing about it.
+          recoveryStartedRef.current = null;
+          console.error("Could not resume the analysis for case", selectedCase.id, res.status);
+          return;
+        }
+        // Reload so the analysis, the status and the negotiation link all
+        // come from the server rather than being guessed at here.
+        await loadCases();
+      } finally {
+        setRecovering(false);
+      }
+    })();
+  }, [selectedCase, loadCases]);
+
   const [negotiation, setNegotiation] = useState<AutomationNegotiation | null>(null);
   useEffect(() => {
     let cancelled = false;
