@@ -2,6 +2,13 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock } from "@/test/supabaseMock";
 
+vi.mock("next/navigation", () => ({
+  // The navbar now carries the language switcher, which refreshes the
+  // route so server components re-read the language cookie.
+  useRouter: () => ({ refresh: vi.fn() }),
+  usePathname: () => "/",
+}));
+
 const serverMock = createSupabaseMock();
 // The page reads with the service role: app_settings is not visible to a
 // signed-out visitor under RLS.

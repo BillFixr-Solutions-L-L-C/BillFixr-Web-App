@@ -5,6 +5,9 @@ import Sidebar from "./Sidebar";
 let pathname = "/dashboard";
 vi.mock("next/navigation", () => ({
   usePathname: () => pathname,
+  // The sidebar now carries the language switcher, which refreshes the
+  // route so server components re-read the language cookie.
+  useRouter: () => ({ refresh: vi.fn() }),
 }));
 
 const USER = { name: "Jane Doe", status: "active" as const, avatarUrl: null };

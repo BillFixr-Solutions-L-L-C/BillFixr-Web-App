@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { describeMissing, missingRequiredInformation, REQUIRED_LABELS } from "@/lib/requiredInformation";
+import { useT } from "@/lib/i18n/client";
 
 // Fields the AI can read straight off the uploaded bill. The two email
 // addresses are deliberately absent — they aren't printed on a bill and
@@ -125,6 +126,7 @@ function Section({
   // looks confident about it. The button waits for the address.
   canSearch: boolean;
 }) {
+  const t = useT();
   return (
     <section>
       <h2 className="font-serif text-2xl font-bold text-gray-900">{title}</h2>
@@ -165,7 +167,7 @@ function Section({
                     className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#0f7545] px-4 py-2 text-xs font-semibold text-[#0f7545] hover:bg-primary-50 disabled:opacity-60"
                   >
                     <SparkIcon />
-                    {searchingKey === f.key ? "Searching…" : "Search by AI"}
+                    {searchingKey === f.key ? t("info.searching") : t("info.searchByAi")}
                   </button>
                 )}
               </div>
@@ -187,7 +189,7 @@ function Section({
           disabled={editing}
           className="rounded-full border border-gray-200 px-10 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
         >
-          Edit
+          {t("info.edit")}
         </button>
         <button
           type="button"
@@ -195,7 +197,7 @@ function Section({
           disabled={!editing || saving}
           className="rounded-full bg-[#0f7545] px-10 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
         >
-          {saving ? "Saving…" : "Save"}
+          {saving ? t("info.saving") : t("info.save")}
         </button>
       </div>
     </section>
@@ -213,6 +215,7 @@ export default function CaseInformationStep({
   previews: string[];
   onContinue: () => void;
 }) {
+  const t = useT();
   const [values, setValues] = useState(initial);
   const [editing, setEditing] = useState<"personal" | "hospital" | null>(null);
   const [saving, setSaving] = useState(false);
@@ -446,11 +449,11 @@ export default function CaseInformationStep({
           a document is idiomatic -- but the doubled letter reads as a typo
           on screen, and it was read as one. */}
       {reading && (
-        <p className="text-center text-sm text-gray-500">Reading the details of your bill…</p>
+        <p className="text-center text-sm text-gray-500">{t("upload.readingDetails")}</p>
       )}
 
       <Section
-        title="Personal Information"
+        title={t("info.personal")}
         fields={PERSONAL}
         values={values}
         editing={editing === "personal"}
@@ -467,7 +470,7 @@ export default function CaseInformationStep({
       <hr className="border-gray-200" />
 
       <Section
-        title="Hospital Information"
+        title={t("info.hospital")}
         fields={HOSPITAL}
         values={values}
         editing={editing === "hospital"}
@@ -493,7 +496,7 @@ export default function CaseInformationStep({
       )}
 
       {error && <p className="text-center text-sm text-danger">{error}</p>}
-      {savedNote && !error && <p className="text-center text-sm text-primary-600">Information saved.</p>}
+      {savedNote && !error && <p className="text-center text-sm text-primary-600">{t("info.saved")}</p>}
       {missing.length > 0 && !error && (
         <p className="text-center text-sm text-accent-600">{describeMissing(missing)}</p>
       )}
@@ -508,7 +511,7 @@ export default function CaseInformationStep({
           title={missing.length > 0 ? describeMissing(missing) : undefined}
           className="rounded-full bg-[#0f7545] px-12 py-3 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {saving ? "Saving…" : "Save Information"}
+          {saving ? t("info.saving") : t("info.saveInformation")}
         </button>
       </div>
     </div>

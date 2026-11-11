@@ -6,20 +6,27 @@ import { usePathname } from "next/navigation";
 import Logo from "@/components/Logo";
 import NavIcon, { type NavIconName } from "@/components/dashboard/NavIcon";
 import { SOCIAL_LINKS } from "@/components/socialLinks";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/messages";
 
-type Link = { label: string; href: string; icon: NavIconName };
+// The label is a message KEY, not a label. A module-level constant is
+// evaluated once at import, so translating here would freeze whichever
+// language happened to load first -- the switcher would move the page and
+// leave the sidebar behind.
+type Link = { labelKey: MessageKey; href: string; icon: NavIconName };
 
 const topLinks: Link[] = [
-  { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
-  { label: "My Document", href: "/dashboard/documents", icon: "document" },
-  { label: "Active Case", href: "/dashboard/case", icon: "case" },
-  { label: "Completed Case", href: "/dashboard/completed", icon: "completed" },
-  { label: "Support", href: "/dashboard/support", icon: "support" },
+  { labelKey: "nav.dashboard", href: "/dashboard", icon: "dashboard" },
+  { labelKey: "nav.documents", href: "/dashboard/documents", icon: "document" },
+  { labelKey: "nav.activeCase", href: "/dashboard/case", icon: "case" },
+  { labelKey: "nav.completedCase", href: "/dashboard/completed", icon: "completed" },
+  { labelKey: "nav.support", href: "/dashboard/support", icon: "support" },
 ];
 
 const bottomLinks: Link[] = [
-  { label: "Settings", href: "/dashboard/settings", icon: "settings" },
-  { label: "Log out", href: "/dashboard/logout", icon: "logout" },
+  { labelKey: "nav.settings", href: "/dashboard/settings", icon: "settings" },
+  { labelKey: "nav.logout", href: "/dashboard/logout", icon: "logout" },
 ];
 
 function MenuIcon() {
@@ -30,7 +37,7 @@ function MenuIcon() {
   );
 }
 
-function NavLink({ label, href, icon, onNavigate }: Link & { onNavigate?: () => void }) {
+function NavLink({ label, href, icon, onNavigate }: Omit<Link, "labelKey"> & { label: string; onNavigate?: () => void }) {
   const pathname = usePathname();
   // Detail routes live under their section (e.g. /dashboard/documents/[id]),
   // so the section stays highlighted while you're inside one. /dashboard
@@ -60,6 +67,7 @@ export default function Sidebar({
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
+  const t = useT();
 
   return (
     <>
@@ -109,7 +117,7 @@ export default function Sidebar({
 
         <nav className="mt-6 flex flex-col gap-2">
           {topLinks.map((link) => (
-            <NavLink key={link.href} {...link} onNavigate={close} />
+            <NavLink key={link.href} {...link} label={t(link.labelKey)} onNavigate={close} />
           ))}
         </nav>
 
@@ -117,9 +125,16 @@ export default function Sidebar({
 
         <nav className="flex flex-col gap-2">
           {bottomLinks.map((link) => (
-            <NavLink key={link.href} {...link} onNavigate={close} />
+            <NavLink key={link.href} {...link} label={t(link.labelKey)} onNavigate={close} />
           ))}
         </nav>
+
+        {/* The site's language. Changing it here does NOT change the
+            language BillFixr writes to this customer in -- that is fixed
+            at registration. See src/lib/language.ts. */}
+        <div className="mt-6 flex justify-center">
+          <LanguageSwitcher />
+        </div>
 
         <div className="mt-6 flex items-center justify-center gap-2">
           {SOCIAL_LINKS.filter((s) => s.href).map((s) => (
