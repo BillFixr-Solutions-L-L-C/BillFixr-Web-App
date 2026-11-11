@@ -410,8 +410,11 @@ export default function CaseInformationStep({
 
   return (
     <div className="space-y-10">
+      {/* "of", not "off". Both are correct English -- to read a value off
+          a document is idiomatic -- but on screen the doubled letter reads
+          as a typo, and it was reported as one. */}
       {reading && (
-        <p className="text-center text-sm text-gray-500">Reading the details off your bill…</p>
+        <p className="text-center text-sm text-gray-500">Reading the details of your bill…</p>
       )}
 
       <Section
