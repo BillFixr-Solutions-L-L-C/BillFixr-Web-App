@@ -110,6 +110,18 @@ export type ProviderContact = {
    */
   email_confirmed: boolean;
   email_unconfirmed_reason: string | null;
+  /**
+   * Where to POST a dispute. Engine-only, and not the same thing as
+   * `mailing_address`: that is where the provider is registered with CMS,
+   * usually the clinic. This is where it asks patients to send billing
+   * mail. For a provider that publishes no email at all -- which is most
+   * of them -- this is the only way to reach its billing office.
+   */
+  billing_address: string | null;
+  billing_address_source_url: string | null;
+  billing_address_confirmed: boolean;
+  billing_address_unconfirmed_reason: string | null;
+  billing_address_is_remit_to: boolean;
   /** Facilities sharing the name, for the customer to choose between. */
   candidates: AutomationProviderCandidate[];
   /** Which backend actually answered, so a caller can say where a value came from. */
@@ -149,6 +161,11 @@ export async function findProviderContact(provider: {
       email_source_url: contact.email_source_url ?? null,
       email_confirmed: contact.email_confirmed ?? true,
       email_unconfirmed_reason: contact.email_unconfirmed_reason ?? null,
+      billing_address: contact.billing_address ?? null,
+      billing_address_source_url: contact.billing_address_source_url ?? null,
+      billing_address_confirmed: contact.billing_address_confirmed ?? true,
+      billing_address_unconfirmed_reason: contact.billing_address_unconfirmed_reason ?? null,
+      billing_address_is_remit_to: contact.billing_address_is_remit_to ?? false,
       candidates: contact.candidates ?? [],
       source: backend,
     };
@@ -170,6 +187,11 @@ export async function findProviderContact(provider: {
     email_source_url: null,
     email_confirmed: true,
     email_unconfirmed_reason: null,
+    billing_address: null,
+    billing_address_source_url: null,
+    billing_address_confirmed: true,
+    billing_address_unconfirmed_reason: null,
+    billing_address_is_remit_to: false,
     candidates: [],
     source: backend,
   };

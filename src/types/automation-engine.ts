@@ -87,6 +87,21 @@ export type EngineBillData = {
 // "needs_review" for keyword rules, estimates, or unverified benchmark rates.
 // A hospital's billing contacts. Every field except the notes can be null: the engine never guesses, and
 // most hospitals publish no billing email. The first three fields match AiProviderContact in ai-service.ts.
+/** Where the provider tells patients to POST a payment or a billing
+ *  dispute. Distinct from `mailing_address`, which is where it is
+ *  registered with CMS -- usually the clinic itself. A health system
+ *  routes billing mail somewhere else entirely, and a dispute posted to a
+ *  hospital's front desk goes unread. Engine-only. */
+export type EngineBillingAddress = {
+  billing_address: string | null;
+  billing_address_source_url: string | null;
+  billing_address_confirmed: boolean;
+  billing_address_unconfirmed_reason: string | null;
+  /** True when it is published as a "remit to" address rather than merely
+   *  the provider's street address. */
+  billing_address_is_remit_to: boolean;
+};
+
 export type AutomationProviderCandidate = {
   npi: string;
   name: string;
@@ -116,6 +131,16 @@ export type AutomationProviderContact = {
   // to post a letter or ring the billing line, never enough to send an
   // email.
   mailing_address: string | null;
+  // Where the provider asks patients to POST a payment or a billing
+  // dispute — a different question from where it is registered with CMS,
+  // which is usually the clinic itself. A health system routes billing
+  // mail to a separate office or a PO box, and a dispute sent to a
+  // hospital's front desk goes unread.
+  billing_address: string | null;
+  billing_address_source_url: string | null;
+  billing_address_confirmed: boolean;
+  billing_address_unconfirmed_reason: string | null;
+  billing_address_is_remit_to: boolean;
   npi: string | null;
   facility_type: string | null;
   fax: string | null;

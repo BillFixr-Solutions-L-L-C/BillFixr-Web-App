@@ -118,6 +118,13 @@ describe("findProviderContact", () => {
       // left off: toEqual treats a missing key and an undefined one as
       // equal, so omitting these would pass even if the seam dropped them.
       mailing_address: null,
+      // Where to POST a dispute. Null here for the same reason: a curated
+      // entry carries an email, so nothing went looking for an address.
+      billing_address: null,
+      billing_address_source_url: null,
+      billing_address_confirmed: true,
+      billing_address_unconfirmed_reason: null,
+      billing_address_is_remit_to: false,
       npi: null,
       facility_type: null,
       fax: null,
