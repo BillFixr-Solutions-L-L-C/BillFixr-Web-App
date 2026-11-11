@@ -8,6 +8,8 @@ import { friendlyAuthError, DISPOSABLE_EMAIL_MESSAGE } from "@/lib/authErrors";
 import { isBlockedEmailDomain } from "@/lib/emailDomain";
 import PasswordInput from "@/components/auth/PasswordInput";
 import CheckYourEmail from "@/components/auth/CheckYourEmail";
+import { DISPLAY_LANGUAGE_COOKIE, FIRST_VISIT_LANGUAGE_COOKIE, registrationLanguage } from "@/lib/language";
+import { readLanguageCookie } from "@/lib/languageCookie";
 
 export default function SignUpForm() {
   const router = useRouter();
@@ -41,10 +43,23 @@ export default function SignUpForm() {
       return;
     }
 
+    // The language they chose on their first visit, carried into the
+    // account. The trigger on auth.users copies it onto the profile as
+    // `communication_language`, and from then on it is what BillFixr
+    // writes to them in -- regardless of what the site's display-language
+    // switcher is later set to. See src/lib/language.ts.
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name } },
+      options: {
+        data: {
+          name,
+          communication_language: registrationLanguage(
+            readLanguageCookie(FIRST_VISIT_LANGUAGE_COOKIE),
+            readLanguageCookie(DISPLAY_LANGUAGE_COOKIE),
+          ),
+        },
+      },
     });
 
     if (error) {

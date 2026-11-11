@@ -7,6 +7,9 @@ import { isBackendConfigured } from "@/lib/aiStack";
 import { providerHasResponded } from "@/lib/negotiationStatus";
 import { sendEmail } from "@/lib/email";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
+import { emailCopy } from "@/lib/emailCopy";
+import { customerLanguage } from "@/lib/language";
+import { escapeHtml } from "@/lib/html";
 
 // The ending for a case the provider never answered.
 //
@@ -150,21 +153,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // actually happening rather than to the request being made.
   let emailed = false;
   if (!alreadyClosed) {
+    // communication_language, not the display cookie: what they chose on
+    // their first visit is what we write to them in. See lib/language.ts.
     const { data: profile } = await admin
       .from("profiles")
-      .select("name, email")
+      .select("name, email, communication_language")
       .eq("id", caseRow.user_id)
       .single();
     if (profile?.email) {
       try {
+        const copy = emailCopy("closedNoResponse", customerLanguage(profile));
         await sendEmail({
           to: profile.email,
-          subject: CLOSED_NO_RESPONSE_EMAIL.subject,
+          subject: copy.subject,
           html: renderEmailCard({
-            title: CLOSED_NO_RESPONSE_EMAIL.heading,
-            heading: CLOSED_NO_RESPONSE_EMAIL.heading,
-            bodyHtml: emailParagraph(CLOSED_NO_RESPONSE_EMAIL.body),
-            cta: { text: "View Your Case", href: "https://billfixr.com/dashboard/case" },
+            title: copy.heading,
+            heading: copy.heading,
+            bodyHtml: emailParagraph(escapeHtml(copy.body)),
+            cta: { text: copy.cta, href: "https://billfixr.com/dashboard/case" },
           }),
         });
         emailed = true;
