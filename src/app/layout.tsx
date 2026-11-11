@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { getDisplayLanguage } from "@/lib/i18n/server";
+import { LanguageProvider } from "@/lib/i18n/client";
 
 const aeonik = localFont({
   variable: "--font-sans",
@@ -38,13 +40,22 @@ export const metadata: Metadata = {
   description: "AI-powered medical bill review and negotiation.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+// Async so the display language is read from the cookie on the server.
+// Seeding the provider here is what makes the first paint already correct
+// -- reading the cookie in an effect would render English and then flip,
+// which is visible and reads as a bug.
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const language = await getDisplayLanguage();
   return (
     <html
-      lang="en"
+      // Moves with the content: a screen reader announcing Spanish text
+      // with an English voice is worse than no translation.
+      lang={language}
       className={`${aeonik.variable} ${playfair.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        <LanguageProvider language={language}>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }

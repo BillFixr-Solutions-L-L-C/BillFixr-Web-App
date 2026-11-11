@@ -22,9 +22,45 @@ export type EmailMessage = {
   cta: string;
 };
 
-type MessageId = "responseReceived" | "closedNoResponse" | "stillWaiting";
+type MessageId = "responseReceived" | "closedNoResponse" | "stillWaiting" | "welcome" | "accountDeleted";
 
 const MESSAGES: Record<MessageId, Record<Language, EmailMessage>> = {
+  // The first thing we ever send them.
+  welcome: {
+    en: {
+      subject: "Welcome to BillFixr",
+      heading: "Welcome to BillFixr",
+      body: "Here's how it works, from the bill you upload to the money you keep.",
+      cta: "Upload Your Bill",
+    },
+    es: {
+      subject: "Bienvenido a BillFixr",
+      heading: "Bienvenido a BillFixr",
+      body: "Así funciona, desde la factura que sube hasta el dinero que se ahorra.",
+      cta: "Suba su factura",
+    },
+  },
+
+  // Account closed at their request.
+  accountDeleted: {
+    en: {
+      subject: "Your BillFixr account has been deleted",
+      heading: "Your account has been deleted",
+      body:
+        "Your BillFixr account and the bills stored with it have been permanently removed. " +
+        "Nothing of yours remains on our systems.",
+      cta: "Visit BillFixr",
+    },
+    es: {
+      subject: "Su cuenta de BillFixr ha sido eliminada",
+      heading: "Su cuenta ha sido eliminada",
+      body:
+        "Su cuenta de BillFixr y las facturas guardadas en ella se eliminaron de forma permanente. " +
+        "No queda nada suyo en nuestros sistemas.",
+      cta: "Ir a BillFixr",
+    },
+  },
+
   // The provider wrote back.
   responseReceived: {
     en: {
@@ -108,3 +144,19 @@ export function fillCopy(text: string, values: Record<string, string>): string {
     Object.prototype.hasOwnProperty.call(values, key) ? values[key] : whole,
   );
 }
+
+/** The four "how it works" steps in the welcome email. */
+export const WELCOME_STEPS: Record<Language, { title: string; description: string }[]> = {
+  en: [
+    { title: "Upload Your Bill", description: "Upload your medical bill" },
+    { title: "We Review & Detect Errors", description: "AI scans for overcharges and hidden fees" },
+    { title: "We Negotiate For You", description: "Our experts negotiate with providers" },
+    { title: "You Save Money", description: "Receive your reduced bill" },
+  ],
+  es: [
+    { title: "Suba su factura", description: "Suba su factura médica" },
+    { title: "Revisamos y detectamos errores", description: "La IA busca cobros excesivos y cargos ocultos" },
+    { title: "Negociamos por usted", description: "Nuestro equipo negocia con los proveedores" },
+    { title: "Usted ahorra", description: "Reciba su factura reducida" },
+  ],
+};
