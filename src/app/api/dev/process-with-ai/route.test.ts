@@ -241,14 +241,38 @@ describe("POST /api/dev/process-with-ai", () => {
     expect(adminMock.from).toHaveBeenCalledWith("bill_extractions");
   });
 
-  it("refuses a second re-scan", async () => {
+  it("allows a second re-scan", async () => {
+    // Raised from one to two on 2026-11-13, so there is a look available
+    // after reading the analysis and the appeal letter together, just
+    // before Proceed. One used is no longer the end of the allowance.
     serverMock.getUser.mockResolvedValue({ data: { user: USER } });
-    queueCaseRow({ analysis_result: { already: "there" } }, { rescanned_at: "2026-10-05T00:00:00Z" });
+    queueCaseRow(
+      { analysis_result: { already: "there" } },
+      { rescanned_at: "2026-10-05T00:00:00Z", rescan_count: 1 },
+    );
+    adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf"]), error: null });
+    adminMock.queueResult("bill_extractions", { data: null, error: null });
+    processCase.mockResolvedValue(AI_RESPONSE);
 
     const res = await POST(makeRequest({ caseId: "case-1", force: true }));
 
+    expect(res.status).toBe(200);
+    expect(processCase).toHaveBeenCalled();
+  });
+
+  it("refuses the third re-scan", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    queueCaseRow(
+      { analysis_result: { already: "there" } },
+      { rescanned_at: "2026-10-05T00:00:00Z", rescan_count: 2 },
+    );
+
+    const res = await POST(makeRequest({ caseId: "case-1", force: true }));
+    const body = await res.json();
+
     expect(res.status).toBe(409);
-    expect((await res.json()).error).toMatch(/already re-scanned/i);
+    expect(body.error).toMatch(/used all 2 re-scans/i);
+    expect(body.rescansRemaining).toBe(0);
     expect(processCase).not.toHaveBeenCalled();
   });
 
@@ -288,6 +312,10 @@ describe("POST /api/dev/process-with-ai", () => {
       errorsDetected: 1,
       savingsFound: 100,
       negotiation: { running: true, reason: null },
+      // Reported so the screen can say how many are left without a
+      // refetch. Two here: this was a first scan, not a re-scan, so
+      // nothing has been spent.
+      rescansRemaining: 2,
     });
     expect(processCase).toHaveBeenCalledWith("case-1", expect.objectContaining({ filename: "bill.pdf" }));
 

@@ -100,6 +100,15 @@ export default function Navbar({ dashboardHref = null }: { dashboardHref?: strin
               {link.label}
             </Link>
           ))}
+
+          {/* The switcher in the header row is `hidden sm:flex`, so on a
+              phone it is not on screen at all -- which left a Spanish
+              speaker on mobile with no way to change the language. It
+              lives in the menu too, which is where a phone user looks for
+              it anyway. */}
+          <div className="mt-2 border-t border-primary-100 pt-3">
+            <LanguageSwitcher />
+          </div>
         </nav>
       )}
     </header>
