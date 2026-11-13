@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import PageHeading from "@/components/dashboard/PageHeading";
 import { createClient } from "@/lib/supabase/client";
+import { useT } from "@/lib/i18n/client";
 
 const CHAT_POLL_MS = 3000;
 const ONLINE_POLL_MS = 30000;
@@ -36,6 +37,7 @@ function UserAvatar({ avatarUrl, className = "" }: { avatarUrl: string | null; c
 const complaintOptions = ["Payment issue", "Case status question", "Document access", "Other"];
 
 export default function SupportPage() {
+  const t = useT();
   const [chatOpen, setChatOpen] = useState(false);
   const [chatLoaded, setChatLoaded] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -261,7 +263,7 @@ export default function SupportPage() {
 
   return (
     <div className="relative">
-      <PageHeading title="Support" />
+      <PageHeading title={t("support.title")} />
 
       <div className="space-y-4">
         <select
@@ -272,7 +274,7 @@ export default function SupportPage() {
           }}
           className="w-full rounded-lg border border-primary-200 px-4 py-2.5 text-sm text-gray-500 focus:border-primary-400 focus:outline-none"
         >
-          <option value="">Select your complain</option>
+          <option value="">{t("support.selectComplaint")}</option>
           {complaintOptions.map((option) => (
             <option key={option} value={option}>
               {option}
@@ -281,7 +283,7 @@ export default function SupportPage() {
         </select>
 
         <div>
-          <label className="text-sm text-gray-700">Message</label>
+          <label className="text-sm text-gray-700">{t("support.message")}</label>
           <textarea
             rows={12}
             value={message}
@@ -358,7 +360,7 @@ export default function SupportPage() {
           {historyOpen ? (
             <div className="flex-1 space-y-2 overflow-y-auto py-4">
               {pastTickets.length === 0 ? (
-                <p className="text-center text-sm text-gray-400">No past conversations yet.</p>
+                <p className="text-center text-sm text-gray-400">{t("support.noConversations")}</p>
               ) : (
                 pastTickets.map((t) => (
                   <button
@@ -442,7 +444,7 @@ export default function SupportPage() {
                       {"☆".repeat(5 - activeTicket.chat_rating)}
                     </p>
                   )}
-                  <p className="mb-2 text-xs text-gray-400">This conversation has ended.</p>
+                  <p className="mb-2 text-xs text-gray-400">{t("support.conversationEnded")}</p>
                   <button
                     type="button"
                     onClick={startNewConversation}
