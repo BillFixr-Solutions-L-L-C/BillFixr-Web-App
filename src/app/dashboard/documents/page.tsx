@@ -2,6 +2,7 @@ import PageHeading from "@/components/dashboard/PageHeading";
 import DocumentsTable, { type DocumentRow } from "@/components/dashboard/DocumentsTable";
 import { createClient } from "@/lib/supabase/server";
 import { buildCaseDocumentRows } from "@/lib/caseDocuments";
+import { getT } from "@/lib/i18n/server";
 
 type CaseWithBill = {
   id: string;
@@ -15,6 +16,7 @@ type CaseWithBill = {
 // appeal letter, and anything staff have uploaded against the case. The
 // bill they uploaded themselves is deliberately not listed here.
 export default async function MyDocumentsPage() {
+  const t = await getT();
   const supabase = await createClient();
   const {
     data: { user },
@@ -63,7 +65,7 @@ export default async function MyDocumentsPage() {
 
   return (
     <div>
-      <PageHeading title="My Documents" />
+      <PageHeading title={t("docs.title")} />
       <DocumentsTable rows={rows} />
     </div>
   );

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useT } from "@/lib/i18n/client";
 
 export type CompletedCaseRow = {
   id: string;
@@ -20,6 +23,7 @@ function formatSavings(value: number | null) {
 }
 
 export default function CompletedCasesTable({ rows }: { rows: CompletedCaseRow[] }) {
+  const t = useT();
   if (rows.length === 0) {
     return (
       <div className="rounded-2xl bg-white p-6 shadow-sm">
@@ -36,12 +40,12 @@ export default function CompletedCasesTable({ rows }: { rows: CompletedCaseRow[]
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
-              <th className="px-4 py-3">Bill</th>
-              <th className="px-4 py-3">Provider</th>
-              <th className="px-4 py-3">Upload Date</th>
-              <th className="px-4 py-3">Appeal Letter</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Proposed Savings</th>
+              <th className="px-4 py-3">{t("table.bill")}</th>
+              <th className="px-4 py-3">{t("table.provider")}</th>
+              <th className="px-4 py-3">{t("table.uploadDate")}</th>
+              <th className="px-4 py-3">{t("completed.appealLetter")}</th>
+              <th className="px-4 py-3">{t("table.status")}</th>
+              <th className="px-4 py-3">{t("completed.proposedSavings")}</th>
             </tr>
           </thead>
           <tbody>
@@ -56,7 +60,7 @@ export default function CompletedCasesTable({ rows }: { rows: CompletedCaseRow[]
                 <td className="px-4 py-3 text-gray-600">{row.provider}</td>
                 <td className="px-4 py-3 text-gray-600">{formatDate(row.uploadedAt)}</td>
                 <td className="px-4 py-3 text-primary-600">{row.appealLetterSent ? "Sent" : "—"}</td>
-                <td className="px-4 py-3 font-medium text-primary-600">Completed</td>
+                <td className="px-4 py-3 font-medium text-primary-600">{t("completed.completed")}</td>
                 <td className="px-4 py-3 text-gray-800">{formatSavings(row.savings)}</td>
               </tr>
             ))}

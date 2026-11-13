@@ -2,8 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { COMPLETED_STATUSES } from "@/lib/caseStatus";
 import PageHeading from "@/components/dashboard/PageHeading";
 import CompletedCasesTable, { type CompletedCaseRow } from "@/components/dashboard/CompletedCasesTable";
+import { getT } from "@/lib/i18n/server";
 
 export default async function CompletedCasesPage() {
+  const t = await getT();
   const supabase = await createClient();
   const {
     data: { user },
@@ -27,7 +29,7 @@ export default async function CompletedCasesPage() {
 
   return (
     <div>
-      <PageHeading title="Completed Case" />
+      <PageHeading title={t("completed.title")} />
       <CompletedCasesTable rows={rows} />
     </div>
   );
