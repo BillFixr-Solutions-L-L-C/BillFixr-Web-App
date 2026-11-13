@@ -15,6 +15,7 @@ import { COMPLETED_STATUSES } from "@/lib/caseStatus";
 import { agreedSavings, clientNotices, describeNegotiationStatus, providerHasResponded } from "@/lib/negotiationStatus";
 import type { AutomationNegotiation } from "@/types/automation-engine";
 import { useT } from "@/lib/i18n/client";
+import { DEFAULT_LANGUAGE, customerLanguage, type Language } from "@/lib/language";
 
 // "letter"/"summary" are gone: the provider's reply is a row in the
 // document list now, and the route to payment is Check and Proceed.
@@ -76,6 +77,11 @@ export default function ActiveCasePage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [successFeePercentage, setSuccessFeePercentage] = useState<number | null>(null);
+  // The language we WRITE to this customer in, from their profile. Not
+  // the display language: someone who flips the site to English to read
+  // a page still gets the account of their provider's reply in the
+  // language they signed up in. See src/lib/language.ts.
+  const [writeLanguage, setWriteLanguage] = useState<Language>(DEFAULT_LANGUAGE);
 
   // Reads the rows and returns them rather than setting state itself.
   //
@@ -92,7 +98,7 @@ export default function ActiveCasePage() {
     } = await supabase.auth.getUser();
     if (!user) return null;
 
-    const [{ data }, { data: settings }] = await Promise.all([
+    const [{ data }, { data: settings }, { data: profile }] = await Promise.all([
       supabase
         .from("cases")
         .select(
@@ -104,8 +110,10 @@ export default function ActiveCasePage() {
         .not("status", "in", `(${COMPLETED_STATUSES.join(",")})`)
         .order("created_at", { ascending: false }),
       supabase.from("app_settings").select("success_fee_percentage").eq("id", 1).single(),
+      supabase.from("profiles").select("communication_language").eq("id", user.id).single(),
     ]);
     return {
+      language: customerLanguage(profile),
       rows: (data as unknown as CaseRow[]) ?? [],
       successFee: settings?.success_fee_percentage != null ? Number(settings.success_fee_percentage) : null,
     };
@@ -118,6 +126,7 @@ export default function ActiveCasePage() {
       if (cancelled) return;
       if (loaded) {
         setCases(loaded.rows);
+        setWriteLanguage(loaded.language);
         if (loaded.successFee != null) setSuccessFeePercentage(loaded.successFee);
       }
       setLoading(false);
@@ -275,6 +284,7 @@ export default function ActiveCasePage() {
       const loaded = await fetchCases();
       if (cancelled || !loaded) return;
       setCases(loaded.rows);
+      setWriteLanguage(loaded.language);
     })();
     return () => {
       cancelled = true;
@@ -318,7 +328,7 @@ export default function ActiveCasePage() {
     };
   }, [selectedCase]);
 
-  const negotiationStatus = negotiation ? describeNegotiationStatus(negotiation.status) : null;
+  const negotiationStatus = negotiation ? describeNegotiationStatus(negotiation.status, writeLanguage) : null;
   const negotiationSavings = negotiation ? agreedSavings(negotiation) : null;
   const notices = negotiation ? clientNotices(negotiation) : [];
 

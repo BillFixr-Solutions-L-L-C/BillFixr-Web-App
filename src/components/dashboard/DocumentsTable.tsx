@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import DocumentViewer from "./DocumentViewer";
+import { useT } from "@/lib/i18n/client";
 
 export type DocumentRow = {
   key: string;
@@ -19,6 +20,7 @@ function formatDate(value: string | null) {
 }
 
 export default function DocumentsTable({ rows }: { rows: DocumentRow[] }) {
+  const t = useT();
   const [viewing, setViewing] = useState<DocumentRow | null>(null);
 
   if (rows.length === 0) {
@@ -34,9 +36,9 @@ export default function DocumentsTable({ rows }: { rows: DocumentRow[] }) {
       <table className="w-full min-w-[560px] text-left text-sm">
         <thead>
           <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
-            <th className="px-4 py-3">Document</th>
-            <th className="px-4 py-3">Provider</th>
-            <th className="px-4 py-3">Date</th>
+            <th className="px-4 py-3">{t("docs.document")}</th>
+            <th className="px-4 py-3">{t("table.provider")}</th>
+            <th className="px-4 py-3">{t("docs.date")}</th>
             <th className="px-4 py-3" />
           </tr>
         </thead>
@@ -68,7 +70,7 @@ export default function DocumentsTable({ rows }: { rows: DocumentRow[] }) {
                     View
                   </button>
                 ) : (
-                  <span className="text-sm text-gray-300">View</span>
+                  <span className="text-sm text-gray-300">{t("docs.view")}</span>
                 )}
               </td>
             </tr>

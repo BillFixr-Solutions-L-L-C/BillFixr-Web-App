@@ -1,7 +1,11 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useT } from "@/lib/i18n/client";
 
 export default function BeforeYouPay() {
+  const t = useT();
   return (
     <section className="flex min-h-screen flex-col items-center justify-center bg-primary-50 px-6 py-24 text-center">
       <div className="mx-auto max-w-4xl">
@@ -14,10 +18,10 @@ export default function BeforeYouPay() {
         />
 
         <h2 className="text-2xl font-semibold text-[#003322] sm:whitespace-nowrap sm:text-4xl">
-          Before you pay, let BillFixr read it
+          {t("home.beforeHeading")}
         </h2>
         <p className="mt-4 text-lg text-primary-900/50">
-          Because bills shouldn&apos;t come as a burden.
+          {t("home.beforeSub")}
         </p>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
@@ -25,13 +29,13 @@ export default function BeforeYouPay() {
             href="/signup"
             className="rounded-full bg-[#0f7545] px-8 py-3.5 text-sm font-semibold text-white transition hover:bg-primary-700"
           >
-            Review Your Bill
+            {t("home.reviewYourBill")}
           </Link>
           <a
             href="mailto:support@billfixr.com"
             className="rounded-full border border-[#0f7545] px-8 py-3.5 text-sm font-semibold text-[#0f7545] transition hover:bg-white"
           >
-            Contact us
+            {t("home.contactUs")}
           </a>
         </div>
       </div>
