@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
 import { escapeHtml } from "@/lib/html";
+import { emailCopy, WELCOME_STEPS, type EmailMessage } from "@/lib/emailCopy";
+import { customerLanguage, type Language } from "@/lib/language";
 
 // Fired once, right after a new user's confirmation link lands them back
 // in the app (see /welcome). Idempotent via profiles.welcome_email_sent_at
@@ -18,7 +20,7 @@ export async function POST() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("name, email, welcome_email_sent_at")
+    .select("name, email, welcome_email_sent_at, communication_language")
     .eq("id", user.id)
     .single();
   if (!profile) {
@@ -29,11 +31,15 @@ export async function POST() {
     return NextResponse.json({ ok: true, alreadySent: true });
   }
 
+  // Their language, from the profile -- not whatever the site happens to
+  // be displaying when they click.
+  const language = customerLanguage(profile);
+  const copy = emailCopy("welcome", language);
   try {
     await sendEmail({
       to: profile.email,
-      subject: "Welcome to BillFixr",
-      html: welcomeEmailHtml({ name: profile.name }),
+      subject: copy.subject,
+      html: welcomeEmailHtml({ name: profile.name, copy, language }),
     });
   } catch (err) {
     console.error("Welcome email send failed for", user.id, err);
@@ -45,13 +51,16 @@ export async function POST() {
   return NextResponse.json({ ok: true });
 }
 
-function welcomeEmailHtml({ name }: { name: string }) {
-  const steps = [
-    { title: "Upload Your Bill", description: "Upload your medical bill" },
-    { title: "We Review & Detect Errors", description: "AI scans for overcharges and hidden fees" },
-    { title: "We Negotiate For You", description: "Our experts negotiate with providers" },
-    { title: "You Save Money", description: "Receive your reduced bill" },
-  ];
+function welcomeEmailHtml({
+  name,
+  copy,
+  language,
+}: {
+  name: string;
+  copy: EmailMessage;
+  language: Language;
+}) {
+  const steps = WELCOME_STEPS[language] ?? WELCOME_STEPS.en;
 
   const stepRows = steps
     .map(
@@ -79,11 +88,11 @@ function welcomeEmailHtml({ name }: { name: string }) {
     .join("");
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${language}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Welcome to BillFixr</title>
+<title>${escapeHtml(copy.subject)}</title>
 </head>
 <body style="margin:0; padding:0; background-color:#f4fffa; font-family:Arial, Helvetica, sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4fffa; padding:40px 16px;">
@@ -109,14 +118,14 @@ function welcomeEmailHtml({ name }: { name: string }) {
           <tr>
             <td style="padding:0 40px 8px;">
               <h1 style="margin:0; font-size:22px; line-height:1.3; color:#003322; font-weight:700; text-align:center;">
-                You're in, ${escapeHtml(name)}
+                ${escapeHtml(name ? `${copy.heading} — ${name}` : copy.heading)}
               </h1>
             </td>
           </tr>
           <tr>
             <td style="padding:16px 40px 24px;">
               <p style="margin:0; font-size:14px; line-height:1.6; color:#4d6276; text-align:center;">
-                Your account is confirmed and ready. Here's how BillFixr works:
+                ${escapeHtml(copy.body)}
               </p>
             </td>
           </tr>

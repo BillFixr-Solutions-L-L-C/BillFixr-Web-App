@@ -1,4 +1,6 @@
 import { sendEmail } from "@/lib/email";
+import { emailCopy } from "@/lib/emailCopy";
+import { customerLanguage, type Language } from "@/lib/language";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { escapeHtml } from "@/lib/html";
 import { providerHasResponded } from "@/lib/negotiationStatus";
@@ -24,6 +26,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // a case forward to the point the provider replied, and never rewrites a
 // settled, paid or closed case from the engine's view of the negotiation.
 const ADVANCEABLE = new Set(["uploaded", "scanning", "analyzed", "letter_sent", "awaiting_response"]);
+
+/** "Hi <name>," in the customer's language. Separate from the body copy
+ *  because the name is interpolated and the punctuation differs. */
+function greeting(name: string | null | undefined, language: Language): string {
+  const who = (name ?? "").trim();
+  if (language === "es") return who ? `Hola ${who},` : "Hola,";
+  return who ? `Hi ${who},` : "Hi there,";
+}
 
 export const RESPONSE_RECEIVED_EMAIL = {
   subject: "Your provider responded",
@@ -68,23 +78,27 @@ export async function syncCaseFromNegotiation(
   }
 
   let emailed = false;
+  // communication_language, not the display cookie: what the customer
+  // chose when they first arrived is what we write to them in, however
+  // they have since set the website. See src/lib/language.ts.
   const { data: profile } = await admin
     .from("profiles")
-    .select("name, email")
+    .select("name, email, communication_language")
     .eq("id", caseRow.user_id)
     .single();
   if (profile?.email) {
     try {
+      const copy = emailCopy("responseReceived", customerLanguage(profile));
       await sendEmail({
         to: profile.email,
-        subject: RESPONSE_RECEIVED_EMAIL.subject,
+        subject: copy.subject,
         html: renderEmailCard({
-          title: RESPONSE_RECEIVED_EMAIL.heading,
-          heading: RESPONSE_RECEIVED_EMAIL.heading,
+          title: copy.heading,
+          heading: copy.heading,
           bodyHtml: emailParagraph(
-            `Hi ${escapeHtml(profile.name ?? "there")}, ${escapeHtml(RESPONSE_RECEIVED_EMAIL.body)}`,
+            `${escapeHtml(greeting(profile.name, customerLanguage(profile)))} ${escapeHtml(copy.body)}`,
           ),
-          cta: { text: "View Your Case", href: "https://billfixr.com/dashboard/case" },
+          cta: { text: copy.cta, href: "https://billfixr.com/dashboard/case" },
         }),
       });
       emailed = true;

@@ -1,3 +1,10 @@
+"use client";
+
+import { useT } from "@/lib/i18n/client";
+
+// Message keys, not strings: this constant is evaluated once at import,
+// so translating here would freeze whichever language loaded first and
+// the switcher would leave this section in the old one.
 const steps = [
   {
     icon: (
@@ -9,8 +16,8 @@ const steps = [
         strokeLinejoin="round"
       />
     ),
-    title: "Upload Your Bill",
-    description: "Upload your medical bill",
+    titleKey: "home.step1",
+    bodyKey: "home.step1Body",
   },
   {
     icon: (
@@ -19,8 +26,8 @@ const steps = [
         <path d="m19 19-4.5-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       </>
     ),
-    title: "We Review & Detect Errors",
-    description: "AI scans for overcharges and hidden fees",
+    titleKey: "home.step2",
+    bodyKey: "home.step2Body",
   },
   {
     icon: (
@@ -39,8 +46,8 @@ const steps = [
         />
       </>
     ),
-    title: "We Negotiate For You",
-    description: "Our experts negotiate with providers.",
+    titleKey: "home.step3",
+    bodyKey: "home.step3Body",
   },
   {
     icon: (
@@ -50,12 +57,13 @@ const steps = [
         <circle cx="14" cy="10" r="2.1" stroke="currentColor" strokeWidth="1.4" />
       </>
     ),
-    title: "You Save Money",
-    description: "Receive your reduced bill",
+    titleKey: "home.step4",
+    bodyKey: "home.step4Body",
   },
-];
+] as const;
 
 export default function HowItWorks() {
+  const t = useT();
   return (
     <section id="how-it-works" className="relative overflow-hidden bg-primary-900 px-6 py-24">
       <div
@@ -71,7 +79,7 @@ export default function HowItWorks() {
         <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((step) => (
             <div
-              key={step.title}
+              key={step.titleKey}
               className="flex min-h-[280px] flex-col rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/[0.03] p-7"
             >
               <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-primary-600">
@@ -80,8 +88,8 @@ export default function HowItWorks() {
                 </svg>
               </span>
               <div className="mt-auto pt-10">
-                <h3 className="text-xl font-bold leading-snug text-white">{step.title}</h3>
-                <p className="mt-2 text-sm text-white/60">{step.description}</p>
+                <h3 className="text-xl font-bold leading-snug text-white">{t(step.titleKey)}</h3>
+                <p className="mt-2 text-sm text-white/60">{t(step.bodyKey)}</p>
               </div>
             </div>
           ))}

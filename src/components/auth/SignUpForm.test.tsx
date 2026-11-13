@@ -70,9 +70,31 @@ describe("SignUpForm", () => {
     expect(signUp).toHaveBeenCalledWith({
       email: "jane@example.com",
       password: "Password1",
-      options: { data: { name: "Jane Doe" } },
+      // communication_language rides along with the name. The trigger on
+      // auth.users copies it onto the profile, and it is what BillFixr
+      // writes to this customer in from then on -- whatever the website's
+      // display-language switcher is later set to.
+      options: { data: { name: "Jane Doe", communication_language: "en" } },
     });
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it("registers the language chosen on the first visit, not the one on screen now", async () => {
+    // The requirement: someone who arrived in Spanish and later flipped
+    // the site to English is still a Spanish speaker for correspondence.
+    document.cookie = "bf_lang_chosen=es; path=/";
+    document.cookie = "bf_lang_display=en; path=/";
+    signUp.mockResolvedValue({ data: { session: null }, error: null });
+    const user = userEvent.setup();
+    render(<SignUpForm />);
+
+    await fillAndSubmit(user, { email: "jane@example.com" });
+
+    await waitFor(() => expect(signUp).toHaveBeenCalled());
+    expect(signUp.mock.calls[0][0].options.data.communication_language).toBe("es");
+
+    document.cookie = "bf_lang_chosen=; path=/; max-age=0";
+    document.cookie = "bf_lang_display=; path=/; max-age=0";
   });
 
   it("redirects straight to the dashboard when signUp returns an active session", async () => {

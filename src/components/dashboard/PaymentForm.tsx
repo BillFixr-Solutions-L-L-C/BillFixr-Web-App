@@ -9,6 +9,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { getStripe } from "@/lib/stripeClient";
 import type { Appearance } from "@stripe/stripe-js";
+import { useT } from "@/lib/i18n/client";
 
 // Stripe's Payment Element renders inside its own cross-origin iframe, so
 // it can't inherit this app's Tailwind classes or CSS variables (a
@@ -80,6 +81,7 @@ function CheckoutInner({
   total: string;
   onSuccess: () => void;
 }) {
+  const tr = useT();
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -226,10 +228,10 @@ function CheckoutInner({
         disabled={!stripe || submitting}
         className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary-600 py-3.5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:opacity-60"
       >
-        <LockIcon /> {submitting ? "Processing…" : "Confirm Payment"}
+        <LockIcon /> {submitting ? tr("pay.processing") : tr("pay.confirm")}
       </button>
       <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-gray-400">
-        <LockIcon /> Payments are encrypted and securely processed
+        <LockIcon /> {tr("pay.secure")}
       </p>
     </form>
   );

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { escapeHtml } from "@/lib/html";
+import { emailCopy, fillCopy, type EmailMessage } from "@/lib/emailCopy";
+import { customerLanguage, type Language } from "@/lib/language";
 
 // Vercel Cron hits this on a schedule (see vercel.json). Sends the
 // 3/7/21-day follow-up emails for cases stuck in awaiting_response.
@@ -16,7 +18,7 @@ export async function GET(request: Request) {
 
   const { data: dueFollowUps, error } = await supabase
     .from("follow_ups")
-    .select("id, cadence_day, cases(id, bills(filename), profiles!cases_user_id_fkey(name, email))")
+    .select("id, cadence_day, cases(id, bills(filename), profiles!cases_user_id_fkey(name, email, communication_language))")
     .eq("sent", false)
     .lte("scheduled_at", new Date().toISOString());
 
@@ -28,7 +30,7 @@ export async function GET(request: Request) {
     id: string;
     cases: {
       bills: { filename: string } | null;
-      profiles: { name: string; email: string } | null;
+      profiles: { name: string; email: string; communication_language: string | null } | null;
     } | null;
   };
 
@@ -41,10 +43,14 @@ export async function GET(request: Request) {
     if (!profile?.email) continue;
 
     try {
+      // Their language, from the profile. This email says "no action is
+      // needed", which is only reassuring if they can read it.
+      const language = customerLanguage(profile);
+      const copy = emailCopy("stillWaiting", language);
       await sendEmail({
         to: profile.email,
-        subject: "Update on your BillFixr case",
-        html: followUpEmailHtml({ name: profile.name, filename }),
+        subject: copy.subject,
+        html: followUpEmailHtml({ name: profile.name, filename, copy, language }),
       });
       await supabase.from("follow_ups").update({ sent: true }).eq("id", followUp.id);
       sentCount += 1;
@@ -57,13 +63,27 @@ export async function GET(request: Request) {
   return NextResponse.json({ processed: dueFollowUps?.length ?? 0, sent: sentCount });
 }
 
-function followUpEmailHtml({ name, filename }: { name: string; filename: string }) {
+function followUpEmailHtml({
+  name,
+  filename,
+  copy,
+  language,
+}: {
+  name: string;
+  filename: string;
+  copy: EmailMessage;
+  language: Language;
+}) {
+  // "Hi <name>," in their language. The name is interpolated and the
+  // punctuation differs, so it is not part of the body copy.
+  const who = (name ?? "").trim();
+  const greeting = language === "es" ? (who ? `Hola ${who},` : "Hola,") : who ? `Hi ${who},` : "Hi there,";
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${language}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Update on your BillFixr case</title>
+<title>${escapeHtml(copy.subject)}</title>
 </head>
 <body style="margin:0; padding:0; background-color:#f4fffa; font-family:Arial, Helvetica, sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4fffa; padding:40px 16px;">
@@ -87,16 +107,14 @@ function followUpEmailHtml({ name, filename }: { name: string; filename: string 
           <tr>
             <td style="padding:0 40px 8px;">
               <h1 style="margin:0; font-size:22px; line-height:1.3; color:#003322; font-weight:700; text-align:center;">
-                Still waiting on your provider
+                ${escapeHtml(copy.heading)}
               </h1>
             </td>
           </tr>
           <tr>
             <td style="padding:16px 40px 0;">
               <p style="margin:0; font-size:14px; line-height:1.6; color:#4d6276; text-align:center;">
-                Hi ${escapeHtml(name)}, we're still waiting to hear back from your provider about
-                ${escapeHtml(filename)}. No action is needed on your end &mdash; we'll keep
-                following up and let you know as soon as there's a response.
+                ${escapeHtml(greeting)} ${escapeHtml(fillCopy(copy.body, { filename }))}
               </p>
             </td>
           </tr>
@@ -107,7 +125,7 @@ function followUpEmailHtml({ name, filename }: { name: string; filename: string 
                   <td align="center" style="border-radius:999px; background-color:#0f7545;">
                     <a href="https://billfixr.com/dashboard/case"
                        style="display:inline-block; padding:14px 40px; font-size:14px; font-weight:700; color:#ffffff; text-decoration:none; border-radius:999px;">
-                      View Your Case
+                      ${escapeHtml(copy.cta)}
                     </a>
                   </td>
                 </tr>

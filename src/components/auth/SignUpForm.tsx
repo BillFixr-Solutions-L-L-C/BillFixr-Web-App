@@ -8,8 +8,12 @@ import { friendlyAuthError, DISPOSABLE_EMAIL_MESSAGE } from "@/lib/authErrors";
 import { isBlockedEmailDomain } from "@/lib/emailDomain";
 import PasswordInput from "@/components/auth/PasswordInput";
 import CheckYourEmail from "@/components/auth/CheckYourEmail";
+import { DISPLAY_LANGUAGE_COOKIE, FIRST_VISIT_LANGUAGE_COOKIE, registrationLanguage } from "@/lib/language";
+import { readLanguageCookie } from "@/lib/languageCookie";
+import { useT } from "@/lib/i18n/client";
 
 export default function SignUpForm() {
+  const t = useT();
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -41,10 +45,23 @@ export default function SignUpForm() {
       return;
     }
 
+    // The language they chose on their first visit, carried into the
+    // account. The trigger on auth.users copies it onto the profile as
+    // `communication_language`, and from then on it is what BillFixr
+    // writes to them in -- regardless of what the site's display-language
+    // switcher is later set to. See src/lib/language.ts.
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name } },
+      options: {
+        data: {
+          name,
+          communication_language: registrationLanguage(
+            readLanguageCookie(FIRST_VISIT_LANGUAGE_COOKIE),
+            readLanguageCookie(DISPLAY_LANGUAGE_COOKIE),
+          ),
+        },
+      },
     });
 
     if (error) {
@@ -80,7 +97,7 @@ export default function SignUpForm() {
     <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
       <input
         type="text"
-        placeholder="Full Name"
+        placeholder={t("auth.fullName")}
         required
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -88,21 +105,21 @@ export default function SignUpForm() {
       />
       <input
         type="email"
-        placeholder="Email"
+        placeholder={t("auth.email")}
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         className="rounded-full border border-gray-200 px-5 py-3.5 text-sm focus:border-primary-400 focus:outline-none"
       />
       <PasswordInput
-        placeholder="Password"
+        placeholder={t("auth.password")}
         required
         minLength={8}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
       <PasswordInput
-        placeholder="Confirm Password"
+        placeholder={t("auth.confirmPassword")}
         required
         minLength={8}
         value={confirmPassword}
@@ -120,13 +137,13 @@ export default function SignUpForm() {
         disabled={loading}
         className="mt-2 rounded-full bg-primary-600 py-3.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
       >
-        {loading ? "Creating account…" : "Sign up"}
+        {loading ? t("auth.creating") : t("auth.signUpCta")}
       </button>
 
       <p className="text-center text-sm text-gray-500">
-        Already have an account?{" "}
+        {t("auth.haveAccount")}{" "}
         <Link href="/login" className="font-medium text-accent-600">
-          Log in
+          {t("auth.logIn")}
         </Link>
       </p>
     </form>

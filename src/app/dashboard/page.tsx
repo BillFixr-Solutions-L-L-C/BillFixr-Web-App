@@ -14,6 +14,7 @@ import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
 import { stepAfterPayment } from "@/lib/postPaymentStep";
 import { prepareBillFile } from "@/lib/billUpload";
 import CaseInformationStep, { type CaseInformation } from "@/components/dashboard/CaseInformationStep";
+import { useT } from "@/lib/i18n/client";
 
 const EMPTY_CASE_INFORMATION: CaseInformation = {
   clientName: "",
@@ -77,6 +78,7 @@ function numberOrNull(value: unknown): number | null {
 }
 
 export default function DashboardHome() {
+  const t = useT();
   const [stage, setStage] = useState<Stage>("upload");
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -376,7 +378,7 @@ export default function DashboardHome() {
                 </button>
               </>
             ) : (
-              <p className="mt-5 text-base text-[#a6b1bb]">Analyzing your bill — this can take a moment...</p>
+              <p className="mt-5 text-base text-[#a6b1bb]">{t("upload.analyzing")}</p>
             )}
           </FlowCard>
         ) : (
@@ -405,12 +407,12 @@ export default function DashboardHome() {
               <table className="w-full min-w-[640px] text-left text-sm">
                 <thead>
                   <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
-                    <th className="px-4 py-3">Bill</th>
-                    <th className="px-4 py-3">Provider</th>
-                    <th className="px-4 py-3">Upload Date</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Errors</th>
-                    <th className="px-4 py-3">Savings</th>
+                    <th className="px-4 py-3">{t("table.bill")}</th>
+                    <th className="px-4 py-3">{t("table.provider")}</th>
+                    <th className="px-4 py-3">{t("table.uploadDate")}</th>
+                    <th className="px-4 py-3">{t("table.status")}</th>
+                    <th className="px-4 py-3">{t("table.errors")}</th>
+                    <th className="px-4 py-3">{t("table.savings")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -430,7 +432,7 @@ export default function DashboardHome() {
                           })
                         : "—"}
                     </td>
-                    <td className="px-4 py-3 font-medium text-accent-600">Negotiating</td>
+                    <td className="px-4 py-3 font-medium text-accent-600">{t("table.negotiating")}</td>
                     <td className="px-4 py-3 font-medium text-red-500">
                       {analysis?.errorsDetected === null || analysis === null
                         ? "—"
@@ -444,8 +446,7 @@ export default function DashboardHome() {
 
             <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-primary-50 px-5 py-4">
               <p className="text-sm text-primary-800">
-                Your errors have been found and negotiation has started. Track the response and
-                next steps from your Active Case.
+                {t("case.negotiationStarted")}
               </p>
               <Link
                 href="/dashboard/case"
@@ -483,7 +484,7 @@ export default function DashboardHome() {
           >
             {stage === "upload" && preparingFile && (
               <div className="flex flex-col items-center">
-                <p className="text-2xl font-bold text-[#003322]">Preparing your file…</p>
+                <p className="text-2xl font-bold text-[#003322]">{t("upload.preparing")}</p>
                 <p className="mt-2 max-w-sm text-base text-[#a6b1bb]">
                   Compressing photos and getting everything ready to upload.
                 </p>
@@ -506,7 +507,7 @@ export default function DashboardHome() {
                     +
                   </span>
                 </span>
-                <p className="mt-4 text-2xl font-bold text-[#003322]">Choose a file</p>
+                <p className="mt-4 text-2xl font-bold text-[#003322]">{t("upload.chooseFile")}</p>
                 <p className="mt-2 max-w-sm text-base text-[#a6b1bb]">
                   Drag and drop your files,{" "}
                   <span className="font-medium text-[#0f7545]">or click here to choose</span> from
@@ -514,7 +515,7 @@ export default function DashboardHome() {
                   multiple photos for a multi-page bill.
                 </p>
                 <span className="mt-5 rounded-full bg-[#0f7545] px-8 py-3 text-base font-semibold text-white">
-                  Upload Your Bill
+                  {t("upload.cta")}
                 </span>
                 <input
                   type="file"
@@ -571,14 +572,14 @@ export default function DashboardHome() {
               <div className="flex flex-col items-center gap-3">
                 <p className="text-2xl font-bold text-[#003322]">Ready for scan</p>
                 <p className="max-w-sm text-base text-[#a6b1bb]">
-                  Your medical bill is ready for scan now, click the button below
+                  {t("upload.readyBody")}
                 </p>
                 <button
                   type="button"
                   onClick={() => setStage("feePrompt")}
                   className="mt-1 rounded-full bg-[#0f7545] px-8 py-3 text-base font-semibold text-white hover:opacity-90"
                 >
-                  Scan now
+                  {t("upload.scanNow")}
                 </button>
               </div>
             )}
@@ -611,7 +612,7 @@ export default function DashboardHome() {
             onClick={handleAgree}
             className="mx-auto mt-8 block rounded-full bg-[#0f7545] px-10 py-3.5 text-sm font-semibold text-white hover:opacity-90"
           >
-            I Agree
+            {t("upload.agree")}
           </button>
         </Modal>
       )}
@@ -619,7 +620,7 @@ export default function DashboardHome() {
       {stage === "feePrompt" && (
         <Modal onClose={() => setStage("ready")}>
           <p className="text-center text-2xl font-bold leading-snug text-[#003322]">
-            Proceed to make your commitment fee while your document is being scanned
+            {t("pay.feePrompt")}
           </p>
           {paymentError && <p className="mt-4 text-center text-sm text-danger">{paymentError}</p>}
           <button
@@ -627,7 +628,7 @@ export default function DashboardHome() {
             onClick={handleProceedToPayment}
             className="mx-auto mt-8 block rounded-full bg-[#0f7545] px-10 py-3.5 text-sm font-semibold text-white hover:opacity-90"
           >
-            Proceed to Payment
+            {t("pay.proceed")}
           </button>
         </Modal>
       )}
@@ -638,12 +639,12 @@ export default function DashboardHome() {
             <>
               <PaymentForm
                 clientSecret={clientSecret}
-                lineItems={[{ label: "Commitment fee", value: "$5" }]}
+                lineItems={[{ label: t("pay.commitmentFee"), value: "$5" }]}
                 total="$5"
                 onSuccess={handlePaymentConfirmed}
               />
               {confirmingPayment && (
-                <p className="mt-3 text-center text-sm text-gray-500">Confirming your payment…</p>
+                <p className="mt-3 text-center text-sm text-gray-500">{t("pay.confirming")}</p>
               )}
               {paymentError && <p className="mt-3 text-center text-sm text-danger">{paymentError}</p>}
             </>

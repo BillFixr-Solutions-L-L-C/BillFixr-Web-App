@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const links = [
   { label: "How it works", href: "/#how-it-works" },
@@ -48,6 +49,10 @@ export default function Navbar({ dashboardHref = null }: { dashboardHref?: strin
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* The first thing a visitor can choose. chooseLanguage() records
+              it as their first-visit language, which becomes the language
+              BillFixr writes to them in once they register. */}
+          <LanguageSwitcher className="hidden sm:flex" />
           {dashboardHref ? (
             <Link
               href={dashboardHref}

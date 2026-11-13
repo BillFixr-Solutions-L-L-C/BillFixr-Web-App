@@ -1,6 +1,13 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import Navbar from "./Navbar";
+
+vi.mock("next/navigation", () => ({
+  // The navbar now carries the language switcher, which refreshes the
+  // route so server components re-read the language cookie.
+  useRouter: () => ({ refresh: vi.fn() }),
+  usePathname: () => "/",
+}));
 
 describe("Navbar", () => {
   it("shows Sign Up and Log in when no one is logged in", () => {

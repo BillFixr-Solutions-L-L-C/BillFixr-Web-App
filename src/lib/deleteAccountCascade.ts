@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
 import { escapeHtml } from "@/lib/html";
+import { emailCopy, type EmailMessage } from "@/lib/emailCopy";
+import { customerLanguage, type Language } from "@/lib/language";
 
 // Deletes everything that references a profile before deleting the auth
 // user itself, since none of those foreign keys are `on delete cascade`.
@@ -10,7 +12,7 @@ import { escapeHtml } from "@/lib/html";
 // deletion happens, since the profile row (and the email address on it)
 // won't exist anymore once this finishes.
 export async function deleteAccountCascade(admin: SupabaseClient, userId: string) {
-  const { data: profile } = await admin.from("profiles").select("name, email").eq("id", userId).single();
+  const { data: profile } = await admin.from("profiles").select("name, email, communication_language").eq("id", userId).single();
 
   const { data: cases } = await admin.from("cases").select("id").eq("user_id", userId);
   const caseIds = (cases ?? []).map((c) => c.id);
@@ -60,12 +62,14 @@ export async function deleteAccountCascade(admin: SupabaseClient, userId: string
 
   const result = await admin.auth.admin.deleteUser(userId);
 
+  const deletionLanguage = customerLanguage(profile);
+  const deletionCopy = emailCopy("accountDeleted", deletionLanguage);
   if (!result.error && profile?.email) {
     try {
       await sendEmail({
         to: profile.email,
-        subject: "Your BillFixr account has been deleted",
-        html: deletionEmailHtml({ name: profile.name }),
+        subject: deletionCopy.subject,
+        html: deletionEmailHtml({ name: profile.name, copy: deletionCopy, language: deletionLanguage }),
       });
     } catch (err) {
       // The deletion itself already succeeded — a failed notification
@@ -117,13 +121,21 @@ async function listFilesRecursively(admin: SupabaseClient, bucket: string, prefi
   return files;
 }
 
-function deletionEmailHtml({ name }: { name: string }) {
+function deletionEmailHtml({
+  name,
+  copy,
+  language,
+}: {
+  name: string;
+  copy: EmailMessage;
+  language: Language;
+}) {
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${language}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Your BillFixr account has been deleted</title>
+<title>${escapeHtml(copy.subject)}</title>
 </head>
 <body style="margin:0; padding:0; background-color:#f4fffa; font-family:Arial, Helvetica, sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4fffa; padding:40px 16px;">
@@ -149,15 +161,14 @@ function deletionEmailHtml({ name }: { name: string }) {
           <tr>
             <td style="padding:0 40px 8px;">
               <h1 style="margin:0; font-size:22px; line-height:1.3; color:#003322; font-weight:700; text-align:center;">
-                Your account has been deleted
+                ${escapeHtml(copy.heading)}
               </h1>
             </td>
           </tr>
           <tr>
             <td style="padding:16px 40px 0;">
               <p style="margin:0; font-size:14px; line-height:1.6; color:#4d6276; text-align:center;">
-                Hi ${escapeHtml(name)}, this confirms your BillFixr account and all associated data (bills,
-                cases, support tickets) have been permanently deleted.
+                ${escapeHtml(name ? `Hi ${name},` : "Hi there,")} ${escapeHtml(copy.body)}
               </p>
             </td>
           </tr>
