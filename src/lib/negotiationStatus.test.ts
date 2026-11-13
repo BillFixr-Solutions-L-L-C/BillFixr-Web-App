@@ -42,11 +42,17 @@ describe("describeNegotiationStatus", () => {
     }
   });
 
-  it("tells the customer they owe nothing when nobody replied", () => {
-    // The engine closes these itself, and a customer seeing "closed"
-    // with no explanation would reasonably assume they still owe a fee.
+  it("says they owe US nothing further, and that the provider's bill still stands", () => {
+    // The engine closes these itself, and a customer seeing "closed" with
+    // no explanation would reasonably assume they still owe a fee. This
+    // used to say a bare "You owe nothing", which solves that and creates
+    // a worse problem: someone whose provider ignored the dispute could
+    // read it as their medical bill being cancelled. The success fee is a
+    // share of the reduction, so silence means no fee -- and nothing at
+    // all about what the hospital is owed.
     const { detail, tone } = describeNegotiationStatus("CLOSED_NO_RESPONSE");
-    expect(detail).toMatch(/owe nothing/i);
+    expect(detail).toMatch(/owe us nothing further/i);
+    expect(detail).toMatch(/bill from the provider still stands/i);
     expect(tone).toBe("attention");
   });
 

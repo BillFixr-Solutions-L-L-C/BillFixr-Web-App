@@ -1,4 +1,6 @@
 import type { AutomationNegotiation, AutomationNegotiationStatus } from "@/types/automation-engine";
+import type { Language } from "@/lib/language";
+import { SUMMARIES_ES } from "@/lib/negotiationStatus.es";
 
 // Turns the engine's status into something a customer can read.
 //
@@ -95,21 +97,51 @@ const SUMMARIES: Record<AutomationNegotiationStatus, NegotiationSummary> = {
   },
   CLOSED_NO_RESPONSE: {
     label: "Closed — no response",
-    detail: "The provider never replied, so we've closed this case. You owe nothing.",
+    // "You owe nothing" used to stand alone here, and it is the most
+    // consequential sentence on this screen. It means no further BillFixr
+    // fee -- the success fee is a share of the reduction, and silence
+    // produces no reduction. A customer whose provider ignored the
+    // dispute could reasonably read the bare version as "my medical bill
+    // is cancelled", which is the opposite of true and the worst possible
+    // thing for this product to imply. Spelled out rather than trusted to
+    // context, and spelled out before it was translated into a second
+    // language where the ambiguity would have been copied.
+    detail:
+      "The provider never replied, so we've closed this case. You owe us nothing further - " +
+      "our fee is a share of what we save you, and there was no reduction. Your bill from the provider still stands.",
     tone: "attention",
   },
 };
 
-export function describeNegotiationStatus(status: string): NegotiationSummary {
-  return (
-    SUMMARIES[status as AutomationNegotiationStatus] ?? {
-      // Reached only if the engine adds a status this app hasn't been
-      // taught. Says nothing it cannot support rather than guessing.
-      label: "In progress",
-      detail: "We're working on this case.",
-      tone: "working",
-    }
-  );
+/**
+ * What this status means, for the customer, in their language.
+ *
+ * `language` is the CUSTOMER's communication language -- taken from the
+ * profile, never from the display cookie. This sentence is our account of
+ * what the provider said, which is exactly the thing that has to arrive
+ * in the language they chose when they signed up.
+ *
+ * Untranslated, deliberately: the provider's own reply, the letters we
+ * send them, and the corrected bill. Only the account of them moves.
+ */
+export function describeNegotiationStatus(
+  status: string,
+  language: Language = "en",
+): NegotiationSummary {
+  const english = SUMMARIES[status as AutomationNegotiationStatus] ?? {
+    // Reached only if the engine adds a status this app hasn't been
+    // taught. Says nothing it cannot support rather than guessing.
+    label: "In progress",
+    detail: "We're working on this case.",
+    tone: "working" as NegotiationTone,
+  };
+  if (language !== "es") return english;
+
+  // Overlaid on the English entry rather than replacing it, so `tone`
+  // comes from one place and a status that has no Spanish yet still
+  // renders -- in English, which is readable, rather than blank.
+  const spanish = SUMMARIES_ES[status as AutomationNegotiationStatus];
+  return spanish ? { ...english, ...spanish } : english;
 }
 
 // Whether the provider has actually written back, which decides if the
