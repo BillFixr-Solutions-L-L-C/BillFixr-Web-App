@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 
 import {
+  DEFAULT_LANGUAGE,
   DISPLAY_LANGUAGE_COOKIE,
   FIRST_VISIT_LANGUAGE_COOKIE,
   asLanguage,
@@ -18,10 +19,20 @@ import { translate, type MessageKey } from "@/lib/i18n/messages";
  * src/lib/language.ts for why the two are kept apart.
  */
 export async function getDisplayLanguage(): Promise<Language> {
-  const jar = await cookies();
-  return asLanguage(
-    jar.get(DISPLAY_LANGUAGE_COOKIE)?.value ?? jar.get(FIRST_VISIT_LANGUAGE_COOKIE)?.value,
-  );
+  try {
+    const jar = await cookies();
+    return asLanguage(
+      jar.get(DISPLAY_LANGUAGE_COOKIE)?.value ?? jar.get(FIRST_VISIT_LANGUAGE_COOKIE)?.value,
+    );
+  } catch {
+    // `cookies()` throws when there is no request scope -- a component
+    // rendered directly in a test, or anything statically evaluated at
+    // build time. A language preference is not worth failing a page over,
+    // so that degrades to English rather than crashing. Found when
+    // translating the pricing page broke its own tests, which render the
+    // server component directly.
+    return DEFAULT_LANGUAGE;
+  }
 }
 
 /** A translator bound to this request's display language, for server components. */

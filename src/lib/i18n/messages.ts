@@ -50,6 +50,61 @@ export const MESSAGES = {
     "home.mailingList": "Join Our Mailing List",
 
     // --- auth ---
+    // --- FAQ ---
+    //
+    // These four answers state eligibility and the fee structure, so they
+    // are the copy where a loose translation does commercial damage rather
+    // than merely reading awkwardly. The Spanish keeps every number, every
+    // condition and every "if" exactly where the English has it.
+    "faq.heading": "Frequently Asked Questions",
+    "faq.sub": "Everything you need to know about the product and bill.",
+    "faq.q1": "Who is eligible?",
+    "faq.a1":
+      "BillFixr is available to individuals 18 years or older residing in the United States. By using the service, you confirm that the medical bill you upload belongs to you or you have legal authorization to act on behalf of the patient.",
+    "faq.q2": "What's the Fees & Payment Terms",
+    "faq.a2":
+      "A small commitment fee is charged when your bill is submitted for analysis. If errors are found and your bill is successfully reduced, a success fee is charged as a percentage of your savings. If no errors are found, no success fee applies.",
+    "faq.q3": "Service Description",
+    "faq.a3":
+      "BillFixr uses AI to scan your medical bill for billing errors, then generates and sends negotiation documents to your provider on your behalf, following up until a resolution is reached.",
+    "faq.q4": "Why is there a five-dollar commitment fee?",
+    // The paragraph breaks are "\n\n" because the component splits on them
+    // to render separate <p> elements. A real newline in the source would
+    // be one paragraph with a line break in it, which looks the same in a
+    // diff and different on screen.
+    "faq.a4":
+      "The five-dollar commitment fee is simply a gentle way to make sure we are supporting people who truly need help. Many people upload bills without any intention of continuing, and that slows down the process for those who are genuinely overwhelmed and looking for real relief.\n\nThis small fee helps us focus our time and energy on you. It also goes directly toward your final BillFixr fee, so you are not paying anything extra.\n\nIt is just a simple step that allows us to begin working on your bill immediately and give you the attention you deserve.",
+    // --- pricing ---
+    //
+    // Fee copy, so every figure stays a placeholder rather than being
+    // written into the sentence. A translated string with a hardcoded "$5"
+    // in it survives a change to COMMITMENT_FEE_CENTS and starts lying.
+    "price.heading": "Pricing",
+    "price.sub":
+      "You pay ${fee} to get your bill reviewed, and a share of what we save you. If we don't find anything, there is nothing more to pay.",
+    "price.commitmentFee": "Commitment fee",
+    "price.successFee": "Success fee",
+    "price.workedExample": "A worked example",
+    "price.exampleIntro": "Say we review a ${bill} bill and get it reduced by ${cut}.",
+    "price.youSave": "You save",
+    "price.successFeeOf": "Success fee ({percent}% of ${cut})",
+    "price.lessCommitment": "Less the commitment fee already paid",
+    "price.totalYouPay": "Total you pay",
+    "price.whatElse": "What else should I know?",
+    "price.noSubscription": "There is no subscription",
+    "price.noSubscriptionBody":
+      "Nothing recurring, and no charge for holding an account. You pay per bill you ask us to review.",
+    "price.ifNoErrors": "What if no errors are found?",
+    "price.ifNoErrorsBody":
+      "Then there is no success fee. You will have paid the ${fee} commitment fee for the review itself, and nothing further.",
+    "price.whenCharged": "When am I charged?",
+    "price.whenChargedBody":
+      "The commitment fee when you submit the bill. The success fee only after your bill has been reduced and you can see the result.",
+    "price.howPay": "How do I pay?",
+    "price.howPayBody": "By card, processed by Stripe. We never see or store your card details.",
+    "price.questions": "Questions about a charge?",
+    "price.questionsBody":
+      "Talk to a person before or after you pay - we would rather answer a question than take a payment someone did not understand.",
     "auth.signIn": "Sign in",
     "auth.signUp": "Create account",
     "auth.email": "Email",
@@ -210,6 +265,33 @@ export const MESSAGES = {
     "home.contactUs": "Contáctenos",
     "home.mailingList": "Únase a nuestra lista de correo",
 
+    // --- pricing ---
+    "price.heading": "Precios",
+    "price.sub":
+      "Usted paga ${fee} para que revisemos su factura, y una parte de lo que le ahorremos. Si no encontramos nada, no hay nada más que pagar.",
+    "price.commitmentFee": "Cuota de compromiso",
+    "price.successFee": "Comisión por resultado",
+    "price.workedExample": "Un ejemplo",
+    "price.exampleIntro": "Supongamos que revisamos una factura de ${bill} y logramos reducirla en ${cut}.",
+    "price.youSave": "Usted ahorra",
+    "price.successFeeOf": "Comisión por resultado ({percent}% de ${cut})",
+    "price.lessCommitment": "Menos la cuota de compromiso ya pagada",
+    "price.totalYouPay": "Total a pagar",
+    "price.whatElse": "¿Qué más debo saber?",
+    "price.noSubscription": "No hay suscripción",
+    "price.noSubscriptionBody":
+      "No hay cargos recurrentes ni cobro por tener una cuenta. Usted paga por cada factura que nos pide revisar.",
+    "price.ifNoErrors": "¿Y si no se encuentran errores?",
+    "price.ifNoErrorsBody":
+      "Entonces no hay comisión por resultado. Habrá pagado la cuota de compromiso de ${fee} por la revisión en sí, y nada más.",
+    "price.whenCharged": "¿Cuándo se me cobra?",
+    "price.whenChargedBody":
+      "La cuota de compromiso al enviar la factura. La comisión por resultado solo después de que su factura se haya reducido y usted pueda ver el resultado.",
+    "price.howPay": "¿Cómo pago?",
+    "price.howPayBody": "Con tarjeta, procesada por Stripe. Nunca vemos ni guardamos los datos de su tarjeta.",
+    "price.questions": "¿Preguntas sobre un cargo?",
+    "price.questionsBody":
+      "Hable con una persona antes o después de pagar: preferimos responder una pregunta que cobrar algo que alguien no entendió.",
     "auth.signIn": "Iniciar sesión",
     "auth.signUp": "Crear cuenta",
     "auth.email": "Correo electrónico",
@@ -221,6 +303,21 @@ export const MESSAGES = {
     "auth.checkEmail": "Revise su correo",
     "auth.checkEmailBody": "Le enviamos un enlace para confirmar su dirección.",
 
+    // --- FAQ ---
+    "faq.heading": "Preguntas frecuentes",
+    "faq.sub": "Todo lo que necesita saber sobre el servicio y su factura.",
+    "faq.q1": "¿Quién puede usar el servicio?",
+    "faq.a1":
+      "BillFixr está disponible para personas de 18 años o más que residan en los Estados Unidos. Al usar el servicio, usted confirma que la factura médica que sube le pertenece o que cuenta con autorización legal para actuar en nombre del paciente.",
+    "faq.q2": "¿Cuáles son las tarifas y las condiciones de pago?",
+    "faq.a2":
+      "Se cobra una pequeña cuota de compromiso cuando su factura se envía para análisis. Si se encuentran errores y su factura se reduce con éxito, se cobra una comisión por resultado equivalente a un porcentaje de su ahorro. Si no se encuentran errores, no se cobra ninguna comisión por resultado.",
+    "faq.q3": "Descripción del servicio",
+    "faq.a3":
+      "BillFixr usa inteligencia artificial para revisar su factura médica en busca de errores de facturación, y luego genera y envía documentos de negociación a su proveedor en su nombre, dando seguimiento hasta llegar a una resolución.",
+    "faq.q4": "¿Por qué hay una cuota de compromiso de cinco dólares?",
+    "faq.a4":
+      "La cuota de compromiso de cinco dólares es simplemente una forma amable de asegurarnos de que estamos ayudando a quienes de verdad lo necesitan. Muchas personas suben facturas sin intención de continuar, y eso retrasa el proceso para quienes están realmente agobiados y buscan un alivio real.\n\nEsta pequeña cuota nos ayuda a concentrar nuestro tiempo y esfuerzo en usted. Además, se descuenta directamente de su cuota final de BillFixr, de modo que no paga nada adicional.\n\nEs solo un paso sencillo que nos permite empezar a trabajar en su factura de inmediato y darle la atención que merece.",
     "auth.logIn": "Iniciar sesión",
     "auth.loggingIn": "Iniciando sesión…",
     "auth.signUpCta": "Registrarse",
