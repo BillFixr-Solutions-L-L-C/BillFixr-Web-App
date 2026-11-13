@@ -14,6 +14,7 @@ import { summarizeLetterEvents, describeLetterTracking, type LetterEvent } from 
 import { COMPLETED_STATUSES } from "@/lib/caseStatus";
 import { agreedSavings, clientNotices, describeNegotiationStatus, providerHasResponded } from "@/lib/negotiationStatus";
 import type { AutomationNegotiation } from "@/types/automation-engine";
+import { useT } from "@/lib/i18n/client";
 
 // "letter"/"summary" are gone: the provider's reply is a row in the
 // document list now, and the route to payment is Check and Proceed.
@@ -63,6 +64,7 @@ function viewForStatus(status: string): View {
 }
 
 export default function ActiveCasePage() {
+  const t = useT();
   const [loading, setLoading] = useState(true);
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
@@ -386,7 +388,7 @@ export default function ActiveCasePage() {
     setConfirmingPayment(false);
 
     if (result.status === "failed") {
-      setPaymentError("Payment failed. Please try again.");
+      setPaymentError(t("pay.failed"));
       return;
     }
     if (result.status === "pending") {
@@ -401,7 +403,7 @@ export default function ActiveCasePage() {
   if (loading) {
     return (
       <div>
-        <PageHeading title="Active Case" />
+        <PageHeading title={t("case.title")} />
         <p className="text-sm text-gray-400">Loading…</p>
       </div>
     );
@@ -410,7 +412,7 @@ export default function ActiveCasePage() {
   if (view === "list") {
     return (
       <div>
-        <PageHeading title="Active Case" />
+        <PageHeading title={t("case.title")} />
         {cases.length === 0 ? (
           <div className="rounded-2xl bg-white p-10 text-center text-sm text-gray-500 shadow-sm">
             No active cases yet. Upload a bill from your dashboard to get started.
@@ -458,7 +460,7 @@ export default function ActiveCasePage() {
                       <td
                         className={`px-4 py-3 font-medium ${row.letter_sent_at ? "text-primary-600" : "text-gray-400"}`}
                       >
-                        {row.letter_sent_at ? "Sent" : "Not sent"}
+                        {row.letter_sent_at ? t("case.letterSent") : t("case.letterNotSent")}
                       </td>
                       <td className={`px-4 py-3 font-medium ${responseLabel === "Received" ? "text-primary-600" : "text-accent-600"}`}>
                         {responseLabel}
@@ -487,7 +489,7 @@ export default function ActiveCasePage() {
     return (
       <div>
         <BackToCasesButton onClick={backToList} />
-        <PageHeading title="Active Case" />
+        <PageHeading title={t("case.title")} />
         <div className="grid gap-6 sm:grid-cols-2">
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
@@ -503,7 +505,7 @@ export default function ActiveCasePage() {
                 <button
                   type="button"
                   disabled
-                  title="Original bill file unavailable"
+                  title={t("case.originalUnavailable")}
                   className="cursor-not-allowed rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-400"
                 >
                   ⬇ Download as PDF
@@ -525,7 +527,7 @@ export default function ActiveCasePage() {
               <button
                 type="button"
                 disabled
-                title="Available from Completed Case once payment is complete"
+                title={t("case.availableAfterPayment")}
                 className="cursor-not-allowed rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-400"
               >
                 ⬇ Download as PDF
@@ -618,13 +620,13 @@ export default function ActiveCasePage() {
     return (
       <div>
         <BackToCasesButton onClick={backToList} />
-        <PageHeading title="Active Case" />
+        <PageHeading title={t("case.title")} />
         <div className="rounded-2xl bg-white p-6 shadow-sm">
           {clientSecret ? (
             <>
               <PaymentForm
                 clientSecret={clientSecret}
-                lineItems={[{ label: "Success fee", value: total }]}
+                lineItems={[{ label: t("pay.successFee"), value: total }]}
                 total={total}
                 onSuccess={handlePaymentConfirmed}
               />
@@ -645,7 +647,7 @@ export default function ActiveCasePage() {
     return (
       <div>
         <BackToCasesButton onClick={backToList} />
-        <PageHeading title="Active Case" />
+        <PageHeading title={t("case.title")} />
         <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
           <p className="text-2xl font-bold text-primary-700">Payment Successful</p>
           <p className="mt-2 text-sm text-gray-500">
@@ -665,7 +667,7 @@ export default function ActiveCasePage() {
   return (
     <div>
       <BackToCasesButton onClick={backToList} />
-      <PageHeading title="Active Case" />
+      <PageHeading title={t("case.title")} />
 
       {/* Where the negotiation actually stands, straight from the engine
           that is running it. Absent for cases it is not running — the
@@ -744,7 +746,7 @@ export default function ActiveCasePage() {
                     {doc.label}
                   </p>
                   <p className="text-xs text-gray-400">
-                    {doc.available ? doc.status : "Not yet available"}
+                    {doc.available ? doc.status : t("case.notYetAvailable")}
                     {doc.sizeLabel ? ` · ${doc.sizeLabel}` : ""}
                     {doc.date
                       ? ` · ${new Date(doc.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
@@ -803,9 +805,9 @@ export default function ActiveCasePage() {
 
         <div className="grid grid-cols-2 gap-4">
           {[
-            { label: "Bill Analyzed", value: "1" },
+            { label: t("stats.billAnalyzed"), value: "1" },
             {
-              label: "Savings Found",
+              label: t("stats.savingsFound"),
               // Deliberately the stored column, not the engine's
               // agreedSavings(), even though the negotiation panel above
               // has it. The success fee is computed from savings_found
@@ -817,10 +819,10 @@ export default function ActiveCasePage() {
               value: selectedCase?.savings_found != null ? `$${selectedCase.savings_found}` : MOCK_SAVINGS_FOUND,
             },
             {
-              label: "Errors Detected",
+              label: t("stats.errorsDetected"),
               value: selectedCase?.errors_detected != null ? String(selectedCase.errors_detected) : MOCK_ERRORS_DETECTED,
             },
-            { label: "Appeal Generated", value: "1" },
+            { label: t("stats.appealGenerated"), value: "1" },
           ].map((stat) => (
             <div key={stat.label} className="rounded-2xl bg-white p-4 shadow-sm">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-400">

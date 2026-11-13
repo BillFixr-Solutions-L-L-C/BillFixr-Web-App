@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PasswordInput from "@/components/auth/PasswordInput";
+import { useT } from "@/lib/i18n/client";
 
 // "danger" for genuine failures (red); "info" for expected, non-error
 // states like a routine inactivity sign-out (brand green, not alarming).
@@ -20,6 +21,7 @@ const LINK_MESSAGES: Record<string, { text: string; tone: "danger" | "info" }> =
 };
 
 export default function LoginForm() {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const linkMessage = LINK_MESSAGES[searchParams.get("error") ?? ""];
@@ -69,14 +71,14 @@ export default function LoginForm() {
       )}
       <input
         type="email"
-        placeholder="Email"
+        placeholder={t("auth.email")}
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         className="rounded-full border border-gray-200 px-5 py-3.5 text-sm focus:border-primary-400 focus:outline-none"
       />
       <PasswordInput
-        placeholder="Password"
+        placeholder={t("auth.password")}
         required
         value={password}
         onChange={(e) => setPassword(e.target.value)}
@@ -93,7 +95,7 @@ export default function LoginForm() {
         disabled={loading}
         className="mt-2 rounded-full bg-primary-600 py-3.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
       >
-        {loading ? "Logging in…" : "Log in"}
+        {loading ? t("auth.loggingIn") : t("auth.logIn")}
       </button>
 
       <p className="text-center text-sm text-gray-500">

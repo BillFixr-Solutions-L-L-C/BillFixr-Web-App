@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import type { CSSProperties } from "react";
+import { useT } from "@/lib/i18n/client";
 
 function Bubble({
   className,
@@ -39,6 +42,7 @@ function Bubble({
 }
 
 export default function Hero() {
+  const t = useT();
   return (
     <section className="relative overflow-hidden">
       <Bubble className="-right-16 -top-10 h-[26rem] w-[26rem] opacity-90" from="#e9f7ef" to="#a9dcbf" x={26} y={-46} scale={1.08} duration={6} delay={0} />
@@ -60,23 +64,23 @@ export default function Hero() {
           />
 
           <span className="inline-flex items-center rounded-full border border-primary-200 bg-white px-5 py-2 text-xs font-semibold tracking-wide text-primary-700">
-            AI-POWERED MEDICAL BILLS REVIEW
+            {t("home.eyebrow")}
           </span>
 
           <h1 className="mt-8 font-sans text-4xl font-bold leading-[1.05] text-primary-900 sm:text-7xl">
-            Take Control of Your Medical Bills-
-            <span className="text-accent-500">Automatically</span>
+            {t("home.headline")}{" "}
+            <span className="text-accent-500">{t("home.headlineAccent")}</span>
           </h1>
 
           <p className="mt-6 text-xl text-primary-900/70">
-            Reduce your cost with AI-powered bill negotiation
+            {t("home.sub")}
           </p>
 
           <Link
             href="/signup"
             className="mt-8 inline-flex items-center justify-center rounded-full bg-accent-500 px-10 py-4 text-base font-semibold text-white shadow-sm transition hover:bg-accent-600"
           >
-            Upload Your Bill
+            {t("home.cta")}
           </Link>
         </div>
       </div>

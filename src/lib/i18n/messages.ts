@@ -23,6 +23,22 @@ export const MESSAGES = {
     "lang.en": "English",
     "lang.es": "Español",
 
+    // --- landing ---
+    "home.eyebrow": "AI-POWERED MEDICAL BILLS REVIEW",
+    "home.headline": "Take Control of Your Medical Bills-",
+    "home.headlineAccent": "Automatically",
+    "home.sub": "Reduce your cost with AI-powered bill negotiation",
+    "home.cta": "Upload Your Bill",
+    "home.howItWorks": "How it works",
+    "home.step1": "Upload Your Bill",
+    "home.step1Body": "Upload your medical bill",
+    "home.step2": "We Review & Detect Errors",
+    "home.step2Body": "AI scans for overcharges and hidden fees",
+    "home.step3": "We Negotiate For You",
+    "home.step3Body": "Our experts negotiate with providers.",
+    "home.step4": "You Save Money",
+    "home.step4Body": "Receive your reduced bill",
+    "home.whyChooseUs": "Why choose us",
     // --- auth ---
     "auth.signIn": "Sign in",
     "auth.signUp": "Create account",
@@ -35,6 +51,12 @@ export const MESSAGES = {
     "auth.checkEmail": "Check your email",
     "auth.checkEmailBody": "We've sent you a link to confirm your address.",
 
+    "auth.logIn": "Log in",
+    "auth.loggingIn": "Logging in…",
+    "auth.signUpCta": "Sign up",
+    "auth.creating": "Creating account…",
+    "auth.fullName": "Full Name",
+    "auth.confirmPassword": "Confirm Password",
     // --- dashboard shell ---
     "nav.dashboard": "Dashboard",
     "nav.documents": "My Document",
@@ -120,6 +142,11 @@ export const MESSAGES = {
     "case.negotiationStarted":
       "Your errors have been found and negotiation has started. Track the response and next steps from your Active Case.",
 
+    "case.notYetAvailable": "Not yet available",
+    "case.originalUnavailable": "Original bill file unavailable",
+    "case.availableAfterPayment": "Available from Completed Case once payment is complete",
+    "pay.successFee": "Success fee",
+    "pay.failed": "Payment failed. Please try again.",
     // --- generic ---
     "common.continue": "Continue",
     "common.close": "Close",
@@ -133,6 +160,22 @@ export const MESSAGES = {
     "lang.en": "English",
     "lang.es": "Español",
 
+    // --- landing ---
+    "home.eyebrow": "REVISIÓN DE FACTURAS MÉDICAS CON IA",
+    "home.headline": "Tome el control de sus facturas médicas,",
+    "home.headlineAccent": "automáticamente",
+    "home.sub": "Reduzca su costo con negociación de facturas asistida por IA",
+    "home.cta": "Suba su factura",
+    "home.howItWorks": "Cómo funciona",
+    "home.step1": "Suba su factura",
+    "home.step1Body": "Suba su factura médica",
+    "home.step2": "Revisamos y detectamos errores",
+    "home.step2Body": "La IA busca cobros excesivos y cargos ocultos",
+    "home.step3": "Negociamos por usted",
+    "home.step3Body": "Nuestro equipo negocia con los proveedores.",
+    "home.step4": "Usted ahorra",
+    "home.step4Body": "Reciba su factura reducida",
+    "home.whyChooseUs": "Por qué elegirnos",
     "auth.signIn": "Iniciar sesión",
     "auth.signUp": "Crear cuenta",
     "auth.email": "Correo electrónico",
@@ -144,6 +187,12 @@ export const MESSAGES = {
     "auth.checkEmail": "Revise su correo",
     "auth.checkEmailBody": "Le enviamos un enlace para confirmar su dirección.",
 
+    "auth.logIn": "Iniciar sesión",
+    "auth.loggingIn": "Iniciando sesión…",
+    "auth.signUpCta": "Registrarse",
+    "auth.creating": "Creando la cuenta…",
+    "auth.fullName": "Nombre completo",
+    "auth.confirmPassword": "Confirme la contraseña",
     "nav.dashboard": "Panel",
     "nav.documents": "Mis documentos",
     "nav.activeCase": "Caso activo",
@@ -222,6 +271,11 @@ export const MESSAGES = {
     "case.negotiationStarted":
       "Encontramos los errores y comenzó la negociación. Siga la respuesta y los próximos pasos desde su Caso activo.",
 
+    "case.notYetAvailable": "Aún no disponible",
+    "case.originalUnavailable": "El archivo de la factura original no está disponible",
+    "case.availableAfterPayment": "Disponible en Casos cerrados cuando se complete el pago",
+    "pay.successFee": "Comisión por resultado",
+    "pay.failed": "El pago falló. Inténtelo de nuevo.",
     "common.continue": "Continuar",
     "common.close": "Cerrar",
     "common.download": "Descargar en PDF",
