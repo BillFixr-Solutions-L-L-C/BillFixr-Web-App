@@ -206,6 +206,31 @@ describe("buildCaseDocumentRows for staff", () => {
     expect(row.downloadUrl).toBe("/api/admin/cases/c1/appeal-letter?download=1");
   });
 
+  it("links the analysis when given somewhere to read it", async () => {
+    // My Documents stopped listing the analysis on 2026-11-13 -- it
+    // lists the customer's own uploads now -- so this row is how it is
+    // reached from the case it belongs to.
+    const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), {
+      ...BASE,
+      analysisUrl: "/dashboard/documents/bill-1",
+    });
+    const row = rows.find((r) => r.id === "analysis")!;
+    expect(row.previewUrl).toBe("/dashboard/documents/bill-1");
+    // It is a page, not a file: there is nothing to download.
+    expect(row.downloadUrl).toBeNull();
+  });
+
+  it("does not link an analysis that does not exist yet", async () => {
+    const rows = await buildCaseDocumentRows(supabaseWithSignedUrls(), {
+      ...BASE,
+      hasAnalysis: false,
+      analysisUrl: "/dashboard/documents/bill-1",
+    });
+    const row = rows.find((r) => r.id === "analysis")!;
+    expect(row.available).toBe(false);
+    expect(row.previewUrl).toBeNull();
+  });
+
   it("does not link an appeal letter that has not been written", async () => {
     // A link here would open a 404 and read as a missing file rather than
     // a letter that does not exist yet.

@@ -8,6 +8,9 @@ import { useT } from "@/lib/i18n/client";
 export type DocumentRow = {
   key: string;
   label: string;
+  /** The real filename, under the label. The label says what the document
+   *  is; this says which file it is, which matters once there are two. */
+  sublabel?: string | null;
   provider: string;
   date: string | null;
   previewUrl: string | null;
@@ -48,7 +51,12 @@ export default function DocumentsTable({ rows }: { rows: DocumentRow[] }) {
               <td className="px-4 py-3">
                 <span className="flex items-center gap-2 text-gray-800">
                   <span className="text-accent-500">📄</span>
-                  {row.label}
+                  <span>
+                    {row.label}
+                    {row.sublabel && (
+                      <span className="block break-all text-xs font-normal text-gray-400">{row.sublabel}</span>
+                    )}
+                  </span>
                 </span>
               </td>
               <td className="px-4 py-3 text-gray-600">{row.provider}</td>
