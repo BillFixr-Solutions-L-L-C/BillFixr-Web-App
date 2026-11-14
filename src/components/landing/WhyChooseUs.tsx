@@ -21,7 +21,7 @@ export default function WhyChooseUs() {
         <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-primary-100 sm:aspect-[9/10]">
           <Image
             src="/img-1.jpg"
-            alt="A caregiver supporting a patient at a medical office"
+            alt={t("home.caregiverAlt")}
             fill
             sizes="(min-width: 1024px) 50vw, 100vw"
             className="object-cover"

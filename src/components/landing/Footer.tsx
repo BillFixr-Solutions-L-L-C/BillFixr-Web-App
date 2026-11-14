@@ -1,4 +1,11 @@
+"use client";
+
+// A client component on purpose. It is rendered from client trees as well
+// as server ones -- TestimonialForm imports it -- so it reads the display
+// language from the provider in src/lib/i18n/client.tsx rather than from
+// cookies(), which only exists on the server.
 import Logo from "@/components/Logo";
+import { useT } from "@/lib/i18n/client";
 import NewsletterForm from "./NewsletterForm";
 import { SOCIAL_LINKS } from "@/components/socialLinks";
 import {
@@ -48,13 +55,14 @@ function WordmarkStrip() {
 }
 
 export default function Footer() {
+  const t = useT();
   return (
     <footer id="contact" className="relative overflow-hidden bg-gradient-to-br from-primary-500 to-primary-700 text-white">
       <div className="mx-auto max-w-6xl px-6 pb-8 pt-10 sm:px-10 sm:pt-12">
         <div className="flex flex-wrap items-center justify-between gap-8">
           <div>
             <Logo inverted size={56} className="text-4xl sm:text-5xl" />
-            <p className="mt-6 text-sm text-white/80">Join Our Mailing List</p>
+            <p className="mt-6 text-sm text-white/80">{t("site.mailingList")}</p>
             <NewsletterForm />
 
             {/* Findable without a form: card processors check the site for
