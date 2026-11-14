@@ -49,17 +49,16 @@ export default function DocumentAnalysisClient({
   analysis,
   headerInfo,
   doc,
-  locked = false,
   appealLetter = null,
   headerEditBillId = null,
   watermark = false,
   caseId = null,
   canRescan = true,
+  rescanHint,
 }: {
   analysis: BillAnalysis;
   headerInfo: HeaderField[];
   doc: BillDocument;
-  locked?: boolean;
   appealLetter?: AppealLetterData | null;
   headerEditBillId?: string | null;
   watermark?: boolean;
@@ -67,6 +66,8 @@ export default function DocumentAnalysisClient({
   caseId?: string | null;
   // One re-scan per case; false once it's been used.
   canRescan?: boolean;
+  /** What to say about the allowance, from src/lib/rescan.ts. */
+  rescanHint?: string;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [rescanning, setRescanning] = useState(false);
@@ -123,23 +124,14 @@ export default function DocumentAnalysisClient({
               </div>
             </div>
             <div className="flex items-center gap-3 text-xs">
-              {locked ? (
-                <span className="text-accent-600">🔒 Locked</span>
-              ) : (
-                <span className="text-primary-600">✓ Uploaded</span>
-              )}
-              {!locked && doc.previewUrl && (
+              <span className="text-primary-600">✓ Uploaded</span>
+              {doc.previewUrl && (
                 <button type="button" onClick={() => setPreviewOpen(true)} className="text-primary-600">
                   👁 View
                 </button>
               )}
             </div>
           </div>
-          {locked && (
-            <p className="mt-3 text-xs text-gray-400">
-              Complete your success fee payment to unlock this document.
-            </p>
-          )}
         </div>
       </div>
 
@@ -260,7 +252,7 @@ export default function DocumentAnalysisClient({
               type="button"
               onClick={rescan}
               disabled={rescanning || !canRescan}
-              title={canRescan ? undefined : "You've already used your one re-scan for this bill."}
+              title={rescanHint}
               className="rounded-full border border-[#0f7545] px-8 py-3 text-sm font-semibold text-[#0f7545] hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {rescanning ? "Re-scanning…" : canRescan ? "Re-scan" : "Re-scan used"}

@@ -5,6 +5,7 @@ import { EMPTY_BILL_ANALYSIS, type BillAnalysis } from "@/lib/billAnalysis";
 import DocumentAnalysisClient from "@/components/dashboard/DocumentAnalysisClient";
 import { EMPTY_VALUE, HEADER_FIELD_DEFS, type HeaderField, type HeaderKey } from "@/lib/headerInfo";
 import { isCaseCompleted } from "@/lib/caseStatus";
+import { canRescan, rescanHint } from "@/lib/rescan";
 
 export default async function DocumentAnalysisPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -32,31 +33,29 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
     { id: bill.id, filename: bill.filename, storage_url: bill.storage_url, status: bill.status, uploaded_at: "" },
   ]);
 
-  // Payment-gated document access: real enforcement that simply never
-  // triggers today, since errors_detected is always null pre-Phase-2 —
-  // it activates automatically once AI populates it, same shape as
-  // everything else gated on Phase 2 in this codebase.
   const { data: caseRow } = await supabase
     .from("cases")
-    .select("id, status, errors_detected, appeal_letter_text, provider_email, letter_sent_at, rescanned_at")
+    .select("id, status, errors_detected, appeal_letter_text, provider_email, letter_sent_at, rescanned_at, rescan_count")
     .eq("bill_id", bill.id)
     .maybeSingle();
 
-  let locked = false;
-  if (caseRow && (caseRow.errors_detected ?? 0) > 0) {
-    const { data: paidSuccessFee } = await supabase
-      .from("payment_records")
-      .select("id")
-      .eq("case_id", caseRow.id)
-      .eq("type", "success_fee")
-      .eq("status", "paid")
-      .maybeSingle();
-    locked = !paidSuccessFee;
-  }
-  if (locked) {
-    doc.previewUrl = null;
-    doc.downloadUrl = null;
-  }
+  // Nothing on this page is locked behind the success fee any more.
+  //
+  // It used to null out previewUrl and downloadUrl once the analysis found
+  // errors, so a customer who had paid the commitment fee could not open
+  // the bill THEY uploaded. That is their own document; withholding it
+  // teaches them we are holding their records hostage rather than that we
+  // found something worth paying for.
+  //
+  // The analysis and the appeal letter were already visible and
+  // watermarked, so this brings the bill itself into line with them.
+  // Everything here is watermarked while the case is in progress -- see
+  // `inProgress` below.
+  //
+  // What stays gated is the one thing the fee actually buys: the REVISED
+  // bill. That is blurred on the Active Case screen and the engine refuses
+  // to release the file with a 402 until the completion fee is paid, which
+  // is enforcement rather than a hidden button.
 
   // Once the AI has actually analyzed the bill, show what it found (or an
   // honest "not found") and let the customer correct it. The sample
@@ -93,12 +92,12 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
       analysis={analysis}
       headerInfo={headerInfo}
       doc={doc}
-      locked={locked}
       appealLetter={appealLetter}
       headerEditBillId={analyzed ? bill.id : null}
       watermark={inProgress}
       caseId={caseRow?.id ?? null}
-      canRescan={Boolean(caseRow) && !caseRow!.rescanned_at}
+      canRescan={Boolean(caseRow) && canRescan(caseRow)}
+      rescanHint={rescanHint(caseRow)}
     />
   );
 }

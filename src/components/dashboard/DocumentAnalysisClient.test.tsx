@@ -49,13 +49,22 @@ describe("DocumentAnalysisClient", () => {
     expect(screen.getByRole("link", { name: "Proceed" })).toHaveAttribute("href", "/dashboard/case");
   });
 
-  it("disables Re-scan once the one re-scan has been used", () => {
+  it("disables Re-scan once the allowance is spent, and says so", () => {
     render(
-      <DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" canRescan={false} />,
+      <DocumentAnalysisClient
+        analysis={MOCK_BILL_ANALYSIS}
+        headerInfo={[]}
+        doc={DOC}
+        caseId="case-1"
+        canRescan={false}
+        rescanHint="You've used both of your re-scans for this bill."
+      />,
     );
     const button = screen.getByRole("button", { name: /Re-scan/ });
     expect(button).toBeDisabled();
-    expect(button).toHaveAttribute("title", expect.stringContaining("already used"));
+    // The hint comes from src/lib/rescan.ts so the button and the route
+    // cannot disagree about how many are left.
+    expect(button).toHaveAttribute("title", expect.stringContaining("both of your re-scans"));
     // Proceed still works
     expect(screen.getByRole("link", { name: "Proceed" })).toBeInTheDocument();
   });

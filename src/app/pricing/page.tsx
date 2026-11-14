@@ -4,6 +4,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { COMMITMENT_FEE_CENTS } from "@/lib/stripe";
+import { getT } from "@/lib/i18n/server";
 import {
   BUSINESS_NAME,
   BUSINESS_ADDRESS_LINES,
@@ -36,6 +37,7 @@ export const dynamic = "force-dynamic";
 // app_settings (an admin can change it in /admin/payments and this page
 // follows).
 export default async function PricingPage() {
+  const t = await getT();
   // Service role, deliberately, and selecting nothing but the percentage:
   // app_settings is not readable under RLS by a signed-out visitor, so the
   // user-scoped client got zero rows here and the page quietly advertised
@@ -65,17 +67,16 @@ export default async function PricingPage() {
 
       <main className="mx-auto max-w-5xl px-6 py-14 sm:py-20">
         <header className="text-center">
-          <h1 className="text-4xl font-bold text-[#003322] sm:text-5xl">Pricing</h1>
+          <h1 className="text-4xl font-bold text-[#003322] sm:text-5xl">{t("price.heading")}</h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-primary-900/60">
-            You pay ${commitmentFee} to get your bill reviewed, and a share of what we save you.
-            If we don&apos;t find anything, there is nothing more to pay.
+            {t("price.sub", { fee: commitmentFee })}
           </p>
         </header>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2">
           <section className="rounded-3xl border border-primary-100 bg-white p-8">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-primary-900/40">
-              Commitment fee
+              {t("price.commitmentFee")}
             </h2>
             <p className="mt-3 text-4xl font-bold text-[#003322]">
               ${commitmentFee}
@@ -105,26 +106,28 @@ export default async function PricingPage() {
         </div>
 
         <section className="mt-10 rounded-3xl bg-white p-8">
-          <h2 className="text-xl font-semibold text-[#003322]">A worked example</h2>
+          <h2 className="text-xl font-semibold text-[#003322]">{t("price.workedExample")}</h2>
           <p className="mt-3 text-sm leading-relaxed text-primary-900/70">
-            Say we review a ${(2_000).toLocaleString()} bill and get it reduced by{" "}
-            ${(500).toLocaleString()}.
+            {t("price.exampleIntro", {
+              bill: (2_000).toLocaleString(),
+              cut: (500).toLocaleString(),
+            })}
           </p>
           <dl className="mt-6 divide-y divide-primary-100 text-sm">
             <div className="flex items-center justify-between py-3">
-              <dt className="text-primary-900/70">You save</dt>
+              <dt className="text-primary-900/70">{t("price.youSave")}</dt>
               <dd className="font-semibold text-[#003322]">${(500).toLocaleString()}</dd>
             </div>
             <div className="flex items-center justify-between py-3">
-              <dt className="text-primary-900/70">Success fee ({percentage}% of ${(500).toLocaleString()})</dt>
+              <dt className="text-primary-900/70">{t("price.successFeeOf", { percent: percentage, cut: (500).toLocaleString() })}</dt>
               <dd className="font-semibold text-[#003322]">${(500 * percentage) / 100}</dd>
             </div>
             <div className="flex items-center justify-between py-3">
-              <dt className="text-primary-900/70">Less the commitment fee already paid</dt>
+              <dt className="text-primary-900/70">{t("price.lessCommitment")}</dt>
               <dd className="font-semibold text-[#003322]">-${commitmentFee}</dd>
             </div>
             <div className="flex items-center justify-between py-3">
-              <dt className="font-semibold text-[#003322]">Total you pay</dt>
+              <dt className="font-semibold text-[#003322]">{t("price.totalYouPay")}</dt>
               <dd className="font-semibold text-[#003322]">
                 ${(500 * percentage) / 100 - commitmentFee}
               </dd>
@@ -133,41 +136,37 @@ export default async function PricingPage() {
         </section>
 
         <section className="mt-10 space-y-6 rounded-3xl bg-white p-8">
-          <h2 className="text-xl font-semibold text-[#003322]">What else should I know?</h2>
+          <h2 className="text-xl font-semibold text-[#003322]">{t("price.whatElse")}</h2>
           <div>
-            <h3 className="text-sm font-semibold text-[#003322]">There is no subscription</h3>
+            <h3 className="text-sm font-semibold text-[#003322]">{t("price.noSubscription")}</h3>
             <p className="mt-1 text-sm leading-relaxed text-primary-900/70">
-              Nothing recurring, and no charge for holding an account. You pay per bill you ask us
-              to review.
+              {t("price.noSubscriptionBody")}
             </p>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-[#003322]">What if no errors are found?</h3>
+            <h3 className="text-sm font-semibold text-[#003322]">{t("price.ifNoErrors")}</h3>
             <p className="mt-1 text-sm leading-relaxed text-primary-900/70">
-              Then there is no success fee. You will have paid the ${commitmentFee} commitment fee
-              for the review itself, and nothing further.
+              {t("price.ifNoErrorsBody", { fee: commitmentFee })}
             </p>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-[#003322]">When am I charged?</h3>
+            <h3 className="text-sm font-semibold text-[#003322]">{t("price.whenCharged")}</h3>
             <p className="mt-1 text-sm leading-relaxed text-primary-900/70">
-              The commitment fee when you submit the bill. The success fee only after your bill has
-              been reduced and you can see the result.
+              {t("price.whenChargedBody")}
             </p>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-[#003322]">How do I pay?</h3>
+            <h3 className="text-sm font-semibold text-[#003322]">{t("price.howPay")}</h3>
             <p className="mt-1 text-sm leading-relaxed text-primary-900/70">
-              By card, processed by Stripe. We never see or store your card details.
+              {t("price.howPayBody")}
             </p>
           </div>
         </section>
 
         <section className="mt-10 rounded-3xl bg-white p-8">
-          <h2 className="text-xl font-semibold text-[#003322]">Questions about a charge?</h2>
+          <h2 className="text-xl font-semibold text-[#003322]">{t("price.questions")}</h2>
           <p className="mt-3 text-sm leading-relaxed text-primary-900/70">
-            Talk to a person before or after you pay — we would rather answer a question than
-            take a payment someone did not understand.
+            {t("price.questionsBody")}
           </p>
           <address className="mt-5 not-italic text-sm leading-relaxed text-primary-900/70">
             <span className="font-semibold text-[#003322]">{BUSINESS_NAME}</span>

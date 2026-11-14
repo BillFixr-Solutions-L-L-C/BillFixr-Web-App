@@ -13,6 +13,7 @@ import { auditBill, getNegotiation } from "@/lib/automation-engine";
 import { guessContentType } from "@/lib/contentType";
 import { negotiationSummary, startNegotiationForCase, type StartableCase } from "@/lib/startNegotiation";
 import type { AiCaseProcessingResponse } from "@/types/ai";
+import { MAX_RESCANS, canRescan, remaining, used } from "@/lib/rescan";
 
 // Stands in for the real trigger (an automated pipeline kicking this off
 // right after upload) the same way /api/dev/advance-case stands in for
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
   const { data: caseRow } = await supabase
     .from("cases")
     .select(
-      "id, user_id, bill_id, negotiation_id, rescanned_at, bills(id, filename, storage_url, analysis_result, provider_name, provider_email, provider_phone, provider_address)",
+      "id, user_id, bill_id, negotiation_id, rescanned_at, rescan_count, bills(id, filename, storage_url, analysis_result, provider_name, provider_email, provider_phone, provider_address)",
     )
     .eq("id", caseId)
     .single();
@@ -85,9 +86,16 @@ export async function POST(request: Request) {
 
   // One re-scan per case: it's a free second AI read, meant as a one-off
   // correction when the first result looks wrong.
-  if (force && caseRow.rescanned_at) {
+  // The allowance is a count now, not "has it ever been re-scanned". Two,
+  // so there is a second look available at the point it is wanted: after
+  // reading the analysis and the appeal letter together, before Proceed.
+  // See src/lib/rescan.ts.
+  if (force && !canRescan(caseRow)) {
     return NextResponse.json(
-      { error: "You've already re-scanned this bill. Contact support if it still looks wrong." },
+      {
+        error: `You've used all ${MAX_RESCANS} re-scans for this bill. Contact support if it still looks wrong.`,
+        rescansRemaining: 0,
+      },
       { status: 409 },
     );
   }
@@ -231,8 +239,15 @@ export async function POST(request: Request) {
       appeal_letter_text: appealLetterText,
       ai_summary_text: aiSummaryText,
       admin_analysis: adminAnalysis,
-      // Spends the single re-scan, so a second one is refused.
-      ...(force ? { rescanned_at: new Date().toISOString() } : {}),
+      // Spends one of the allowance. rescanned_at still records WHEN the
+      // most recent one happened -- the admin case view reads it, and a
+      // bare count cannot be audited against anything.
+      ...(force
+        ? {
+            rescanned_at: new Date().toISOString(),
+            rescan_count: used(caseRow) + 1,
+          }
+        : {}),
     })
     .eq("id", caseId);
   if (caseUpdateError) {
@@ -272,7 +287,13 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, errorsDetected, savingsFound, negotiation });
+  return NextResponse.json({
+    ok: true,
+    errorsDetected,
+    savingsFound,
+    negotiation,
+    rescansRemaining: remaining({ rescan_count: used(caseRow) + (force ? 1 : 0) }),
+  });
 }
 
 // The engine writes to a real hospital here, so this never throws into
