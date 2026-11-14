@@ -43,34 +43,47 @@ describe("DocumentAnalysisClient", () => {
     expect(screen.queryByText("Issue 1")).not.toBeInTheDocument();
   });
 
-  it("shows Re-scan and Proceed once the bill has a case", () => {
-    render(<DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" />);
+  it("shows Re-scan and Proceed while the customer is deciding", () => {
+    render(
+      <DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" atDecisionPoint />,
+    );
     expect(screen.getByRole("button", { name: "Re-scan" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Proceed" })).toHaveAttribute("href", "/dashboard/case");
   });
 
-  it("disables Re-scan once the allowance is spent, and says so", () => {
+  // Asked for on 2026-11-13: these two belong to the stretch between
+  // upload and the commitment fee. "By the time they are opening the
+  // Analysis on the active case it shouldn't show rescan or proceed."
+  it("shows neither once the case is past the commitment fee", () => {
+    render(<DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" />);
+    expect(screen.queryByRole("button", { name: /Re-scan/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Proceed" })).not.toBeInTheDocument();
+  });
+
+  it("drops Re-scan once the allowance is spent, leaving Proceed", () => {
+    // "the next after rescan will only show proceed" — a dead button
+    // with a tooltip nobody hovers on a phone is worse than no button
+    // and a sentence.
     render(
       <DocumentAnalysisClient
         analysis={MOCK_BILL_ANALYSIS}
         headerInfo={[]}
         doc={DOC}
         caseId="case-1"
+        atDecisionPoint
         canRescan={false}
         rescanHint="You've used both of your re-scans for this bill."
       />,
     );
-    const button = screen.getByRole("button", { name: /Re-scan/ });
-    expect(button).toBeDisabled();
-    // The hint comes from src/lib/rescan.ts so the button and the route
+    expect(screen.queryByRole("button", { name: /Re-scan/ })).not.toBeInTheDocument();
+    // The hint comes from src/lib/rescan.ts so the screen and the route
     // cannot disagree about how many are left.
-    expect(button).toHaveAttribute("title", expect.stringContaining("both of your re-scans"));
-    // Proceed still works
+    expect(screen.getByText(/both of your re-scans/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Proceed" })).toBeInTheDocument();
   });
 
   it("hides them when there is no case yet", () => {
-    render(<DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} />);
+    render(<DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} atDecisionPoint />);
     expect(screen.queryByRole("button", { name: "Re-scan" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Proceed" })).not.toBeInTheDocument();
   });
@@ -78,7 +91,9 @@ describe("DocumentAnalysisClient", () => {
   it("re-scan asks for a fresh read and refreshes the page", async () => {
     global.fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const user = userEvent.setup();
-    render(<DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" />);
+    render(
+      <DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" atDecisionPoint />,
+    );
 
     await user.click(screen.getByRole("button", { name: "Re-scan" }));
 
@@ -93,7 +108,9 @@ describe("DocumentAnalysisClient", () => {
       async () => new Response(JSON.stringify({ error: "AI processing failed" }), { status: 502 }),
     );
     const user = userEvent.setup();
-    render(<DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" />);
+    render(
+      <DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" atDecisionPoint />,
+    );
 
     await user.click(screen.getByRole("button", { name: "Re-scan" }));
 

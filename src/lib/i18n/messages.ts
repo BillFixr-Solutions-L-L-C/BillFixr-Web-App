@@ -208,6 +208,12 @@ export const MESSAGES = {
       "Your errors have been found and negotiation has started. Track the response and next steps from your Active Case.",
 
     "case.notYetAvailable": "Not yet available",
+    "case.providerReply": "Your provider's reply",
+    // The reply itself stays in the language the provider wrote it in --
+    // normally English. Only our account of it is translated, which is
+    // what this caption exists to say.
+    "case.providerReplyNote":
+      "This is what your provider sent us, exactly as they wrote it. Our summary of what it means is above.",
     "case.originalUnavailable": "Original bill file unavailable",
     "case.availableAfterPayment": "Available from Completed Case once payment is complete",
     "pay.successFee": "Success fee",
@@ -215,6 +221,7 @@ export const MESSAGES = {
     // --- documents / completed / support ---
     "docs.title": "My Documents",
     "docs.document": "Document",
+    "docs.hospitalBill": "Hospital Bill",
     "docs.date": "Date",
     "docs.view": "View",
     "completed.title": "Completed Case",
@@ -403,6 +410,9 @@ export const MESSAGES = {
       "Encontramos los errores y comenzó la negociación. Siga la respuesta y los próximos pasos desde su Caso activo.",
 
     "case.notYetAvailable": "Aún no disponible",
+    "case.providerReply": "Respuesta de su proveedor",
+    "case.providerReplyNote":
+      "Esto es lo que nos envió su proveedor, tal como lo escribió (normalmente en inglés). Nuestro resumen de lo que significa está más arriba.",
     "case.originalUnavailable": "El archivo de la factura original no está disponible",
     "case.availableAfterPayment": "Disponible en Casos cerrados cuando se complete el pago",
     "pay.successFee": "Comisión por resultado",
@@ -410,6 +420,7 @@ export const MESSAGES = {
     // --- documents / completed / support ---
     "docs.title": "Mis documentos",
     "docs.document": "Documento",
+    "docs.hospitalBill": "Factura del hospital",
     "docs.date": "Fecha",
     "docs.view": "Ver",
     "completed.title": "Casos cerrados",

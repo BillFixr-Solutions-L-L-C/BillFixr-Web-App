@@ -11,6 +11,7 @@ import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
 import { getBillDocuments, type BillDocument } from "@/lib/billDocuments";
 import { buildCaseDocumentRows, type CaseDocumentRow } from "@/lib/caseDocuments";
 import { summarizeLetterEvents, describeLetterTracking, type LetterEvent } from "@/lib/letterTracking";
+import { stripQuotedTail } from "@/lib/quotedEmail";
 import { COMPLETED_STATUSES } from "@/lib/caseStatus";
 import { agreedSavings, clientNotices, describeNegotiationStatus, providerHasResponded } from "@/lib/negotiationStatus";
 import type { AutomationNegotiation } from "@/types/automation-engine";
@@ -24,6 +25,9 @@ type View = "list" | "pending" | "received" | "savings" | "payment" | "paid";
 type CaseRow = {
   id: string;
   status: string;
+  // The analysis is read at /dashboard/documents/[billId], which is where
+  // the document row for it points.
+  bill_id: string | null;
   bills: { filename: string; storage_url: string | null; uploaded_at: string; provider_name: string | null } | null;
   errors_detected: number | null;
   savings_found: number | null;
@@ -102,7 +106,7 @@ export default function ActiveCasePage() {
       supabase
         .from("cases")
         .select(
-          "id, status, bills(filename, storage_url, uploaded_at, provider_name), errors_detected, savings_found, appeal_letter_text, ai_summary_text, letter_sent_at, adjusted_total, negotiation_id",
+          "id, status, bill_id, bills(filename, storage_url, uploaded_at, provider_name), errors_detected, savings_found, appeal_letter_text, ai_summary_text, letter_sent_at, adjusted_total, negotiation_id",
         )
         .eq("user_id", user.id)
         // Completed cases live on their own page (/dashboard/completed).
@@ -218,6 +222,11 @@ export default function ActiveCasePage() {
         letterSentAt: selectedCase.letter_sent_at,
         hasAnalysis: selectedCase.savings_found != null,
         analysisDate: selectedCase.bills?.uploaded_at ?? null,
+        // My Documents stopped listing the analysis -- it lists the
+        // customer's own uploads now -- so this row is how it is reached.
+        // It is the only place it can be read from without being in the
+        // middle of the upload flow.
+        analysisUrl: selectedCase.bill_id ? `/dashboard/documents/${selectedCase.bill_id}` : null,
         stored: stored ?? [],
       });
       if (!cancelled) setDocRows(rows);
@@ -331,6 +340,27 @@ export default function ActiveCasePage() {
   const negotiationStatus = negotiation ? describeNegotiationStatus(negotiation.status, writeLanguage) : null;
   const negotiationSavings = negotiation ? agreedSavings(negotiation) : null;
   const notices = negotiation ? clientNotices(negotiation) : [];
+
+  // The provider's reply. It reaches us as an email on the engine's
+  // thread -- the engine reads the mailbox, files it as an INBOUND
+  // message and moves the negotiation on -- so there is no file for
+  // anyone to upload and nothing was putting it in front of the customer.
+  //
+  // What that meant in production on 2026-11-13: a provider accepted the
+  // settlement, the customer was emailed "your provider responded", and
+  // the case screen they then opened said "With our team" with the
+  // Provider Responses row still reading "Pending". The reply existed,
+  // had been read and had moved the case; it was simply never shown.
+  const providerReplies = (negotiation?.messages ?? []).filter((m) => m.direction === "INBOUND");
+  const lastReplyAt = providerReplies.length > 0 ? providerReplies[providerReplies.length - 1].created_at : null;
+
+  // So the row says Received, dated, and links to the reply below it,
+  // instead of claiming nothing has come back.
+  const rowsToShow = docRows.map((row) =>
+    row.id === "pending-provider_response" && lastReplyAt
+      ? { ...row, available: true, status: "Received" as const, date: lastReplyAt, previewUrl: "#provider-reply" }
+      : row,
+  );
 
   // Figma labels this "ADJUSTED BILL"; the stored type is new_bill.
   const adjustedBillDoc = docRows.find((d) => d.label === "New Bill" && d.available) ?? null;
@@ -724,6 +754,15 @@ export default function ActiveCasePage() {
                     {new Date(notice.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </span>{" "}
                   {notice.subject || notice.content_markdown}
+                  {/* The body as well as the subject. The subject is a
+                      headline -- "Hospital agreed - we are checking it
+                      before confirming" -- and the body is the part that
+                      says what they agreed to and that nothing is at
+                      risk. Dropping it left the customer with the
+                      headline alone. */}
+                  {notice.subject && notice.content_markdown && (
+                    <span className="mt-0.5 block text-gray-500">{notice.content_markdown}</span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -742,9 +781,41 @@ export default function ActiveCasePage() {
         </div>
       )}
 
+      {/* What the provider actually said. Our account of it is the panel
+          above, in the language the customer signed up in; this is their
+          words, in the language they wrote them -- the reply, the letters
+          we send and the corrected bill all stay as sent. */}
+      {providerReplies.length > 0 && (
+        <div id="provider-reply" className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">
+              {t("case.providerReply")}
+            </p>
+            <span className="text-sm font-medium text-primary-600">{t("case.received")}</span>
+          </div>
+          <p className="mt-1 text-xs text-gray-400">{t("case.providerReplyNote")}</p>
+          {providerReplies.map((reply) => (
+            <div key={reply.id} className="mt-4 border-t border-gray-50 pt-4 first:mt-3 first:border-0 first:pt-0">
+              <p className="text-xs text-gray-400">
+                {new Date(reply.created_at).toLocaleString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+                {reply.sender ? ` · ${reply.sender}` : ""}
+              </p>
+              <p className="mt-2 whitespace-pre-wrap break-words text-sm text-gray-800">
+                {stripQuotedTail(reply.content_markdown ?? "")}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[1fr_auto]">
         <div className="rounded-2xl bg-white p-6 shadow-sm">
-          {docRows.map((doc) => (
+          {rowsToShow.map((doc) => (
             <div
               key={doc.id}
               className="flex items-center justify-between border-b border-gray-50 py-3 last:border-0"
@@ -787,14 +858,25 @@ export default function ActiveCasePage() {
               </div>
               {doc.previewUrl ? (
                 <div className="flex shrink-0 items-center gap-4">
-                  <a
-                    href={doc.previewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-medium text-primary-600"
-                  >
-                    👁 View
-                  </a>
+                  {/* Two kinds of row land here. A file opens in a new
+                      tab; the analysis and the provider's reply are part
+                      of this app -- a page and a card further down this
+                      screen -- and opening those in a new tab would lose
+                      the case the customer is reading. */}
+                  {doc.previewUrl.startsWith("/") || doc.previewUrl.startsWith("#") ? (
+                    <Link href={doc.previewUrl} className="text-sm font-medium text-primary-600">
+                      👁 View
+                    </Link>
+                  ) : (
+                    <a
+                      href={doc.previewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium text-primary-600"
+                    >
+                      👁 View
+                    </a>
+                  )}
                   {/* While a case is active everything is view-only — the
                       documents become downloadable once it completes. The
                       exception is the customer's own medical bill, which
@@ -810,7 +892,7 @@ export default function ActiveCasePage() {
               )}
             </div>
           ))}
-          {docRows.length === 0 && <p className="py-3 text-sm text-gray-400">No documents yet.</p>}
+          {rowsToShow.length === 0 && <p className="py-3 text-sm text-gray-400">No documents yet.</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
