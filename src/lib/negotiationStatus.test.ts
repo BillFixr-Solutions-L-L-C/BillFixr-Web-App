@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { agreedSavings, clientNotices, describeNegotiationStatus, patientBalance } from "./negotiationStatus";
+import {
+  agreedSavings,
+  canCloseForNoResponse,
+  clientNotices,
+  describeNegotiationStatus,
+  patientBalance,
+} from "./negotiationStatus";
+import { isCaseCompleted } from "./caseStatus";
 import type { AutomationNegotiationStatus } from "@/types/automation-engine";
 
 // Every status the engine can report. Kept as a literal list so adding
@@ -140,5 +147,58 @@ describe("clientNotices", () => {
 
   it("handles a negotiation with no messages", () => {
     expect(clientNotices({ messages: [] })).toEqual([]);
+  });
+});
+
+// One rule, used by the admin screen to decide whether to offer the
+// button and by the route to enforce it. The engine applies no guard of
+// its own: POST /no-response/close closes whatever it is handed.
+describe("canCloseForNoResponse", () => {
+  const silent = { status: "DISPATCHED" as const, cadence_step: 3 };
+
+  it("allows a close once all three follow-ups have gone unanswered", () => {
+    expect(canCloseForNoResponse(silent, "awaiting_response", isCaseCompleted)).toEqual({
+      closable: true,
+      followUpsSent: 3,
+    });
+  });
+
+  it("refuses while the sequence is still running", () => {
+    // Giving up on a provider that was merely slow.
+    expect(canCloseForNoResponse({ ...silent, cadence_step: 2 }, "awaiting_response", isCaseCompleted)).toEqual({
+      closable: false,
+      reason: "follow_ups_incomplete",
+      followUpsSent: 2,
+    });
+  });
+
+  it("refuses on every status that means the provider did reply", () => {
+    // Closing one of these would tell the customer they were ignored
+    // when they were not.
+    for (const status of ["REPLY_RECEIVED", "COUNTER_OFFER_RECEIVED", "HOSPITAL_ACCEPTED", "SETTLEMENT_AGREED"] as const) {
+      expect(canCloseForNoResponse({ status, cadence_step: 3 }, "awaiting_response", isCaseCompleted)).toMatchObject({
+        closable: false,
+        reason: "provider_responded",
+      });
+    }
+  });
+
+  it("refuses a case that is already finished", () => {
+    expect(canCloseForNoResponse(silent, "paid", isCaseCompleted)).toMatchObject({
+      closable: false,
+      reason: "already_finished",
+    });
+    expect(
+      canCloseForNoResponse({ status: "CLOSED_NO_RESPONSE", cadence_step: 3 }, "awaiting_response", isCaseCompleted),
+    ).toMatchObject({ closable: false, reason: "already_finished" });
+  });
+
+  it("treats a missing or unreadable cadence as nothing sent", () => {
+    expect(
+      canCloseForNoResponse({ status: "DISPATCHED", cadence_step: undefined as never }, "awaiting_response", isCaseCompleted),
+    ).toEqual({ closable: false, reason: "follow_ups_incomplete", followUpsSent: 0 });
+    expect(
+      canCloseForNoResponse({ status: "DISPATCHED", cadence_step: Number.NaN }, "awaiting_response", isCaseCompleted),
+    ).toEqual({ closable: false, reason: "follow_ups_incomplete", followUpsSent: 0 });
   });
 });

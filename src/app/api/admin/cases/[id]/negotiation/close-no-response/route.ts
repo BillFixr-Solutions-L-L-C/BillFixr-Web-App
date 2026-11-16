@@ -4,7 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { AutomationEngineError, closeForNoResponse, getNegotiation } from "@/lib/automation-engine";
 import { getDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import { isBackendConfigured } from "@/lib/aiStack";
-import { providerHasResponded } from "@/lib/negotiationStatus";
+import { REQUIRED_FOLLOW_UPS, canCloseForNoResponse } from "@/lib/negotiationStatus";
+import { isCaseCompleted } from "@/lib/caseStatus";
 import { sendEmail } from "@/lib/email";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { emailCopy } from "@/lib/emailCopy";
@@ -94,26 +95,32 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
   }
 
-  if (providerHasResponded(negotiation.status)) {
+  // The same rule the admin screen uses to decide whether to offer the
+  // button, so the two cannot drift into offering a close that is then
+  // refused. The engine applies no guard of its own.
+  const check = canCloseForNoResponse(negotiation, caseRow.status, isCaseCompleted);
+  if (!check.closable) {
+    if (check.reason === "provider_responded") {
+      return NextResponse.json(
+        {
+          error: "This provider has responded, so the case can't be closed for non-response.",
+          negotiationStatus: negotiation.status,
+        },
+        { status: 409 },
+      );
+    }
+    if (check.reason === "already_finished") {
+      return NextResponse.json({ error: "This case is already finished." }, { status: 409 });
+    }
     return NextResponse.json(
       {
-        error: "This provider has responded, so the case can't be closed for non-response.",
-        negotiationStatus: negotiation.status,
+        error: `Only ${check.followUpsSent} of ${REQUIRED_FOLLOW_UPS} follow-ups have been sent. Wait for the sequence to finish.`,
+        followUpsSent: check.followUpsSent,
       },
       { status: 409 },
     );
   }
-
-  const followUpsSent = Number(negotiation.cadence_step ?? 0);
-  if (followUpsSent < 3) {
-    return NextResponse.json(
-      {
-        error: `Only ${followUpsSent} of 3 follow-ups have been sent. Wait for the sequence to finish.`,
-        followUpsSent,
-      },
-      { status: 409 },
-    );
-  }
+  const followUpsSent = check.followUpsSent;
 
   let closed;
   try {

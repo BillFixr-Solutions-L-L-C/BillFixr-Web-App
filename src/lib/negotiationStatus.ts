@@ -227,3 +227,47 @@ export function agreedSavings(
 export function clientNotices(negotiation: Pick<AutomationNegotiation, "messages">) {
   return (negotiation.messages ?? []).filter((m) => m.direction === "SYSTEM");
 }
+
+/** How many follow-ups the engine sends before a case may be given up on. */
+export const REQUIRED_FOLLOW_UPS = 3;
+
+export type NoResponseCloseCheck =
+  | { closable: true; followUpsSent: number }
+  | {
+      closable: false;
+      reason: "provider_responded" | "follow_ups_incomplete" | "already_finished";
+      followUpsSent: number;
+    };
+
+/**
+ * Whether a case may be closed for non-response.
+ *
+ * One function because two places need the answer and they must not
+ * drift: the admin screen, deciding whether to offer the button, and the
+ * route, enforcing it. A screen that offers a close the route refuses is
+ * worse than no button -- the engine applies no guard of its own, so this
+ * is the whole of the rule.
+ *
+ * Both conditions matter. Without the first, an admin could close a case
+ * mid-negotiation and we would tell the customer their provider ignored
+ * them when it had not. Without the second, we would give up on a
+ * provider that was merely slow.
+ */
+export function canCloseForNoResponse(
+  negotiation: Pick<AutomationNegotiation, "status" | "cadence_step">,
+  caseStatus: string,
+  isFinished: (status: string) => boolean,
+): NoResponseCloseCheck {
+  const followUpsSent = Number(negotiation.cadence_step ?? 0);
+
+  if (isFinished(caseStatus) || negotiation.status === "CLOSED_NO_RESPONSE") {
+    return { closable: false, reason: "already_finished", followUpsSent };
+  }
+  if (providerHasResponded(negotiation.status)) {
+    return { closable: false, reason: "provider_responded", followUpsSent };
+  }
+  if (!Number.isFinite(followUpsSent) || followUpsSent < REQUIRED_FOLLOW_UPS) {
+    return { closable: false, reason: "follow_ups_incomplete", followUpsSent: Number.isFinite(followUpsSent) ? followUpsSent : 0 };
+  }
+  return { closable: true, followUpsSent };
+}

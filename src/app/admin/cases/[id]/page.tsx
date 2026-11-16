@@ -13,9 +13,11 @@ import {
 import { buildCaseDocumentRows, type CaseDocumentSource } from "@/lib/caseDocuments";
 import CaseDocumentList from "@/components/dashboard/CaseDocumentList";
 import LetterDeliveryPanel from "@/components/admin/LetterDeliveryPanel";
+import { canCloseForNoResponse } from "@/lib/negotiationStatus";
 import { isCaseCompleted } from "@/lib/caseStatus";
 import ManualOverridePanel from "@/components/admin/ManualOverridePanel";
 import HeldSettlementPanel from "@/components/admin/HeldSettlementPanel";
+import CloseNoResponsePanel from "@/components/admin/CloseNoResponsePanel";
 import CaseDocumentsPanel from "@/components/admin/CaseDocumentsPanel";
 import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
@@ -74,6 +76,15 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   }
   const heldSettlement =
     negotiation?.status === "HELD_FOR_REVIEW" && negotiation.pending_settlement_amount !== null
+      ? negotiation
+      : null;
+
+  // A case the provider never answered. The rule lives in
+  // src/lib/negotiationStatus.ts because the close route enforces the
+  // same one -- a screen that offers a close the route refuses is worse
+  // than no button.
+  const silent =
+    negotiation && canCloseForNoResponse(negotiation, caseRow.status, isCaseCompleted).closable
       ? negotiation
       : null;
 
@@ -277,6 +288,15 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
               reason={heldSettlement.held_for_review_reason}
               heldAt={heldSettlement.held_for_review_at}
               canApprove={canOverride}
+            />
+          )}
+
+          {silent && (
+            <CloseNoResponsePanel
+              caseId={id}
+              followUpsSent={Number(silent.cadence_step ?? 0)}
+              lastContactAt={silent.updated_at ?? null}
+              canClose={canOverride}
             />
           )}
 
