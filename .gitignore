@@ -64,3 +64,6 @@ tt_firs_neue.zip
 /src/app/fonts/tt-firs-neue/
 font.zip
 .stripe-cli/
+
+# QA script output (records, screenshots) — never the scripts themselves
+scripts/qa/.out/

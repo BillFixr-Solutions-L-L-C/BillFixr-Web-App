@@ -1,0 +1,10 @@
+import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { createClient } from "@supabase/supabase-js";
+const ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const env=Object.fromEntries(readFileSync(`${ROOT}/.env.local`,"utf8").split(/\r?\n/).map(l=>l.match(/^([A-Z0-9_]+)=(.*)$/)).filter(Boolean).map(m=>[m[1],m[2].replace(/^["']|["']$/g,"")]));
+const db=createClient(env.NEXT_PUBLIC_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
+const { data, error } = await db.from("role_domain_access").select("*").eq("domain","negotiation");
+if (error) console.log("err:", error.message); else for (const r of data) console.log(JSON.stringify(r));
+const { data: p } = await db.from("profiles").select("role, admin_role, status").eq("role","admin");
+console.log("admins:", JSON.stringify(p));
