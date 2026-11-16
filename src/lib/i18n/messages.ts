@@ -61,7 +61,9 @@ export const MESSAGES = {
     "home.aiCheck": "Use AI to instantly check your Medical Bills",
     "home.caregiverAlt": "A caregiver supporting a patient at a medical office",
     "home.trustTitle": "Why Users Trust BillFixr",
-    "home.trustSubtitle": "Over 150,000 Use BillFixr To Reduce Their Medical Bills",
+    // Was "Over 150,000 Use BillFixr To Reduce Their Medical Bills", a
+    // figure nothing measured. This says only what the section shows.
+    "home.trustSubtitle": "Real reviews from people who brought us their medical bills.",
     "home.shareExperience": "Share your experience",
     "home.noReviews": "No reviews yet - be the first to share your experience.",
     "home.whyBody1": "Medical bills can be overwhelming, confusing, and financially draining.",
@@ -305,7 +307,7 @@ export const MESSAGES = {
     "home.aiCheck": "Use la IA para revisar sus facturas médicas al instante",
     "home.caregiverAlt": "Una cuidadora acompañando a un paciente en un consultorio médico",
     "home.trustTitle": "Por qué los usuarios confían en BillFixr",
-    "home.trustSubtitle": "Más de 150.000 personas usan BillFixr para reducir sus facturas médicas",
+    "home.trustSubtitle": "Reseñas reales de personas que nos trajeron sus facturas médicas.",
     "home.shareExperience": "Comparta su experiencia",
     "home.noReviews": "Aún no hay reseñas: sea el primero en compartir su experiencia.",
     "home.whyChooseUs": "Por qué elegirnos",

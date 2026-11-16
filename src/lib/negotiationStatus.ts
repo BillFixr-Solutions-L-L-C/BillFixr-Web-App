@@ -187,9 +187,38 @@ export function providerHasResponded(status: string): boolean {
 // The savings the provider has actually agreed to, which is not the same
 // as the audit's estimate and must never be shown as if it were. Null
 // until a settlement exists.
-export function agreedSavings(negotiation: Pick<AutomationNegotiation, "total_billed" | "settled_amount">): number | null {
+//
+// Measured against what the PATIENT owed, not the gross charges.
+//
+// This used to subtract the settlement from `total_billed`, and that was
+// wrong by a factor of five on the first real settlement: a $1,818.13
+// bill where insurance had already paid all but $428.13, settled at
+// $112.49. The customer saved $316.04. The old sum reported $1,705.64 and
+// put it on their screen as "saved".
+//
+// It is not only a display error. The success fee is a share of this
+// number, so the overstatement would have billed the customer more than
+// the whole reduction was worth. A fee that exceeds the saving is the one
+// outcome this product cannot produce.
+//
+// `original_balance_due` is what the engine seeds from the bill's
+// patient_due. It falls back to `total_billed` only for a negotiation
+// created before the engine recorded it -- the old behaviour, kept only
+// where there is genuinely nothing better, never preferred.
+export function patientBalance(
+  negotiation: Pick<AutomationNegotiation, "total_billed" | "original_balance_due">,
+): number {
+  const owed = negotiation.original_balance_due;
+  return typeof owed === "number" && Number.isFinite(owed) && owed > 0 ? owed : negotiation.total_billed;
+}
+
+export function agreedSavings(
+  negotiation: Pick<AutomationNegotiation, "total_billed" | "original_balance_due" | "settled_amount">,
+): number | null {
   if (negotiation.settled_amount == null) return null;
-  const saved = negotiation.total_billed - negotiation.settled_amount;
+  // Rounded to the cent: this feeds a Stripe charge, and binary floating
+  // point turns 428.53 - 112.49 into 316.04000000000002.
+  const saved = Math.round((patientBalance(negotiation) - negotiation.settled_amount) * 100) / 100;
   return saved > 0 ? saved : null;
 }
 

@@ -62,7 +62,7 @@ export async function GET(request: Request) {
   // nothing to learn from this.
   const { data: cases, error } = await admin
     .from("cases")
-    .select("id, user_id, status, negotiation_id")
+    .select("id, user_id, status, negotiation_id, savings_found, adjusted_total")
     .not("negotiation_id", "is", null)
     .in("status", ["uploaded", "scanning", "analyzed", "letter_sent", "awaiting_response"]);
 

@@ -41,7 +41,7 @@ async function loadOwnedCase(id: string): Promise<OwnedCase> {
 
   const { data: caseRow } = await supabase
     .from("cases")
-    .select("id, user_id, status, bill_id, negotiation_id")
+    .select("id, user_id, status, bill_id, negotiation_id, savings_found, adjusted_total")
     .eq("id", id)
     .single();
   // One answer for "no such case" and "not yours": an id that is not

@@ -240,6 +240,17 @@ export type AutomationNegotiation = {
   patient_name: string;
   account_number: string;
   total_billed: number;
+  /** What the PATIENT owed before we disputed it -- the engine seeds this
+   *  from the bill's `patient_due`, not from the gross charges. The two
+   *  are very different numbers: a bill can be $1,818 billed with $428
+   *  left to the patient after insurance. Any saving shown to a customer,
+   *  and the success fee computed from it, is against THIS. Optional only
+   *  because a negotiation created before the field existed may not carry
+   *  it; see agreedSavings() for the fallback. */
+  original_balance_due?: number | null;
+  /** What the provider is demanding right now -- starts equal to
+   *  `original_balance_due` and moves as the negotiation does. */
+  current_demanded_balance?: number | null;
   current_offer: number;
   status: AutomationNegotiationStatus;
   hospital_email: string | null;
