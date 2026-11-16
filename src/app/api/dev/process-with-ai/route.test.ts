@@ -30,6 +30,11 @@ vi.mock("@/lib/automation-engine", async (importOriginal) => ({
   auditBill: (...args: unknown[]) => auditBill(...args),
   getNegotiation: (...args: unknown[]) => getNegotiation(...args),
 }));
+const getDomainAccess = vi.fn();
+vi.mock("@/lib/domainAccess", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/domainAccess")>()),
+  getDomainAccess: (...args: unknown[]) => getDomainAccess(...args),
+}));
 vi.mock("@/lib/startNegotiation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/startNegotiation")>()),
   startNegotiationForCase: (...args: unknown[]) => startNegotiationForCase(...args),
@@ -612,5 +617,67 @@ describe("POST /api/dev/process-with-ai - reading the bill with the engine", () 
     expect(auditBill).not.toHaveBeenCalled();
     // Reused, not re-read.
     expect(processCase).not.toHaveBeenCalled();
+  });
+});
+
+// Two paid cases were stranded on 2026-11-10/11 with the scan never run
+// and nothing in the product able to start it: the admin Retry button was
+// inert because this route answered 404 for any case the caller did not
+// own. That gate now has a way through for an admin, and only for an
+// admin.
+describe("an admin restarting a stalled case", () => {
+  function someoneElsesCase() {
+    serverMock.getUser.mockResolvedValue({ data: { user: { id: "admin-1" } } });
+    serverMock.queueResult("cases", {
+      data: { id: "case-1", user_id: "customer-9", bill_id: "bill-1", bills: BILL },
+      error: null,
+    });
+  }
+
+  it("is allowed with full access to the AI pipeline domain", async () => {
+    someoneElsesCase();
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    getDomainAccess.mockResolvedValue("full");
+    getAiServiceConfig.mockReturnValue(null);
+
+    const res = await POST(makeRequest({ caseId: "case-1" }));
+
+    // Past the ownership gate: the 503 is the AI service being absent in
+    // this test, which is a later check and proves we got through.
+    expect(res.status).not.toBe(404);
+  });
+
+  it("is refused for an admin without full access", async () => {
+    someoneElsesCase();
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    getDomainAccess.mockResolvedValue("read_only");
+
+    const res = await POST(makeRequest({ caseId: "case-1" }));
+
+    expect(res.status).toBe(404);
+  });
+
+  it("is refused for a customer looking at someone else's case", async () => {
+    // Indistinguishable from a case that does not exist, deliberately.
+    someoneElsesCase();
+    serverMock.queueResult("profiles", { data: { role: "customer" }, error: null });
+    getDomainAccess.mockResolvedValue("full");
+
+    const res = await POST(makeRequest({ caseId: "case-1" }));
+
+    expect(res.status).toBe(404);
+  });
+
+  it("may not force a re-scan on the customer's allowance", async () => {
+    // A forced re-scan spends one of the customer's two. Starting an
+    // analysis that never ran spends nothing.
+    someoneElsesCase();
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    getDomainAccess.mockResolvedValue("full");
+
+    const res = await POST(makeRequest({ caseId: "case-1", force: true }));
+
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toMatch(/allowance/i);
   });
 });
