@@ -347,6 +347,43 @@ export async function uploadRevisedBill(
   return data.negotiation;
 }
 
+// Sends a counter-offer to the provider, on the existing email thread.
+//
+// This is an outward-facing message to a real hospital billing department, written by a person. The
+// engine does not compose it: `letterText` is dispatched as given, so whatever is passed here is what
+// the provider reads. English, like everything else addressed to a provider — see src/lib/language.ts.
+//
+// Autopilot counters on its own when a dispute is rejected. This is the path for a case it has
+// stopped on, or a figure a person wants to put rather than the one it would.
+//
+// Returns the negotiation itself rather than a wrapper, which is what this endpoint answers with.
+export async function sendCounterOffer(
+  negotiationId: string,
+  counter: { revisedOffer: number; letterText: string },
+): Promise<AutomationNegotiation> {
+  const response = await automationEngineFetch(
+    `/api/negotiations/${negotiationId}/counter`,
+    jsonRequest("POST", { revised_offer: counter.revisedOffer, counter_letter_text: counter.letterText }),
+  );
+  return readJson<AutomationNegotiation>(response, "counter offer");
+}
+
+// Stops or restarts autopilot for one negotiation.
+//
+// Autopilot defaults to ON and answers the provider by itself. AUTOPILOT_HOLD_FOR_REVIEW parks
+// anything resting on a finding below `high` confidence, which is the real safety net — but if a
+// reply is misread there was no way to stop it carrying on. This is that switch, per case.
+export async function setAutopilot(
+  negotiationId: string,
+  enabled: boolean,
+): Promise<{ status: string; auto_pilot_enabled: boolean }> {
+  const response = await automationEngineFetch(
+    `/api/negotiations/${negotiationId}/toggle-autopilot`,
+    jsonRequest("POST", { enabled }),
+  );
+  return readJson(response, "toggle autopilot");
+}
+
 // A hospital reply that arrived some way other than the engine's inbox: a letter, a fax, a scan
 // forwarded to support, or a figure read out over the phone and typed up.
 //
