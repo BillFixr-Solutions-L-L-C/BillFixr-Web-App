@@ -5,6 +5,7 @@ import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { escapeHtml } from "@/lib/html";
 import { providerHasResponded } from "@/lib/negotiationStatus";
 import { syncSettlementFigures } from "@/lib/settlementFigures";
+import { notifyAdmins } from "@/lib/adminNotifications";
 import type { AutomationNegotiation } from "@/types/automation-engine";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -98,6 +99,23 @@ export async function syncCaseFromNegotiation(
   if (!updated || updated.length === 0) {
     return { changed: false, reason: "status_not_advanceable" };
   }
+
+  // Past the conditional update, so this runs exactly once per case:
+  // whichever poll wins the race does the work, every other one matches
+  // no row and returns above. That is what makes it safe to tell the team
+  // here without them getting the same notice on every poll.
+  //
+  // A held settlement is the one that matters most. The engine parks it
+  // when a finding needs a person, and until somebody opens that case the
+  // negotiation cannot finish — there was nothing anywhere that said so.
+  const held = negotiation.status === "HELD_FOR_REVIEW";
+  await notifyAdmins(admin, {
+    type: held ? "settlement_held" : "provider_replied",
+    message: held
+      ? `A provider replied and the settlement needs review before we accept — case ${caseRow.id.slice(0, 8)}`
+      : `A provider replied — case ${caseRow.id.slice(0, 8)}`,
+    domain: "negotiation",
+  });
 
   let emailed = false;
   // communication_language, not the display cookie: what the customer
