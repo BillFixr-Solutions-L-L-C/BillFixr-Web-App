@@ -41,8 +41,13 @@ type CaseRow = {
 // Phase 2 (AI) fields — errors_detected/savings_found/appeal_letter_text/
 // ai_summary_text are real columns on cases, always null until the AI/OCR
 // workstream populates them. These are the exact values shown until then.
-const MOCK_ERRORS_DETECTED = "2";
-const MOCK_SAVINGS_FOUND = "$2590";
+// An em dash, not a number. These tiles used to fall back to
+// MOCK_ERRORS_DETECTED "2" and MOCK_SAVINGS_FOUND "$2590" whenever the
+// real figures were null, so a customer whose bill had not been analysed
+// yet was shown two errors and $2,590 of savings belonging to no bill.
+// The rest of the product stopped doing this in November; these two were
+// missed.
+const NOT_YET_KNOWN = "—";
 
 function BackToCasesButton({ onClick }: { onClick: () => void }) {
   return (
@@ -908,11 +913,15 @@ export default function ActiveCasePage() {
               // savings numbers in front of the customer with the fee
               // matching only one of them. Whatever writes a settlement
               // should write savings_found; this tile follows it.
-              value: selectedCase?.savings_found != null ? `$${selectedCase.savings_found}` : MOCK_SAVINGS_FOUND,
+              value:
+                selectedCase?.savings_found != null
+                  ? `$${Number(selectedCase.savings_found).toLocaleString()}`
+                  : NOT_YET_KNOWN,
             },
             {
               label: t("stats.errorsDetected"),
-              value: selectedCase?.errors_detected != null ? String(selectedCase.errors_detected) : MOCK_ERRORS_DETECTED,
+              value:
+                selectedCase?.errors_detected != null ? String(selectedCase.errors_detected) : NOT_YET_KNOWN,
             },
             { label: t("stats.appealGenerated"), value: "1" },
           ].map((stat) => (

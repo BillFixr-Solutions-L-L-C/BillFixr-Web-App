@@ -34,6 +34,14 @@ function adminClient(outcome: UpdateOutcome, profile: { name: string | null; ema
   return { client: client as never, update };
 }
 
+// The sync also reconciles the money columns now, so it needs the
+// settlement fields. `settled_amount: null` is the normal case -- nothing
+// has been agreed -- and src/lib/settlementFigures.test.ts covers what
+// happens when something has.
+function neg(status: AutomationNegotiationStatus | string, settled: number | null = null) {
+  return { status, total_billed: 1000, original_balance_due: 400, settled_amount: settled } as never;
+}
+
 const CASE = { id: "case-1", user_id: "user-1", status: "awaiting_response" };
 const PROFILE = { name: "Jane", email: "jane@example.com" };
 
@@ -46,7 +54,7 @@ describe("syncCaseFromNegotiation", () => {
   it("advances the case and emails once when the provider has replied", async () => {
     const { client, update } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
 
-    const result = await syncCaseFromNegotiation(client, CASE, { status: "REPLY_RECEIVED" });
+    const result = await syncCaseFromNegotiation(client, CASE, neg("REPLY_RECEIVED"));
 
     expect(result).toEqual({ changed: true, from: "awaiting_response", to: "response_received", emailed: true });
     expect(update).toHaveBeenCalledWith({ status: "response_received" });
@@ -57,7 +65,7 @@ describe("syncCaseFromNegotiation", () => {
   it("does nothing while the provider has not replied", async () => {
     const { client, update } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
 
-    const result = await syncCaseFromNegotiation(client, CASE, { status: "DISPATCHED" });
+    const result = await syncCaseFromNegotiation(client, CASE, neg("DISPATCHED"));
 
     expect(result).toEqual({ changed: false, reason: "no_response_yet" });
     expect(update).not.toHaveBeenCalled();
@@ -70,7 +78,7 @@ describe("syncCaseFromNegotiation", () => {
     const { client, update } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
 
     for (const status of ["response_received", "payment_pending", "resolved", "paid", "closed"]) {
-      const result = await syncCaseFromNegotiation(client, { ...CASE, status }, { status: "COMPLETED" });
+      const result = await syncCaseFromNegotiation(client, { ...CASE, status }, neg("COMPLETED"));
       expect(result).toEqual({ changed: false, reason: "status_not_advanceable" });
     }
     expect(update).not.toHaveBeenCalled();
@@ -82,7 +90,7 @@ describe("syncCaseFromNegotiation", () => {
     // race matches no row — which is what keeps this to one email.
     const { client } = adminClient({ data: [], error: null }, PROFILE);
 
-    const result = await syncCaseFromNegotiation(client, CASE, { status: "REPLY_RECEIVED" });
+    const result = await syncCaseFromNegotiation(client, CASE, neg("REPLY_RECEIVED"));
 
     expect(result).toEqual({ changed: false, reason: "status_not_advanceable" });
     expect(sendEmail).not.toHaveBeenCalled();
@@ -92,7 +100,7 @@ describe("syncCaseFromNegotiation", () => {
     const { client } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
     sendEmail.mockRejectedValue(new Error("resend down"));
 
-    const result = await syncCaseFromNegotiation(client, CASE, { status: "HOSPITAL_ACCEPTED" });
+    const result = await syncCaseFromNegotiation(client, CASE, neg("HOSPITAL_ACCEPTED"));
 
     expect(result).toEqual({ changed: true, from: "awaiting_response", to: "response_received", emailed: false });
   });
@@ -100,14 +108,14 @@ describe("syncCaseFromNegotiation", () => {
   it("throws when the status write fails, so the caller can retry", async () => {
     const { client } = adminClient({ data: null, error: { message: "deadlock" } }, PROFILE);
 
-    await expect(syncCaseFromNegotiation(client, CASE, { status: "REPLY_RECEIVED" })).rejects.toThrow("deadlock");
+    await expect(syncCaseFromNegotiation(client, CASE, neg("REPLY_RECEIVED"))).rejects.toThrow("deadlock");
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
   it("advances from every pre-response status", async () => {
     for (const status of ["uploaded", "scanning", "analyzed", "letter_sent", "awaiting_response"]) {
       const { client } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
-      const result = await syncCaseFromNegotiation(client, { ...CASE, status }, { status: "REPLY_RECEIVED" });
+      const result = await syncCaseFromNegotiation(client, { ...CASE, status }, neg("REPLY_RECEIVED"));
       expect(result).toMatchObject({ changed: true, from: status });
     }
   });
@@ -129,7 +137,7 @@ describe("syncCaseFromNegotiation", () => {
     ];
     for (const status of responded) {
       const { client } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
-      const result = await syncCaseFromNegotiation(client, CASE, { status });
+      const result = await syncCaseFromNegotiation(client, CASE, neg(status));
       expect(result, status).toMatchObject({ changed: true });
     }
   });
@@ -143,7 +151,7 @@ describe("syncCaseFromNegotiation", () => {
     ];
     for (const status of waiting) {
       const { client } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
-      const result = await syncCaseFromNegotiation(client, CASE, { status });
+      const result = await syncCaseFromNegotiation(client, CASE, neg(status));
       expect(result, status).toEqual({ changed: false, reason: "no_response_yet" });
     }
   });

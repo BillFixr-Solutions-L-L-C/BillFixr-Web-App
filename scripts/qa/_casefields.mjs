@@ -1,0 +1,10 @@
+import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { createClient } from "@supabase/supabase-js";
+const ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const env = Object.fromEntries(readFileSync(`${ROOT}/.env.local`,"utf8").split(/\r?\n/).map(l=>l.match(/^([A-Z0-9_]+)=(.*)$/)).filter(Boolean).map(m=>[m[1],m[2].replace(/^["']|["']$/g,"")]));
+const db = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth:{persistSession:false} });
+const { data } = await db.from("cases").select("id, status, errors_detected, savings_found, appeal_letter_text, bill_id, bills(filename, provider_name, analysis_result)").order("created_at",{ascending:false}).limit(5);
+for (const c of data) console.log(c.id.slice(0,8), c.status, "errors=",c.errors_detected, "savings=",c.savings_found, "letter=",Boolean(c.appeal_letter_text), "analysis_result=",Boolean(c.bills?.analysis_result));
+const { data: pr } = await db.from("payment_records").select("bill_id, type, status").eq("type","commitment_fee");
+console.log("commitment payments:", pr.map(p=>`${p.bill_id?.slice(0,8)}:${p.status}`).join(" "));

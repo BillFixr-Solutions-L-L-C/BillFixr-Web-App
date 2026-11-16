@@ -13,9 +13,13 @@ import {
 import { buildCaseDocumentRows, type CaseDocumentSource } from "@/lib/caseDocuments";
 import CaseDocumentList from "@/components/dashboard/CaseDocumentList";
 import LetterDeliveryPanel from "@/components/admin/LetterDeliveryPanel";
+import { canCloseForNoResponse, patientBalance, providerHasResponded } from "@/lib/negotiationStatus";
 import { isCaseCompleted } from "@/lib/caseStatus";
 import ManualOverridePanel from "@/components/admin/ManualOverridePanel";
 import HeldSettlementPanel from "@/components/admin/HeldSettlementPanel";
+import CloseNoResponsePanel from "@/components/admin/CloseNoResponsePanel";
+import AcceptSettlementPanel from "@/components/admin/AcceptSettlementPanel";
+import PaperReplyPanel from "@/components/admin/PaperReplyPanel";
 import CaseDocumentsPanel from "@/components/admin/CaseDocumentsPanel";
 import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
@@ -74,6 +78,26 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   }
   const heldSettlement =
     negotiation?.status === "HELD_FOR_REVIEW" && negotiation.pending_settlement_amount !== null
+      ? negotiation
+      : null;
+
+  // An offer on the table that nothing has settled. The held-settlement
+  // panel covers the figure autopilot parked; this covers a figure agreed
+  // some other way, which until now had no ending at all.
+  const acceptable =
+    negotiation &&
+    providerHasResponded(negotiation.status) &&
+    negotiation.settled_amount == null &&
+    !isCaseCompleted(caseRow.status)
+      ? negotiation
+      : null;
+
+  // A case the provider never answered. The rule lives in
+  // src/lib/negotiationStatus.ts because the close route enforces the
+  // same one -- a screen that offers a close the route refuses is worse
+  // than no button.
+  const silent =
+    negotiation && canCloseForNoResponse(negotiation, caseRow.status, isCaseCompleted).closable
       ? negotiation
       : null;
 
@@ -277,6 +301,31 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
               reason={heldSettlement.held_for_review_reason}
               heldAt={heldSettlement.held_for_review_at}
               canApprove={canOverride}
+            />
+          )}
+
+          {acceptable && !heldSettlement && (
+            <AcceptSettlementPanel
+              caseId={id}
+              patientBalance={patientBalance(acceptable)}
+              currentOffer={acceptable.current_offer ?? null}
+              canAccept={canOverride}
+            />
+          )}
+
+          {/* A reply can arrive by post or fax at any point before the
+              case ends, so this is offered for the whole of that window
+              rather than at one stage. */}
+          {negotiation && !isCaseCompleted(caseRow.status) && (
+            <PaperReplyPanel caseId={id} canSubmit={canOverride} />
+          )}
+
+          {silent && (
+            <CloseNoResponsePanel
+              caseId={id}
+              followUpsSent={Number(silent.cadence_step ?? 0)}
+              lastContactAt={silent.updated_at ?? null}
+              canClose={canOverride}
             />
           )}
 

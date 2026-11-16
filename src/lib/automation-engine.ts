@@ -347,6 +347,35 @@ export async function uploadRevisedBill(
   return data.negotiation;
 }
 
+// A hospital reply that arrived some way other than the engine's inbox: a letter, a fax, a scan
+// forwarded to support, or a figure read out over the phone and typed up.
+//
+// Same endpoint as uploadRevisedBill, with `reply_type` left at the engine's default so it runs the
+// general path: the document is transcribed by the vision model and handed to the same
+// analyze_hospital_response an emailed reply goes through. One analysis, whichever way the reply
+// arrived.
+//
+// At least one of `file` and `text` must carry something. The engine refuses an empty submission
+// rather than inventing a placeholder — it used to substitute a fixed sentence and analyse that,
+// which produced the same hardcoded answer for every reply.
+export async function uploadHospitalReply(
+  negotiationId: string,
+  reply: { file?: { filename: string; bytes: Blob }; text?: string },
+): Promise<AutomationNegotiation> {
+  const body = new FormData();
+  body.append("reply_text", reply.text ?? "");
+  if (reply.file) {
+    body.append("file", reply.file.bytes, reply.file.filename);
+  }
+
+  const response = await automationEngineFetch(`/api/negotiations/${negotiationId}/reply/upload`, {
+    method: "POST",
+    body,
+  });
+  const data = await readJson<{ negotiation: AutomationNegotiation }>(response, "hospital reply upload");
+  return data.negotiation;
+}
+
 // Call this after the client's completion fee payment has succeeded (for example from the Stripe
 // webhook). It unlocks the revised bill. `paymentReference` is stored with the case.
 export async function confirmCompletionPayment(

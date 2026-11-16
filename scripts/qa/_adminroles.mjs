@@ -1,0 +1,12 @@
+import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { createClient } from "@supabase/supabase-js";
+const ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const env=Object.fromEntries(readFileSync(`${ROOT}/.env.local`,"utf8").split(/\r?\n/).map(l=>l.match(/^([A-Z0-9_]+)=(.*)$/)).filter(Boolean).map(m=>[m[1],m[2].replace(/^["']|["']$/g,"")]));
+const db=createClient(env.NEXT_PUBLIC_SUPABASE_URL,env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
+const { data: admins } = await db.from("profiles").select("id, role, status, role_id").eq("role","admin");
+const { data: roles } = await db.from("roles").select("id, name");
+const byId = new Map((roles??[]).map(r=>[r.id,r.name]));
+for (const a of admins??[]) console.log(`admin ${a.id.slice(0,8)} status=${a.status} role_id=${a.role_id ? byId.get(a.role_id) ?? a.role_id.slice(0,8) : "NULL"}`);
+const { data: rda } = await db.from("role_domain_access").select("role_id, domain, access_level").eq("domain","negotiation");
+for (const r of rda??[]) if (byId.get(r.role_id)) console.log(`  negotiation: ${byId.get(r.role_id)} -> ${r.access_level}`);

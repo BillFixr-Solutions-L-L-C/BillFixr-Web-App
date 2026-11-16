@@ -187,9 +187,38 @@ export function providerHasResponded(status: string): boolean {
 // The savings the provider has actually agreed to, which is not the same
 // as the audit's estimate and must never be shown as if it were. Null
 // until a settlement exists.
-export function agreedSavings(negotiation: Pick<AutomationNegotiation, "total_billed" | "settled_amount">): number | null {
+//
+// Measured against what the PATIENT owed, not the gross charges.
+//
+// This used to subtract the settlement from `total_billed`, and that was
+// wrong by a factor of five on the first real settlement: a $1,818.13
+// bill where insurance had already paid all but $428.13, settled at
+// $112.49. The customer saved $316.04. The old sum reported $1,705.64 and
+// put it on their screen as "saved".
+//
+// It is not only a display error. The success fee is a share of this
+// number, so the overstatement would have billed the customer more than
+// the whole reduction was worth. A fee that exceeds the saving is the one
+// outcome this product cannot produce.
+//
+// `original_balance_due` is what the engine seeds from the bill's
+// patient_due. It falls back to `total_billed` only for a negotiation
+// created before the engine recorded it -- the old behaviour, kept only
+// where there is genuinely nothing better, never preferred.
+export function patientBalance(
+  negotiation: Pick<AutomationNegotiation, "total_billed" | "original_balance_due">,
+): number {
+  const owed = negotiation.original_balance_due;
+  return typeof owed === "number" && Number.isFinite(owed) && owed > 0 ? owed : negotiation.total_billed;
+}
+
+export function agreedSavings(
+  negotiation: Pick<AutomationNegotiation, "total_billed" | "original_balance_due" | "settled_amount">,
+): number | null {
   if (negotiation.settled_amount == null) return null;
-  const saved = negotiation.total_billed - negotiation.settled_amount;
+  // Rounded to the cent: this feeds a Stripe charge, and binary floating
+  // point turns 428.53 - 112.49 into 316.04000000000002.
+  const saved = Math.round((patientBalance(negotiation) - negotiation.settled_amount) * 100) / 100;
   return saved > 0 ? saved : null;
 }
 
@@ -197,4 +226,48 @@ export function agreedSavings(negotiation: Pick<AutomationNegotiation, "total_bi
 // INBOUND are the emails between us and the provider.
 export function clientNotices(negotiation: Pick<AutomationNegotiation, "messages">) {
   return (negotiation.messages ?? []).filter((m) => m.direction === "SYSTEM");
+}
+
+/** How many follow-ups the engine sends before a case may be given up on. */
+export const REQUIRED_FOLLOW_UPS = 3;
+
+export type NoResponseCloseCheck =
+  | { closable: true; followUpsSent: number }
+  | {
+      closable: false;
+      reason: "provider_responded" | "follow_ups_incomplete" | "already_finished";
+      followUpsSent: number;
+    };
+
+/**
+ * Whether a case may be closed for non-response.
+ *
+ * One function because two places need the answer and they must not
+ * drift: the admin screen, deciding whether to offer the button, and the
+ * route, enforcing it. A screen that offers a close the route refuses is
+ * worse than no button -- the engine applies no guard of its own, so this
+ * is the whole of the rule.
+ *
+ * Both conditions matter. Without the first, an admin could close a case
+ * mid-negotiation and we would tell the customer their provider ignored
+ * them when it had not. Without the second, we would give up on a
+ * provider that was merely slow.
+ */
+export function canCloseForNoResponse(
+  negotiation: Pick<AutomationNegotiation, "status" | "cadence_step">,
+  caseStatus: string,
+  isFinished: (status: string) => boolean,
+): NoResponseCloseCheck {
+  const followUpsSent = Number(negotiation.cadence_step ?? 0);
+
+  if (isFinished(caseStatus) || negotiation.status === "CLOSED_NO_RESPONSE") {
+    return { closable: false, reason: "already_finished", followUpsSent };
+  }
+  if (providerHasResponded(negotiation.status)) {
+    return { closable: false, reason: "provider_responded", followUpsSent };
+  }
+  if (!Number.isFinite(followUpsSent) || followUpsSent < REQUIRED_FOLLOW_UPS) {
+    return { closable: false, reason: "follow_ups_incomplete", followUpsSent: Number.isFinite(followUpsSent) ? followUpsSent : 0 };
+  }
+  return { closable: true, followUpsSent };
 }

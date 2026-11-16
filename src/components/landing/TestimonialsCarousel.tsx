@@ -78,7 +78,17 @@ export default async function TestimonialsCarousel({ testimonials }: { testimoni
               {t("home.shareExperience")} →
             </Link>
           </div>
-          <p className="text-5xl font-bold text-primary-900 sm:text-7xl">150k+</p>
+          {/* A "150k+" sat here, beside "Over 150,000 Use BillFixr To
+              Reduce Their Medical Bills". Neither was measured: the
+              product has taken 50 bills and no customer case has
+              completed. Published numbers about customers are a claim a
+              regulator can hold you to, and this one had just been
+              translated into a second language, which widened it rather
+              than fixing it.
+
+              Nothing replaces it rather than a smaller invented figure.
+              When there is a real number worth publishing it can come
+              from the database, like the reviews below do. */}
         </div>
 
         {testimonials.length === 0 ? (

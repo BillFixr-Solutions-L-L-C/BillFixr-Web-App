@@ -4,6 +4,7 @@ import { customerLanguage, type Language } from "@/lib/language";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { escapeHtml } from "@/lib/html";
 import { providerHasResponded } from "@/lib/negotiationStatus";
+import { syncSettlementFigures } from "@/lib/settlementFigures";
 import type { AutomationNegotiation } from "@/types/automation-engine";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -53,9 +54,30 @@ export type CaseStatusSyncResult =
  */
 export async function syncCaseFromNegotiation(
   admin: SupabaseClient,
-  caseRow: { id: string; user_id: string; status: string },
-  negotiation: Pick<AutomationNegotiation, "status">,
+  caseRow: { id: string; user_id: string; status: string; savings_found?: number | null; adjusted_total?: number | null },
+  negotiation: Pick<
+    AutomationNegotiation,
+    "status" | "total_billed" | "original_balance_due" | "settled_amount"
+  >,
 ): Promise<CaseStatusSyncResult> {
+  // The settlement figures first, and outside every early return below:
+  // the success fee is computed from cases.savings_found, so the column
+  // has to be right whatever the case's status does. A negotiation with
+  // no settlement returns immediately without touching the database --
+  // see src/lib/settlementFigures.ts.
+  //
+  // Deliberately here rather than beside each caller: both of this
+  // function's callers need it, and a third would otherwise have to
+  // remember.
+  try {
+    await syncSettlementFigures(admin, caseRow, negotiation);
+  } catch (err) {
+    // The status sync must still run. A case stuck on "awaiting a reply"
+    // when the provider has answered is the more visible failure, and
+    // the figures are retried on the next read either way.
+    console.error("Could not sync settlement figures for", caseRow.id, err);
+  }
+
   if (!providerHasResponded(negotiation.status)) {
     return { changed: false, reason: "no_response_yet" };
   }

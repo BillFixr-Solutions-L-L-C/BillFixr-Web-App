@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import WelcomeBanner from "@/components/dashboard/WelcomeBanner";
 import DashboardStats from "@/components/dashboard/DashboardStats";
@@ -131,6 +131,61 @@ export default function DashboardHome() {
       return () => clearTimeout(t);
     }
   }, [stage]);
+
+  // What this customer has actually been through, across every case.
+  //
+  // These four tiles used to be derived purely from the upload in front
+  // of them, so they read 0 / $0 / 0 / 0 on every visit that was not
+  // mid-scan -- including for someone with three analysed bills and a
+  // dispute running. The first thing they saw after logging in was a
+  // claim that nothing had ever happened.
+  //
+  // Read from `cases`, which is the same source Active Case and
+  // Completed Case count from, so the three screens cannot disagree
+  // about how many bills a customer has had analysed.
+  const [lifetime, setLifetime] = useState(emptyStats);
+
+  const loadLifetimeStats = useCallback(async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const [{ data: rows }, { count: appeals }] = await Promise.all([
+      // Only the two small numeric columns: `appeal_letter_text` is a
+      // whole letter and there may be several.
+      supabase.from("cases").select("errors_detected, savings_found").eq("user_id", user.id),
+      supabase
+        .from("cases")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .not("appeal_letter_text", "is", null),
+    ]);
+
+    const cases = rows ?? [];
+    const analysed = cases.filter((c) => c.errors_detected !== null);
+    const savings = cases.reduce((sum, c) => sum + Number(c.savings_found ?? 0), 0);
+    const errors = analysed.reduce((sum, c) => sum + Number(c.errors_detected ?? 0), 0);
+
+    return {
+      billsAnalyzed: String(analysed.length),
+      savingsFound: `$${savings.toLocaleString()}`,
+      errorsDetected: String(errors),
+      appealsGenerated: String(appeals ?? 0),
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const loaded = await loadLifetimeStats();
+      if (!cancelled && loaded) setLifetime(loaded);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadLifetimeStats]);
 
   async function handleAgree() {
     setStage("uploading");
@@ -272,7 +327,10 @@ export default function DashboardHome() {
     null,
   );
 
-  async function runScan(forCaseId: string) {
+  // useCallback because it now reads the lifetime stats, which is itself
+  // memoised — that makes runScan a reactive value, so the effect below
+  // has to depend on it rather than silently closing over an old copy.
+  const runScan = useCallback(async function runScan(forCaseId: string) {
     const analysisRes = await fetch("/api/dev/process-with-ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -305,15 +363,21 @@ export default function DashboardHome() {
       errorsDetected: numberOrNull(analysisBody?.errorsDetected),
       savingsFound: numberOrNull(analysisBody?.savingsFound),
     });
+    // The scan has just written this case's figures, so the tiles above
+    // are now a scan out of date.
+    const refreshed = await loadLifetimeStats();
+    if (refreshed) setLifetime(refreshed);
     setStage("negotiating");
-  }
+  }, [loadLifetimeStats]);
 
   useEffect(() => {
     if (stage === "scanning" && caseId && scanStartedRef.current !== caseId) {
       scanStartedRef.current = caseId;
       runScan(caseId);
     }
-  }, [stage, caseId]);
+    // scanStartedRef, not state, is what stops a second run — so adding
+    // runScan here cannot start the scan twice.
+  }, [stage, caseId, runScan]);
 
   function handleRetryScan() {
     if (!caseId) return;
@@ -323,18 +387,11 @@ export default function DashboardHome() {
   }
 
   const hasFile = stage === "scanning" || stage === "negotiating";
-  const stats =
-    stage === "negotiating"
-      ? {
-          billsAnalyzed: "1",
-          savingsFound: formatMoney(analysis?.savingsFound ?? null),
-          errorsDetected: analysis?.errorsDetected === null || analysis === null ? "—" : String(analysis.errorsDetected),
-          // The engine drafts the dispute letter as part of starting the
-          // negotiation, and the stage only becomes `negotiating` once it
-          // confirms one is running — so by here there is exactly one.
-          appealsGenerated: "1",
-        }
-      : emptyStats;
+  // Always the customer's real totals now, rather than a view of the
+  // current upload only. The scan refreshes them as soon as it has
+  // written, so the bill just analysed is included rather than being a
+  // separate set of numbers that replaces the history on screen.
+  const stats = lifetime;
 
   return (
     <div>
