@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import { AiServiceTimeoutError, getAiServiceConfig, processCase } from "@/lib/ai-service";
 import { mapAdminCaseAnalysis, mapBillAnalysis, mapCaseFields } from "@/lib/aiAnalysisMapping";
 import {
@@ -56,8 +57,40 @@ export async function POST(request: Request) {
     .eq("id", caseId)
     .single();
   const bill = Array.isArray(caseRow?.bills) ? caseRow.bills[0] : caseRow?.bills;
-  if (!caseRow || caseRow.user_id !== user.id || !bill) {
+  if (!caseRow || !bill) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
+
+  // Normally the owner, and only the owner. The exception is an admin
+  // restarting a case that stalled before it was ever analysed.
+  //
+  // Two paid cases were stranded that way on 2026-11-10/11: the scan
+  // never ran, and nothing in the product could start it — the upload
+  // screen's stage is client-only state that resets on reload, and the
+  // admin "Retry" button was inert precisely because this check had no
+  // way through it. The customer-side recovery added later only helps a
+  // customer who opens the case again.
+  //
+  // An admin may START a scan that never happened. They may not `force`
+  // one: that spends a re-scan from the customer's allowance of two, and
+  // it is not the team's allowance to spend.
+  const isOwner = caseRow.user_id === user.id;
+  let actingAsAdmin = false;
+  if (!isOwner) {
+    const { data: caller } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+    actingAsAdmin =
+      caller?.role === "admin" && hasFullDomainAccess(await getDomainAccess(supabase, "ai_pipeline"));
+    if (!actingAsAdmin) {
+      // Same answer as a case that does not exist: an id that is not
+      // yours should not be distinguishable from one that is not there.
+      return NextResponse.json({ error: "not found" }, { status: 404 });
+    }
+    if (force) {
+      return NextResponse.json(
+        { error: "A re-scan spends the customer's allowance. Start the analysis instead." },
+        { status: 403 },
+      );
+    }
   }
   if (!bill.storage_url) {
     return NextResponse.json({ error: "bill has no stored file" }, { status: 400 });
