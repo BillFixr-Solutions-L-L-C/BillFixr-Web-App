@@ -73,7 +73,7 @@ export default function HowItWorks() {
 
       <div className="relative mx-auto max-w-5xl">
         <h2 className="text-center text-4xl font-bold leading-tight text-white sm:text-5xl">
-          Use AI to instantly check your Medical Bills
+          {t("home.aiCheck")}
         </h2>
 
         <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">

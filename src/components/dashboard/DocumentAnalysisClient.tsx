@@ -55,6 +55,7 @@ export default function DocumentAnalysisClient({
   caseId = null,
   canRescan = true,
   rescanHint,
+  atDecisionPoint = false,
 }: {
   analysis: BillAnalysis;
   headerInfo: HeaderField[];
@@ -64,10 +65,24 @@ export default function DocumentAnalysisClient({
   watermark?: boolean;
   // Re-scan and Proceed only mean anything once the bill has a case.
   caseId?: string | null;
-  // One re-scan per case; false once it's been used.
+  // Two re-scans per case; false once both have been used.
   canRescan?: boolean;
   /** What to say about the allowance, from src/lib/rescan.ts. */
   rescanHint?: string;
+  /**
+   * Whether the customer is still deciding whether to go ahead: the bill
+   * is read, the analysis is in front of them, and the commitment fee is
+   * not yet paid. That is the only stretch where Re-scan and Proceed mean
+   * anything -- re-scanning a case whose dispute letter is already with
+   * the provider would replace the analysis the letter was written from,
+   * and "Proceed" past the point they already proceeded reads as a step
+   * they still have to take.
+   *
+   * Defaults to false so the page has to be told the customer is at that
+   * point. The wrong way round would be to show a live Re-scan button on
+   * a case under negotiation because a caller forgot a prop.
+   */
+  atDecisionPoint?: boolean;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [rescanning, setRescanning] = useState(false);
@@ -97,11 +112,13 @@ export default function DocumentAnalysisClient({
 
   return (
     <div>
+      {/* My Documents lists the customer's own uploads now, so a bill
+          with a case is reached from the case and goes back to it. */}
       <Link
-        href="/dashboard/documents"
+        href={caseId ? "/dashboard/case" : "/dashboard/documents"}
         className="mb-4 inline-block text-sm font-medium text-primary-600 hover:text-primary-700"
       >
-        ← Back to My Documents
+        {caseId ? "← Back to your case" : "← Back to My Documents"}
       </Link>
       <h1 className="font-serif text-4xl font-bold text-gray-900">Analysis Complete - Errors Found</h1>
       <p className="mt-2 text-gray-500">We&apos;ve identify potential issues and opportunity to savivings</p>
@@ -246,17 +263,27 @@ export default function DocumentAnalysisClient({
           </div>
         </div>
 
-        {caseId ? (
+        {/* Only while the customer is deciding. Once the commitment fee
+            is paid the dispute is running off this analysis, so there is
+            nothing here to re-scan or proceed to -- the case screen is
+            where that case is followed from then on. A spent allowance
+            removes the button rather than disabling it: a dead control
+            with a tooltip is worse than no control and a sentence. */}
+        {caseId && atDecisionPoint && (
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={rescan}
-              disabled={rescanning || !canRescan}
-              title={rescanHint}
-              className="rounded-full border border-[#0f7545] px-8 py-3 text-sm font-semibold text-[#0f7545] hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {rescanning ? "Re-scanning…" : canRescan ? "Re-scan" : "Re-scan used"}
-            </button>
+            {canRescan ? (
+              <button
+                type="button"
+                onClick={rescan}
+                disabled={rescanning}
+                title={rescanHint}
+                className="rounded-full border border-[#0f7545] px-8 py-3 text-sm font-semibold text-[#0f7545] hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {rescanning ? "Re-scanning…" : "Re-scan"}
+              </button>
+            ) : (
+              rescanHint && <p className="max-w-xs text-xs text-gray-400">{rescanHint}</p>
+            )}
             <Link
               href="/dashboard/case"
               className="rounded-full bg-[#0f7545] px-8 py-3 text-sm font-semibold text-white hover:bg-primary-700"
@@ -264,8 +291,6 @@ export default function DocumentAnalysisClient({
               Proceed
             </Link>
           </div>
-        ) : (
-          <span className="rounded-full bg-primary-600 px-8 py-3 text-sm font-semibold text-white">Completed</span>
         )}
       </div>
 

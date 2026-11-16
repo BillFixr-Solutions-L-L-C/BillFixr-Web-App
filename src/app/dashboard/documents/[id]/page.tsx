@@ -35,7 +35,9 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
 
   const { data: caseRow } = await supabase
     .from("cases")
-    .select("id, status, errors_detected, appeal_letter_text, provider_email, letter_sent_at, rescanned_at, rescan_count")
+    .select(
+      "id, status, errors_detected, appeal_letter_text, provider_email, letter_sent_at, negotiation_id, rescanned_at, rescan_count",
+    )
     .eq("bill_id", bill.id)
     .maybeSingle();
 
@@ -74,6 +76,28 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
   };
   const headerInfo: HeaderField[] = HEADER_FIELD_DEFS.map((def) => ({ ...def, value: headerValues[def.key] }));
 
+  // Re-scan and Proceed belong to one stretch of the process, and the
+  // line is whether the dispute has left the building.
+  //
+  // Once the appeal letter is with the provider, re-reading the bill
+  // would replace the analysis that letter was written from -- the
+  // provider would be arguing about findings we no longer hold -- and
+  // "Proceed" past the point the case is already proceeding reads as a
+  // step the customer still has to take. Asked for on 2026-11-13: "By
+  // the time they are opening the Analysis on the active case it
+  // shouldn't show rescan or proceed."
+  //
+  // Not the commitment fee, which is the other candidate and the wrong
+  // one: it is paid BEFORE the bill is read, so "analysis exists and the
+  // fee is unpaid" is a state that never occurs and would hide the
+  // buttons everywhere, for the wrong reason.
+  //
+  // `negotiation_id` as well as `letter_sent_at`: a negotiation that
+  // started but whose send is not recorded yet is still a dispute in
+  // flight.
+  const atDecisionPoint =
+    Boolean(caseRow) && !caseRow!.letter_sent_at && !caseRow!.negotiation_id;
+
   // Documents stay watermarked until the case is completed.
   const inProgress = Boolean(caseRow) && !isCaseCompleted(caseRow!.status);
 
@@ -98,6 +122,7 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
       caseId={caseRow?.id ?? null}
       canRescan={Boolean(caseRow) && canRescan(caseRow)}
       rescanHint={rescanHint(caseRow)}
+      atDecisionPoint={atDecisionPoint}
     />
   );
 }

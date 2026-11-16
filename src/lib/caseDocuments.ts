@@ -36,7 +36,7 @@ export type CaseDocumentRow = {
   label: string;
   /** The real filename, shown under the label where it is useful (admin). */
   sublabel?: string | null;
-  status: "Uploaded" | "Sent" | "Generated";
+  status: "Uploaded" | "Sent" | "Generated" | "Received";
   date: string | null;
   sizeLabel: string | null;
   previewUrl: string | null;
@@ -82,6 +82,11 @@ export type CaseDocumentSource = {
   // reads. Signed storage URLs instead, which the bills bucket policy
   // already grants an admin with client_data access.
   signStored?: boolean;
+  // Where the analysis of the bill can be read. It is a page rather than
+  // a file, so the row links instead of previewing, and a caller with
+  // nowhere to send the customer passes nothing and the row stays
+  // link-less.
+  analysisUrl?: string | null;
   // Where the appeal letter can be read, when the caller has somewhere to
   // serve it from. The customer reads it on the Active Case screen rather
   // than as a file, so they pass nothing and the row stays link-less.
@@ -138,7 +143,7 @@ export async function buildCaseDocumentRows(
     // reads as something that happened.
     date: source.hasAnalysis ? source.analysisDate : null,
     sizeLabel: null,
-    previewUrl: null,
+    previewUrl: source.hasAnalysis ? (source.analysisUrl ?? null) : null,
     downloadUrl: null,
     available: source.hasAnalysis,
   });

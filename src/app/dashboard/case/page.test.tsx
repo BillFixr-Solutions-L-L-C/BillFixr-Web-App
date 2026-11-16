@@ -162,3 +162,140 @@ describe("ActiveCasePage success fee", () => {
     expect(screen.queryByText(/30%/)).not.toBeInTheDocument();
   });
 });
+
+// Reported on 2026-11-13, after a provider was replied to as a test: the
+// customer got the "your provider responded" email, opened the case, and
+// the reply was nowhere on the screen — the Provider Responses row still
+// read "Pending".
+//
+// The reply is an email on the engine's thread, not a file anyone
+// uploads, so nothing in the document list was ever going to carry it.
+const REPLY = {
+  id: "msg-2",
+  direction: "INBOUND" as const,
+  sender: "billing@matthewwalker.example",
+  recipient: "advocate@billfixr.com",
+  subject: "Re: Formal Billing Dispute",
+  content_markdown:
+    "Dispute accepted ,new bill will be sent\n\nThanks\n\nOn Fri, Nov 13, 2026, 8:44 PM BillFixr Advocate <advocate@billfixr.com>\nwrote:\n\n> Formal Billing Dispute",
+  status: "RECEIVED",
+  created_at: "2026-11-13T20:46:46Z",
+};
+
+const OUR_LETTER = {
+  id: "msg-1",
+  direction: "OUTBOUND" as const,
+  sender: "advocate@billfixr.com",
+  recipient: "billing@matthewwalker.example",
+  subject: "Formal Billing Dispute",
+  content_markdown: "Dear Billing Team, we dispute this bill.",
+  status: "SENT",
+  created_at: "2026-11-13T20:44:32Z",
+};
+
+function withNegotiation(messages: unknown[], status = "HELD_FOR_REVIEW") {
+  mock.reset();
+  mock.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+  mock.queueResult("cases", {
+    data: [{ ...CASE_ROW, negotiation_id: "neg-1", bill_id: "bill-1" }],
+    error: null,
+  });
+  mock.queueResult("app_settings", { data: { success_fee_percentage: 20 }, error: null });
+  mock.queueResult("letter_events", { data: [], error: null });
+  mock.queueResult("case_documents", { data: [], error: null });
+  global.fetch = vi.fn(
+    async () =>
+      new Response(
+        JSON.stringify({
+          id: "neg-1",
+          status,
+          total_billed: 1818.13,
+          settled_amount: null,
+          updated_at: "2026-11-13T20:46:47Z",
+          revised_bill_available: false,
+          messages,
+        }),
+        { status: 200 },
+      ),
+  ) as typeof fetch;
+}
+
+describe("the provider's reply", () => {
+  it("shows what the provider wrote", async () => {
+    withNegotiation([OUR_LETTER, REPLY]);
+    const user = userEvent.setup();
+    render(<ActiveCasePage />);
+
+    await user.click(await screen.findByText("bill.pdf"));
+
+    expect(await screen.findByText(/Dispute accepted ,new bill will be sent/)).toBeInTheDocument();
+    expect(screen.getByText(/billing@matthewwalker.example/)).toBeInTheDocument();
+  });
+
+  it("does not read our own letter back to them inside it", async () => {
+    // The reply carries our dispute quoted underneath — three thousand
+    // characters of our words around one sentence of theirs.
+    withNegotiation([OUR_LETTER, REPLY]);
+    const user = userEvent.setup();
+    render(<ActiveCasePage />);
+
+    await user.click(await screen.findByText("bill.pdf"));
+    await screen.findByText(/Dispute accepted/);
+
+    expect(screen.queryByText(/wrote:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Dear Billing Team/)).not.toBeInTheDocument();
+  });
+
+  it("stops the Provider Responses row claiming nothing has come back", async () => {
+    withNegotiation([OUR_LETTER, REPLY]);
+    const user = userEvent.setup();
+    render(<ActiveCasePage />);
+
+    await user.click(await screen.findByText("bill.pdf"));
+    await screen.findByText(/Dispute accepted/);
+
+    const row = screen.getByText("Provider Responses").closest("div")?.parentElement?.parentElement;
+    expect(row).toBeTruthy();
+    expect(row!.textContent).toContain("Received");
+    expect(row!.textContent).not.toContain("Not yet available");
+  });
+
+  it("gives the engine's notice in full, not just its headline", async () => {
+    // The subject is "Hospital agreed - we are checking it before
+    // confirming". The body is the part that says what they agreed to
+    // and that nothing is at risk, and only the subject was shown.
+    const notice = {
+      id: "msg-3",
+      direction: "SYSTEM" as const,
+      sender: "engine",
+      recipient: "client",
+      subject: "Hospital agreed - we are checking it before confirming",
+      content_markdown:
+        "The hospital agreed to $112.49. One of our findings still needs a person to review it, so we are confirming the details before we accept on your behalf. Nothing is lost and no deadline is running.",
+      status: "SENT",
+      created_at: "2026-11-13T20:46:47Z",
+    };
+    withNegotiation([OUR_LETTER, REPLY, notice]);
+    const user = userEvent.setup();
+    render(<ActiveCasePage />);
+
+    await user.click(await screen.findByText("bill.pdf"));
+
+    expect(await screen.findByText(/Hospital agreed - we are checking it/)).toBeInTheDocument();
+    expect(screen.getByText(/Nothing is lost and no deadline is running/)).toBeInTheDocument();
+  });
+
+  it("says nothing when the provider has not written back", async () => {
+    withNegotiation([OUR_LETTER], "DISPATCHED");
+    const user = userEvent.setup();
+    render(<ActiveCasePage />);
+
+    await user.click(await screen.findByText("bill.pdf"));
+    await screen.findByText("Bill Analyzed");
+
+    // Not "no reply yet" dressed up as one: our own outbound letter must
+    // never be shown as if the provider had sent it.
+    expect(screen.queryByText(/Your provider's reply/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Dear Billing Team/)).not.toBeInTheDocument();
+  });
+});

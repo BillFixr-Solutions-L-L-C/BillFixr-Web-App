@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getT } from "@/lib/i18n/server";
 
 type Testimonial = { quote: string; name: string; rating: number };
 
@@ -46,7 +47,8 @@ function Card({
   );
 }
 
-export default function TestimonialsCarousel({ testimonials }: { testimonials: Testimonial[] }) {
+export default async function TestimonialsCarousel({ testimonials }: { testimonials: Testimonial[] }) {
+  const t = await getT();
   // Few enough that a continuous scroll would just loop the same handful
   // of cards awkwardly — lay them out statically instead.
   const scrolls = testimonials.length > 3;
@@ -65,15 +67,15 @@ export default function TestimonialsCarousel({ testimonials }: { testimonials: T
       <div className="relative mx-auto max-w-5xl">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <h2 className="text-2xl font-semibold text-primary-900">Why Users Trust BillFixr</h2>
+            <h2 className="text-2xl font-semibold text-primary-900">{t("home.trustTitle")}</h2>
             <p className="mt-2 max-w-xs text-sm text-primary-900/60">
-              Over 150,000 Use BillFixr To Reduce Their Medical Bills
+              {t("home.trustSubtitle")}
             </p>
             <Link
               href="/testimonial"
               className="mt-3 inline-block text-sm font-semibold text-primary-600 hover:text-primary-700"
             >
-              Share your experience →
+              {t("home.shareExperience")} →
             </Link>
           </div>
           <p className="text-5xl font-bold text-primary-900 sm:text-7xl">150k+</p>
@@ -82,7 +84,7 @@ export default function TestimonialsCarousel({ testimonials }: { testimonials: T
         {testimonials.length === 0 ? (
           <div className="mt-10 rounded-2xl bg-primary-50 p-8 text-center">
             <p className="text-sm text-primary-900/70">
-              No reviews yet — be the first to share your experience.
+              {t("home.noReviews")}
             </p>
           </div>
         ) : scrolls ? (

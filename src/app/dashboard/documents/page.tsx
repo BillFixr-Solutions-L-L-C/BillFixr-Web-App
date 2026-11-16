@@ -1,20 +1,22 @@
 import PageHeading from "@/components/dashboard/PageHeading";
 import DocumentsTable, { type DocumentRow } from "@/components/dashboard/DocumentsTable";
 import { createClient } from "@/lib/supabase/server";
-import { buildCaseDocumentRows } from "@/lib/caseDocuments";
+import { getBillDocuments } from "@/lib/billDocuments";
 import { getT } from "@/lib/i18n/server";
 
-type CaseWithBill = {
-  id: string;
-  appeal_letter_text: string | null;
-  letter_sent_at: string | null;
-  created_at: string;
-  bills: { id: string; filename: string; provider_name: string | null; analysis_result: unknown } | null;
-};
-
-// Lists what the process has produced for the customer — the analysis, the
-// appeal letter, and anything staff have uploaded against the case. The
-// bill they uploaded themselves is deliberately not listed here.
+// My Documents is the customer's own uploads: the hospital bills they gave
+// us, nothing else.
+//
+// It used to list what the process produced for them instead — the
+// analysis, the appeal letter, and anything received from the provider —
+// with the uploaded bill deliberately left out. That is backwards. Those
+// documents belong to a case, and the case screen is where they are read:
+// Active Case lists all of them against the case they concern, so a
+// customer with two cases can tell which analysis is which. Listed here
+// they were a flat pile with no case to anchor them to.
+//
+// Keeping the bill here also means it is reachable before any case exists
+// — between upload and the analysis there is nothing else to see.
 export default async function MyDocumentsPage() {
   const t = await getT();
   const supabase = await createClient();
@@ -25,42 +27,30 @@ export default async function MyDocumentsPage() {
   let rows: DocumentRow[] = [];
 
   if (user) {
-    const { data: cases } = await supabase
-      .from("cases")
-      .select("id, appeal_letter_text, letter_sent_at, created_at, bills(id, filename, provider_name, analysis_result)")
+    const { data: bills } = await supabase
+      .from("bills")
+      .select("id, filename, provider_name, storage_url, status, uploaded_at")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      .order("uploaded_at", { ascending: false });
 
-    const { data: stored } = await supabase
-      .from("case_documents")
-      .select("id, case_id, type, filename, storage_url, size_bytes, received_on, created_at")
-      .eq("user_id", user.id);
+    const signed = await getBillDocuments(supabase, bills ?? []);
+    const byId = new Map(signed.map((d) => [d.id, d]));
 
-    for (const c of (cases as unknown as CaseWithBill[]) ?? []) {
-      const documents = await buildCaseDocumentRows(supabase, {
-        bill: null, // the customer's own upload isn't listed here
-        appealLetterText: c.appeal_letter_text,
-        letterSentAt: c.letter_sent_at,
-        hasAnalysis: Boolean(c.bills?.analysis_result),
-        analysisDate: c.created_at,
-        stored: (stored ?? []).filter((d) => d.case_id === c.id),
-      });
-
-      rows = rows.concat(
-        documents
-          .filter((d) => d.available)
-          .map((d) => ({
-            key: `${c.id}-${d.id}`,
-            label: d.label,
-            provider: c.bills?.provider_name ?? "—",
-            date: d.date,
-            previewUrl: d.previewUrl,
-            // The analysis isn't a file — it's the page that renders it,
-            // which is keyed on the bill.
-            href: d.id === "analysis" && c.bills ? `/dashboard/documents/${c.bills.id}` : null,
-          })),
-      );
-    }
+    rows = (bills ?? []).map((bill) => ({
+      key: bill.id,
+      // Named for what it is, with the filename underneath. A row labelled
+      // "Screen Shot 2026-10-23 at 5.40.05 PM.png" reads as a stray
+      // upload rather than the medical bill the case is about — the same
+      // reason the case document list carries both.
+      label: t("docs.hospitalBill"),
+      sublabel: bill.filename,
+      provider: bill.provider_name ?? "—",
+      date: bill.uploaded_at,
+      previewUrl: byId.get(bill.id)?.previewUrl ?? null,
+      // Nothing to navigate to: this is a file, and it opens over the
+      // page. The analysis of it is read from the case.
+      href: null,
+    }));
   }
 
   return (

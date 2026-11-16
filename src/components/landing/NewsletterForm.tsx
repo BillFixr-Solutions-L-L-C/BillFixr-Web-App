@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n/client";
 
 export default function NewsletterForm() {
+  const t = useT();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
 
@@ -23,7 +25,7 @@ export default function NewsletterForm() {
   }
 
   if (status === "done") {
-    return <p className="mt-3 text-sm text-white/90">You&apos;re subscribed — thanks for joining!</p>;
+    return <p className="mt-3 text-sm text-white/90">{t("site.subscribed")}</p>;
   }
 
   return (
@@ -34,7 +36,7 @@ export default function NewsletterForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email Address"
+          placeholder={t("site.emailAddress")}
           className="w-full bg-transparent px-4 py-1.5 text-sm text-gray-600 placeholder:text-gray-400 focus:outline-none"
         />
         <button
@@ -42,10 +44,10 @@ export default function NewsletterForm() {
           disabled={status === "loading"}
           className="flex shrink-0 items-center gap-2 rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:opacity-60"
         >
-          ↗ Enter
+          ↗ {t("site.subscribe")}
         </button>
       </form>
-      {status === "error" && <p className="mt-2 text-sm text-white/90">Something went wrong — please try again.</p>}
+      {status === "error" && <p className="mt-2 text-sm text-white/90">{t("site.subscribeFailed")}</p>}
     </div>
   );
 }
