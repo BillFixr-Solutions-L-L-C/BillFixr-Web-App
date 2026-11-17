@@ -188,7 +188,25 @@ async def health_check(check: str = ""):
         "replies_read": state["replies_read"],
         "api_protected": state["api_protected"],
         "store_durable": state["store_durable"],
+        # A count, not the replies themselves -- this route is outside the
+        # API key check. Non-zero means at least one provider answered a
+        # letter whose negotiation is gone and the reply could not be
+        # processed. /api/negotiations/unmatched-replies has the detail,
+        # behind the key.
+        "unmatched_replies": NegotiationRepository.count_unmatched_replies(),
     }
+
+
+@app.get("/api/negotiations/unmatched-replies")
+async def list_unmatched_replies():
+    """Replies carrying a tracking code with no negotiation behind it.
+
+    Until this existed the only trace of a dropped reply was a log line
+    that scrolled away. Behind the API key, because it carries the
+    provider's address and the subject of their mail.
+    """
+    rows = NegotiationRepository.list_unmatched_replies()
+    return {"count": len(rows), "unmatched_replies": rows}
 
 @app.get("/api/demo-bills")
 async def list_demo_bills():

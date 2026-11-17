@@ -147,20 +147,39 @@ class InboundEmailPoller:
                     # normal: either the store was wiped, or it was
                     # restored from before the letter went out. Nothing can
                     # be attributed without the row -- the case id lived on
-                    # it -- so a loud log is the most that can be done here,
-                    # and it is a great deal more than the silent `continue`
-                    # this replaces.
-                    logger.error(
-                        "Reply for tracking code %s from %s matches no negotiation. "
-                        "A letter was sent under this code and its record is gone, so this "
-                        "reply cannot be processed.",
-                        tracking_code,
-                        sender,
+                    # it -- so recording it and saying so is the most that
+                    # can be done here.
+                    #
+                    # Said once per message, not once per poll. This loop
+                    # re-reads the latest fifteen messages every run and
+                    # marks nothing as seen, so a dead reply sitting in the
+                    # inbox used to log the same error on every sync --
+                    # which at a 30-minute cadence is 48 a day, and trains
+                    # everyone to scroll past engine errors.
+                    first_time = NegotiationRepository.record_unmatched_reply(
+                        tracking_code=tracking_code,
+                        sender=sender,
+                        subject=subject or "",
+                        message_id=inbound_msg_id,
                     )
-                    print(
-                        f"UNMATCHED REPLY: {tracking_code} from {sender} - no negotiation on record",
-                        flush=True,
-                    )
+                    if first_time:
+                        logger.error(
+                            "Reply for tracking code %s from %s matches no negotiation. "
+                            "A letter was sent under this code and its record is gone, so this "
+                            "reply cannot be processed.",
+                            tracking_code,
+                            sender,
+                        )
+                        print(
+                            f"UNMATCHED REPLY: {tracking_code} from {sender} - no negotiation on record",
+                            flush=True,
+                        )
+                    else:
+                        logger.debug(
+                            "Unmatched reply %s from %s seen again; already on record.",
+                            tracking_code,
+                            sender,
+                        )
                     continue
 
                 # Check if this exact text is already in the negotiation timeline

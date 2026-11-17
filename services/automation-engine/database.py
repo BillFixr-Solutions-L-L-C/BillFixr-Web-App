@@ -206,6 +206,33 @@ def init_db():
     )
     """))
 
+    # Table: unmatched_replies
+    #
+    # A provider reply carrying a BFX- code the store has no negotiation
+    # for. That should be impossible -- the engine only ever puts a code in
+    # a letter it sent -- so it means the row is gone: wiped with the
+    # container before ENGINE_DATABASE_URL was set, or restored from before
+    # the letter went out.
+    #
+    # It exists for two reasons. The reply cannot be processed, and until
+    # now the only trace of that was a log line; the readiness report even
+    # says "nothing reports it". And the poller re-reads the latest fifteen
+    # messages on EVERY run without marking anything seen, so an unmatched
+    # reply that stays in the inbox logged the same error on every single
+    # poll, forever. A row keyed by the message makes the log fire once and
+    # leaves something queryable behind.
+    cursor.execute(_ddl("""
+    CREATE TABLE IF NOT EXISTS unmatched_replies (
+        message_key TEXT PRIMARY KEY,
+        tracking_code TEXT NOT NULL,
+        sender TEXT NOT NULL,
+        subject TEXT,
+        first_seen_at TEXT NOT NULL,
+        last_seen_at TEXT NOT NULL,
+        times_seen INTEGER NOT NULL DEFAULT 1
+    )
+    """))
+
     conn.commit()
 
     # Dynamic migrations for email threading and autopilot
@@ -283,7 +310,7 @@ def init_db():
         # or by someone who did not know these were in here. No policies, for
         # the same reason bill_extractions has none: nothing should reach this
         # data except the service.
-        for table in ("negotiations", "negotiation_messages"):
+        for table in ("negotiations", "negotiation_messages", "unmatched_replies"):
             cursor.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
 
     conn.commit()
@@ -346,7 +373,17 @@ class NegotiationRepository:
         neg_id = str(uuid.uuid4())
         short_id = neg_id[:6].upper()
         # Clean tracking code: e.g. BFX-85273-A1B2
-        clean_acc = "".join(c for c in account_number if c.isalnum())[-5:] or "BILL"
+        #
+        # .upper() is load-bearing, not tidiness. The account-number segment
+        # is taken verbatim from the bill, so it can carry letters in any
+        # case -- "acct-t4417" becomes "t4417". The reply path uppercases
+        # whatever it finds (inbound_poller._extract_tracking_code), and the
+        # lookup used to compare exactly, so a letter sent under a code with
+        # a lowercase letter in it could never be matched to its own reply.
+        # The provider answers, the engine parses the code, finds nothing,
+        # and drops it -- permanently, because the case id lives on the row
+        # it could not find.
+        clean_acc = "".join(c for c in account_number if c.isalnum())[-5:].upper() or "BILL"
         tracking_code = f"BFX-{clean_acc}-{short_id}"
         now = datetime.now(timezone.utc).isoformat()
         
@@ -400,7 +437,17 @@ class NegotiationRepository:
         conn = get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM negotiations WHERE id = ? OR tracking_code = ?", (negotiation_id, negotiation_id))
+        # The tracking code is compared case-insensitively. The generator
+        # now uppercases it, but rows written before that fix keep whatever
+        # case the account number had, and the reply path uppercases every
+        # code it extracts -- so an exact comparison would leave those rows
+        # permanently unreachable by their own replies. UPPER() on both
+        # sides costs a scan of a small table and buys back every one of
+        # them. Works identically on SQLite and Postgres.
+        cursor.execute(
+            "SELECT * FROM negotiations WHERE id = ? OR UPPER(tracking_code) = UPPER(?)",
+            (negotiation_id, negotiation_id),
+        )
         row = cursor.fetchone()
         if not row:
             conn.close()
@@ -712,3 +759,72 @@ class NegotiationRepository:
         conn.commit()
         conn.close()
 
+
+    # ---- Replies that match no negotiation -------------------------------
+
+    @staticmethod
+    def record_unmatched_reply(
+        tracking_code: str,
+        sender: str,
+        subject: str = "",
+        message_id: str = "",
+    ) -> bool:
+        """Records a reply whose tracking code has no negotiation.
+
+        Returns True the first time a given message is seen and False
+        afterwards, so the caller can log loudly once instead of on every
+        poll. The poller re-reads the latest fifteen messages every run and
+        marks nothing as seen, so without this the same dead reply reports
+        itself forever -- which, at a 30-minute cadence, is 48 identical
+        errors a day and a fast way to teach everyone to ignore the log.
+
+        Keyed on the RFC 5322 Message-ID where there is one. Some senders
+        omit it, so the fallback is the code and the sender together: that
+        can merge two genuinely different replies from the same provider on
+        the same dead code, which is the right way round -- the alternative
+        is a new row, and a fresh error, on every poll.
+        """
+        key = (message_id or "").strip() or f"{tracking_code}|{sender}"
+        now = datetime.now(timezone.utc).isoformat()
+        conn = get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT times_seen FROM unmatched_replies WHERE message_key = ?", (key,))
+            existing = cursor.fetchone()
+            if existing:
+                cursor.execute(
+                    "UPDATE unmatched_replies SET last_seen_at = ?, times_seen = ? WHERE message_key = ?",
+                    (now, dict(existing)["times_seen"] + 1, key),
+                )
+                conn.commit()
+                return False
+
+            cursor.execute(
+                "INSERT INTO unmatched_replies "
+                "(message_key, tracking_code, sender, subject, first_seen_at, last_seen_at, times_seen) "
+                "VALUES (?, ?, ?, ?, ?, ?, 1)",
+                (key, tracking_code, sender, subject, now, now),
+            )
+            conn.commit()
+            return True
+        finally:
+            conn.close()
+
+    @staticmethod
+    def list_unmatched_replies() -> List[Dict[str, Any]]:
+        """Every dead reply on record, newest first."""
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM unmatched_replies ORDER BY first_seen_at DESC")
+        rows = [dict(r) for r in cursor.fetchall()]
+        conn.close()
+        return rows
+
+    @staticmethod
+    def count_unmatched_replies() -> int:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) AS n FROM unmatched_replies")
+        row = cursor.fetchone()
+        conn.close()
+        return int(dict(row)["n"]) if row else 0
