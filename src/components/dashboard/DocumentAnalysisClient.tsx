@@ -10,6 +10,7 @@ import HeaderInformationCard from "@/components/dashboard/HeaderInformationCard"
 import WatermarkOverlay from "@/components/dashboard/WatermarkOverlay";
 import type { HeaderField } from "@/lib/headerInfo";
 import TableScroller from "@/components/TableScroller";
+import { useT } from "@/lib/i18n/client";
 
 const PRIORITY_TAG: Record<BillIssue["priority"], string> = {
   High: "bg-danger text-white",
@@ -18,6 +19,7 @@ const PRIORITY_TAG: Record<BillIssue["priority"], string> = {
 };
 
 function IssueCard({ issue, index }: { issue: BillIssue; index: number }) {
+  const t = useT();
   return (
     <div className="rounded-2xl bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -32,7 +34,8 @@ function IssueCard({ issue, index }: { issue: BillIssue; index: number }) {
         </div>
         {issue.potentialSavings && (
           <p className="text-[#a6b1bb]">
-            Potential Savings <span className="ml-2 text-2xl font-bold text-[#0f7545]">{issue.potentialSavings}</span>
+            {t("analysis.potentialSavings")}{" "}
+            <span className="ml-2 text-2xl font-bold text-[#0f7545]">{issue.potentialSavings}</span>
           </p>
         )}
       </div>
@@ -85,6 +88,7 @@ export default function DocumentAnalysisClient({
    */
   atDecisionPoint?: boolean;
 }) {
+  const t = useT();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [rescanning, setRescanning] = useState(false);
   const [rescanError, setRescanError] = useState<string | null>(null);
@@ -121,11 +125,11 @@ export default function DocumentAnalysisClient({
       >
         {caseId ? "← Back to your case" : "← Back to My Documents"}
       </Link>
-      <h1 className="font-serif text-4xl font-bold text-gray-900">Analysis Complete - Errors Found</h1>
-      <p className="mt-2 text-gray-500">We&apos;ve identify potential issues and opportunity to savivings</p>
+      <h1 className="font-serif text-4xl font-bold text-gray-900">{t("analysis.completeErrors")}</h1>
+      <p className="mt-2 text-gray-500">{t("analysis.completeBody")}</p>
 
       <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">AI Bill Analysis</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">{t("analysis.aiBillAnalysis")}</p>
         <p className="mt-3 text-sm leading-relaxed text-gray-500">{analysis.analysisSummary}</p>
       </div>
 
@@ -133,7 +137,7 @@ export default function DocumentAnalysisClient({
         <HeaderInformationCard fields={headerInfo} billId={headerEditBillId} />
 
         <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">Files</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">{t("analysis.files")}</p>
           <div className="mt-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-accent-500">📄</span>
@@ -155,15 +159,15 @@ export default function DocumentAnalysisClient({
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Errors Found</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{t("analysis.errorsFound")}</p>
           <p className="mt-2 text-2xl font-bold text-gray-900">{analysis.errorsFound}</p>
         </div>
         <div className="rounded-2xl bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Estimated Savings</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{t("analysis.estimatedSavings")}</p>
           <p className="mt-2 text-2xl font-bold text-gray-900">{analysis.estimatedSavings}</p>
         </div>
         <div className="rounded-2xl bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Detected Issues</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{t("analysis.detectedIssues")}</p>
           {analysis.detectedIssues.map((issue) => (
             <span
               key={issue}
@@ -184,15 +188,15 @@ export default function DocumentAnalysisClient({
       )}
 
       <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
-        <p className="text-sm font-semibold text-primary-700">Total Amount Breakdown</p>
+        <p className="text-sm font-semibold text-primary-700">{t("analysis.totalBreakdown")}</p>
         <TableScroller className="mt-4">
           <table className="w-full min-w-[560px] text-left text-sm">
             <thead>
               <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
                 <th className="px-4 py-3" />
-                <th className="px-4 py-3">Current</th>
-                <th className="px-4 py-3">Original (AI Extracted)</th>
-                <th className="px-4 py-3">Difference</th>
+                <th className="px-4 py-3">{t("analysis.current")}</th>
+                <th className="px-4 py-3">{t("analysis.originalExtracted")}</th>
+                <th className="px-4 py-3">{t("analysis.difference")}</th>
               </tr>
             </thead>
             <tbody>
@@ -211,7 +215,7 @@ export default function DocumentAnalysisClient({
 
       <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-primary-700">Line Items</p>
+          <p className="text-sm font-semibold text-primary-700">{t("analysis.lineItems")}</p>
           <span className="rounded-full bg-danger-bg px-3 py-1 text-xs font-medium text-danger">
             {analysis.lineItems.filter((item) => item.status).length} Error Found
           </span>
@@ -221,11 +225,11 @@ export default function DocumentAnalysisClient({
             <thead>
               <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
                 <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Description</th>
-                <th className="px-4 py-3">Billed Amount</th>
-                <th className="px-4 py-3">Insurance Paid</th>
-                <th className="px-4 py-3">Your Responsibility</th>
-                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">{t("analysis.description")}</th>
+                <th className="px-4 py-3">{t("analysis.billedAmount")}</th>
+                <th className="px-4 py-3">{t("analysis.insurancePaid")}</th>
+                <th className="px-4 py-3">{t("analysis.yourResponsibility")}</th>
+                <th className="px-4 py-3">{t("table.status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -255,11 +259,11 @@ export default function DocumentAnalysisClient({
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex gap-4">
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Over Billed</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{t("case.overBilled")}</p>
             <p className="mt-2 text-xl font-bold text-danger">{analysis.overBilled}</p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Adjusted Charges</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{t("case.adjustedCharges")}</p>
             <p className="mt-2 text-xl font-bold text-primary-600">{analysis.adjustedCharges}</p>
           </div>
         </div>
@@ -289,7 +293,7 @@ export default function DocumentAnalysisClient({
               href="/dashboard/case"
               className="rounded-full bg-[#0f7545] px-8 py-3 text-sm font-semibold text-white hover:bg-primary-700"
             >
-              Proceed
+              {t("analysis.proceed")}
             </Link>
           </div>
         )}
@@ -303,7 +307,7 @@ export default function DocumentAnalysisClient({
             <button
               type="button"
               onClick={() => setPreviewOpen(false)}
-              aria-label="Close"
+              aria-label={t("common.close")}
               className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
             >
               ✕
@@ -322,7 +326,7 @@ export default function DocumentAnalysisClient({
                 rel="noopener noreferrer"
                 className="block rounded-lg border border-gray-100 bg-gray-50 p-8 text-center text-sm text-primary-600 hover:bg-gray-100"
               >
-                Open file in new tab
+                {t("analysis.openInNewTab")}
               </a>
             )}
           </div>

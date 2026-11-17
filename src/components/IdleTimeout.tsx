@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { signOutAndRecord } from "@/lib/signOut";
 import ConfirmModal from "@/components/ConfirmModal";
+import { useT } from "@/lib/i18n/client";
 
 // Idle timeout for a signed-in session: a forgotten-open or stolen tab
 // should not stay valid indefinitely. Supabase's own [auth.sessions]
@@ -25,6 +26,7 @@ export const CUSTOMER_IDLE_MS = 90 * 60 * 1000;
 const WARNING_MS = 60 * 1000;
 
 export default function IdleTimeout({ timeoutMs }: { timeoutMs: number }) {
+  const t = useT();
   const router = useRouter();
   const [showWarning, setShowWarning] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(WARNING_MS / 1000);
@@ -102,7 +104,7 @@ export default function IdleTimeout({ timeoutMs }: { timeoutMs: number }) {
   return (
     <ConfirmModal
       open={showWarning}
-      title="Still there?"
+      title={t("idle.stillThere")}
       message={`You'll be signed out in ${secondsLeft}s due to inactivity.`}
       confirmLabel="Stay Signed In"
       cancelLabel="Log Out Now"

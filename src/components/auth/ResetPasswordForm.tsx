@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyAuthError } from "@/lib/authErrors";
 import PasswordInput from "@/components/auth/PasswordInput";
+import { useT } from "@/lib/i18n/client";
 
 export default function ResetPasswordForm() {
   const router = useRouter();
@@ -39,17 +40,19 @@ export default function ResetPasswordForm() {
     router.push("/login");
   }
 
+  const t = useT();
+
   return (
     <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
       <PasswordInput
-        placeholder="New password"
+        placeholder={t("auth.newPassword")}
         required
         minLength={8}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
       <PasswordInput
-        placeholder="Confirm new password"
+        placeholder={t("auth.confirmNewPassword")}
         required
         minLength={8}
         value={confirmPassword}

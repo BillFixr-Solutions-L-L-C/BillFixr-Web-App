@@ -76,6 +76,9 @@ console.log(`${files.length} customer-facing .tsx files scanned`);
 console.log(`${total} possible untranslated strings in ${findings.length} files\n`);
 for (const f of findings) {
   console.log(`${String(f.hits.length).padStart(3)}  ${f.file}`);
-  for (const h of f.hits.slice(0, 6)) console.log(`       ${h.slice(0, 92)}`);
-  if (f.hits.length > 6) console.log(`       … ${f.hits.length - 6} more`);
+  // --all prints every hit: the summary is for triage, but fixing a file
+  // means needing the whole list of what is in it.
+  const limit = process.argv.includes("--all") ? f.hits.length : 6;
+  for (const h of f.hits.slice(0, limit)) console.log(`       ${h.slice(0, 92)}`);
+  if (f.hits.length > limit) console.log(`       … ${f.hits.length - limit} more`);
 }

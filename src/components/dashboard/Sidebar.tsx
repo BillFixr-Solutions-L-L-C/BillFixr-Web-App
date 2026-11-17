@@ -84,7 +84,7 @@ export default function Sidebar({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            aria-label="Open menu"
+            aria-label={t("nav.openMenu")}
             className="-mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-50"
           >
             <MenuIcon />
@@ -119,7 +119,7 @@ export default function Sidebar({
             <button
               type="button"
               onClick={close}
-              aria-label="Close menu"
+              aria-label={t("nav.closeMenu")}
               className="-mr-2 flex h-11 w-11 items-center justify-center text-gray-400 hover:text-gray-600 md:hidden"
             >
               ✕

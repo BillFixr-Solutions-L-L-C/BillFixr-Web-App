@@ -5,6 +5,7 @@ import Image from "next/image";
 import PageHeading from "@/components/dashboard/PageHeading";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/messages";
 
 const CHAT_POLL_MS = 3000;
 const ONLINE_POLL_MS = 30000;
@@ -34,7 +35,20 @@ function UserAvatar({ avatarUrl, className = "" }: { avatarUrl: string | null; c
   return <span className={`inline-block shrink-0 rounded-full bg-primary-100 ${className}`} />;
 }
 
-const complaintOptions = ["Payment issue", "Case status question", "Document access", "Other"];
+// Message KEYS, not labels. A module-level constant is evaluated once at
+// import, so translating here would freeze whichever language happened to
+// load first and leave the dropdown in English after a switch -- the same
+// trap that caught DashboardStats and the landing Navbar.
+//
+// The stored value stays the English string: it is what the support
+// ticket records and what the team reads, and it must not change meaning
+// because the customer was browsing in Spanish.
+const complaintOptions: { value: string; labelKey: MessageKey }[] = [
+  { value: "Payment issue", labelKey: "support.optPayment" },
+  { value: "Case status question", labelKey: "support.optCaseStatus" },
+  { value: "Document access", labelKey: "support.optDocuments" },
+  { value: "Other", labelKey: "support.optOther" },
+];
 
 export default function SupportPage() {
   const t = useT();
@@ -276,8 +290,8 @@ export default function SupportPage() {
         >
           <option value="">{t("support.selectComplaint")}</option>
           {complaintOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
+            <option key={option.value} value={option.value}>
+              {t(option.labelKey)}
             </option>
           ))}
         </select>
@@ -298,7 +312,7 @@ export default function SupportPage() {
         {error && <p className="text-sm text-danger">{error}</p>}
         {submitted && (
           <p className="text-sm text-primary-600">
-            Your message has been sent. We&apos;ll get back to you shortly.
+            {t("support.sent")}
           </p>
         )}
 
@@ -309,7 +323,7 @@ export default function SupportPage() {
             disabled={submitting}
             className="rounded-full bg-primary-600 px-8 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
           >
-            {submitting ? "Sending…" : "Send"}
+            {submitting ? t("support.sending") : t("support.send")}
           </button>
         </div>
       </div>
@@ -318,11 +332,11 @@ export default function SupportPage() {
         <button
           type="button"
           onClick={openChat}
-          aria-label="Open live chat"
+          aria-label={t("support.openChat")}
           className="fixed bottom-6 right-6 z-40 flex items-center gap-3 rounded-full bg-primary-600 py-2 pl-2 pr-5 text-sm font-semibold text-white shadow-lg hover:bg-primary-700"
         >
           <Avatar className="relative h-9 w-9 after:absolute after:bottom-0 after:right-0 after:h-2.5 after:w-2.5 after:rounded-full after:bg-white after:ring-2 after:ring-primary-600" />
-          Live chat with support
+          {t("support.liveChat")}
         </button>
       )}
 
@@ -340,7 +354,7 @@ export default function SupportPage() {
             <button
               type="button"
               onClick={() => setChatOpen(false)}
-              aria-label="Close chat"
+              aria-label={t("support.closeChat")}
               className="text-gray-400 hover:text-gray-600"
             >
               ✕
@@ -384,10 +398,10 @@ export default function SupportPage() {
               <div className="flex-1 space-y-4 overflow-y-auto py-4">
                 {!activeTicketId ? (
                   <p className="text-center text-sm text-gray-400">
-                    Start a conversation with our support team below.
+                    {t("support.startConversation")}
                   </p>
                 ) : messages.length === 0 ? (
-                  <p className="text-center text-sm text-gray-400">No messages yet — say hello!</p>
+                  <p className="text-center text-sm text-gray-400">{t("support.noMessages")}</p>
                 ) : (
                   messages.map((m, i) =>
                     m.from === "agent" ? (
@@ -422,7 +436,7 @@ export default function SupportPage() {
                 <div className="text-center">
                   {activeTicket.chat_rating == null ? (
                     <>
-                      <p className="mb-2 text-xs text-gray-500">How was this conversation?</p>
+                      <p className="mb-2 text-xs text-gray-500">{t("support.howWasIt")}</p>
                       <div className="mb-3 flex justify-center gap-1">
                         {[1, 2, 3, 4, 5].map((n) => (
                           <button
@@ -463,14 +477,14 @@ export default function SupportPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") sendMessage();
                     }}
-                    placeholder="How can i help you?"
+                    placeholder={t("support.placeholder")}
                     className="flex-1 bg-transparent text-sm focus:outline-none"
                   />
                   <button
                     type="button"
                     disabled
-                    aria-label="Voice input"
-                    title="Voice input isn't available yet"
+                    aria-label={t("support.voiceInput")}
+                    title={t("support.voiceUnavailable")}
                     className="text-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     🎤
@@ -478,7 +492,7 @@ export default function SupportPage() {
                   <button
                     type="button"
                     onClick={sendMessage}
-                    aria-label="Send"
+                    aria-label={t("support.send")}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800 text-white hover:bg-gray-700"
                   >
                     ↑

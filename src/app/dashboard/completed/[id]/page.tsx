@@ -5,8 +5,10 @@ import { isCaseCompleted } from "@/lib/caseStatus";
 import { buildCaseDocumentRows } from "@/lib/caseDocuments";
 import PageHeading from "@/components/dashboard/PageHeading";
 import CaseDocumentList from "@/components/dashboard/CaseDocumentList";
+import { getT } from "@/lib/i18n/server";
 
 export default async function CompletedCaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getT();
   const { id } = await params;
   const supabase = await createClient();
   const {
@@ -69,7 +71,7 @@ export default async function CompletedCaseDetailPage({ params }: { params: Prom
       >
         ← Back to completed cases
       </Link>
-      <PageHeading title="Completed Case" />
+      <PageHeading title={t("completed.title")} />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (

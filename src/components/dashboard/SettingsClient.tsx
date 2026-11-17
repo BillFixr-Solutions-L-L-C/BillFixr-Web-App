@@ -6,6 +6,7 @@ import ProfileForm from "@/components/dashboard/ProfileForm";
 import ChangePasswordForm from "@/components/dashboard/ChangePasswordForm";
 import DeleteMyAccount from "@/components/dashboard/DeleteMyAccount";
 import { missingProfileFields, describeMissingProfile } from "@/lib/requiredProfile";
+import { useT } from "@/lib/i18n/client";
 
 type Profile = {
   name: string;
@@ -24,6 +25,7 @@ export default function SettingsClient({
   profile: Profile;
   showCompletionNotice: boolean;
 }) {
+  const t = useT();
   const [tab, setTab] = useState<"profile" | "security">("profile");
   // What is missing according to the saved profile. The form keeps its own
   // live list as they type; this one re-renders from the server after a
@@ -32,7 +34,7 @@ export default function SettingsClient({
 
   return (
     <div>
-      <PageHeading title="Settings" />
+      <PageHeading title={t("settings.title")} />
 
       {showCompletionNotice && missingOnArrival.length > 0 && (
         <div className="mb-6 rounded-xl border border-accent-300 bg-accent-300/10 px-4 py-3 text-sm text-accent-600">

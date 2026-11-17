@@ -6,6 +6,7 @@ import Logo from "@/components/Logo";
 import WelcomeBanner from "@/components/dashboard/WelcomeBanner";
 import Footer from "@/components/landing/Footer";
 import { createClient } from "@/lib/supabase/client";
+import { useT } from "@/lib/i18n/client";
 
 function StarRating({ rating, onChange }: { rating: number; onChange: (value: number) => void }) {
   const [hover, setHover] = useState<number | null>(null);
@@ -36,6 +37,7 @@ function StarRating({ rating, onChange }: { rating: number; onChange: (value: nu
 }
 
 export default function TestimonialForm({ userId, name, email }: { userId: string; name: string; email: string }) {
+  const t = useT();
   const [rating, setRating] = useState(5);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -77,7 +79,7 @@ export default function TestimonialForm({ userId, name, email }: { userId: strin
           href="/dashboard/logout"
           className="rounded-full border border-primary-600 px-6 py-2.5 text-sm font-semibold text-primary-700 transition hover:bg-primary-50"
         >
-          Log out
+          {t("testimonial.logOut")}
         </Link>
       </header>
 
@@ -87,26 +89,26 @@ export default function TestimonialForm({ userId, name, email }: { userId: strin
 
           {submitted ? (
             <div className="mt-16 rounded-2xl bg-primary-50 p-8 text-center">
-              <p className="text-lg font-semibold text-gray-900">Thanks for sharing!</p>
+              <p className="text-lg font-semibold text-gray-900">{t("testimonial.thanks")}</p>
               <p className="mt-2 text-sm text-gray-600">
-                Your review has been submitted and is pending approval before it appears publicly.
+                {t("testimonial.thanksBody")}
               </p>
               <Link
                 href="/dashboard"
                 className="mt-6 inline-block rounded-full bg-[#0f7545] px-8 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
               >
-                Back to dashboard
+                {t("testimonial.backToDashboard")}
               </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit}>
               <div className="mt-16 flex flex-wrap items-center justify-between gap-4">
-                <h2 className="text-2xl font-bold text-gray-900">Rate our services</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{t("testimonial.rateUs")}</h2>
                 <StarRating rating={rating} onChange={setRating} />
               </div>
 
               <div className="mt-8">
-                <label className="text-base text-gray-900">Email</label>
+                <label className="text-base text-gray-900">{t("auth.email")}</label>
                 <input
                   type="email"
                   readOnly
@@ -116,13 +118,13 @@ export default function TestimonialForm({ userId, name, email }: { userId: strin
               </div>
 
               <div className="mt-6">
-                <label className="text-base text-gray-900">Message</label>
+                <label className="text-base text-gray-900">{t("testimonial.message")}</label>
                 <textarea
                   rows={6}
                   required
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Tell us about your experience with BillFixr..."
+                  placeholder={t("testimonial.placeholder")}
                   className="mt-2 w-full rounded-2xl border border-gray-200 px-5 py-4 text-sm text-gray-700 focus:border-primary-400 focus:outline-none"
                 />
               </div>

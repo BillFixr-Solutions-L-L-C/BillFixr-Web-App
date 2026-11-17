@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createAuthEmailClient } from "@/lib/supabase/authEmailClient";
+import { useT } from "@/lib/i18n/client";
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -26,18 +27,21 @@ export default function ForgotPasswordForm() {
     setSent(true);
   }
 
+  const t = useT();
+
   if (sent) {
     return (
       <div className="mt-8">
         <p className="text-sm text-gray-600">
-          If an account exists for <span className="font-medium text-gray-900">{email}</span>,
-          we&apos;ve sent a link to reset your password.
+          {t("auth.ifAccountExists")} <span className="font-medium text-gray-900">{email}</span>,
+          {" "}
+          {t("auth.resetLinkSent")}
         </p>
         <Link
           href="/login"
           className="mt-6 inline-flex rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
         >
-          Back to log in
+          {t("auth.backToLogin")}
         </Link>
       </div>
     );
@@ -46,11 +50,11 @@ export default function ForgotPasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
       <p className="text-sm text-gray-500">
-        Enter the email on your account and we&apos;ll send you a link to reset your password.
+        {t("auth.forgotBody")}
       </p>
       <input
         type="email"
-        placeholder="Email"
+        placeholder={t("auth.email")}
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
@@ -70,7 +74,7 @@ export default function ForgotPasswordForm() {
       <p className="text-center text-sm text-gray-500">
         Remembered it?{" "}
         <Link href="/login" className="font-medium text-accent-600">
-          Log in
+          {t("auth.logIn")}
         </Link>
       </p>
     </form>

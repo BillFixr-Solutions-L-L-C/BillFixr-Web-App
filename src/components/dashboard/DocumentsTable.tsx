@@ -30,7 +30,7 @@ export default function DocumentsTable({ rows }: { rows: DocumentRow[] }) {
   if (rows.length === 0) {
     return (
       <div className="rounded-2xl bg-white p-10 text-center text-sm text-gray-500 shadow-sm">
-        Your documents will appear here once your bill has been reviewed.
+        {t("docs.empty")}
       </div>
     );
   }
@@ -65,7 +65,7 @@ export default function DocumentsTable({ rows }: { rows: DocumentRow[] }) {
               <td className="px-4 py-3 text-right">
                 {row.href ? (
                   <Link href={row.href} className="text-sm font-medium text-primary-600 hover:text-primary-700">
-                    View
+                    {t("docs.view")}
                   </Link>
                 ) : row.previewUrl ? (
                   // Opens over this page. A row whose `href` is set still
@@ -76,7 +76,7 @@ export default function DocumentsTable({ rows }: { rows: DocumentRow[] }) {
                     onClick={() => setViewing(row)}
                     className="text-sm font-medium text-primary-600 hover:text-primary-700"
                   >
-                    View
+                    {t("docs.view")}
                   </button>
                 ) : (
                   <span className="text-sm text-gray-300">{t("docs.view")}</span>

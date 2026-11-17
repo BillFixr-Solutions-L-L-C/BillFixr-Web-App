@@ -413,9 +413,9 @@ export default function DashboardHome() {
         stage === "scanning" ? (
           <FlowCard>
             <p className="text-3xl font-bold leading-tight text-[#003322]">
-              We&apos;re scanning your
+              {t("dash.scanningYour")}
               <br />
-              Medical Bill
+              {t("dash.medicalBill")}
             </p>
             <div className="relative mt-6 flex h-28 w-28 items-center justify-center rounded-full border-[8px] border-[#d9d9d9]">
               <div
@@ -432,7 +432,7 @@ export default function DashboardHome() {
                   onClick={handleRetryScan}
                   className="mt-4 rounded-full bg-[#0f7545] px-8 py-3 text-base font-semibold text-white hover:opacity-90"
                 >
-                  Try again
+                  {t("dash.tryAgain")}
                 </button>
               </>
             ) : (
@@ -510,7 +510,7 @@ export default function DashboardHome() {
                 href="/dashboard/case"
                 className="shrink-0 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
               >
-                Continue to Active Case
+                {t("dash.continueToCase")}
               </Link>
             </div>
           </div>
@@ -544,7 +544,7 @@ export default function DashboardHome() {
               <div className="flex flex-col items-center">
                 <p className="text-2xl font-bold text-[#003322]">{t("upload.preparing")}</p>
                 <p className="mt-2 max-w-sm text-base text-[#a6b1bb]">
-                  Compressing photos and getting everything ready to upload.
+                  {t("dash.compressing")}
                 </p>
               </div>
             )}
@@ -599,13 +599,13 @@ export default function DashboardHome() {
 
             {stage === "uploading" && (
               <div className="flex w-full max-w-sm flex-col items-center">
-                <p className="text-2xl font-bold text-[#003322]">File Uploading</p>
+                <p className="text-2xl font-bold text-[#003322]">{t("dash.fileUploading")}</p>
                 <div className="mt-6 h-[8px] w-full rounded-[20px] bg-[#d9d9d9]">
                   <div className="h-[8px] w-[40%] rounded-[20px] bg-[#ebb55d]" />
                 </div>
                 <p className="mt-4 text-2xl font-bold text-[#003322]">40%</p>
                 <p className="mt-2 text-base text-[#a6b1bb]">
-                  Please wait a minute while your file is being uploaded for scan
+                  {t("dash.fileUploadingBody")}
                 </p>
               </div>
             )}
@@ -618,17 +618,17 @@ export default function DashboardHome() {
                   </svg>
                 </span>
                 <p className="mt-4 max-w-xs text-2xl font-bold leading-tight text-[#003322]">
-                  File Uploaded successfully
+                  {t("dash.fileUploaded")}
                 </p>
                 <p className="mt-2 max-w-sm text-base text-[#a6b1bb]">
-                  Your file will be scan by in a moment
+                  {t("dash.fileUploadedBody")}
                 </p>
               </div>
             )}
 
             {stage === "ready" && (
               <div className="flex flex-col items-center gap-3">
-                <p className="text-2xl font-bold text-[#003322]">Ready for scan</p>
+                <p className="text-2xl font-bold text-[#003322]">{t("dash.readyForScan")}</p>
                 <p className="max-w-sm text-base text-[#a6b1bb]">
                   {t("upload.readyBody")}
                 </p>
@@ -707,7 +707,7 @@ export default function DashboardHome() {
               {paymentError && <p className="mt-3 text-center text-sm text-danger">{paymentError}</p>}
             </>
           ) : (
-            <p className="py-10 text-center text-sm text-gray-400">Loading payment form…</p>
+            <p className="py-10 text-center text-sm text-gray-400">{t("dash.loadingPaymentForm")}</p>
           )}
         </Modal>
       )}
@@ -718,7 +718,7 @@ export default function DashboardHome() {
             <button
               type="button"
               onClick={() => setPreviewOpen(false)}
-              aria-label="Close"
+              aria-label={t("common.close")}
               className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
             >
               ✕

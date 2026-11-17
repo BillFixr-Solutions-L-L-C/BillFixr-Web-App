@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useT } from "@/lib/i18n/client";
 
 function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
@@ -16,6 +17,7 @@ function Field({ label, ...props }: { label: string } & React.InputHTMLAttribute
 }
 
 export default function ChangePasswordForm({ email }: { email: string }) {
+  const t = useT();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [saving, setSaving] = useState(false);
@@ -52,7 +54,7 @@ export default function ChangePasswordForm({ email }: { email: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-md flex-1">
-      <h2 className="mb-4 text-sm font-semibold text-gray-700">Change Password</h2>
+      <h2 className="mb-4 text-sm font-semibold text-gray-700">{t("settings.changePassword")}</h2>
       <div className="flex flex-col gap-5">
         <Field
           label="Current Password"
@@ -72,7 +74,7 @@ export default function ChangePasswordForm({ email }: { email: string }) {
       </div>
 
       {error && <p className="mt-3 text-sm text-danger">{error}</p>}
-      {saved && <p className="mt-3 text-sm text-primary-600">Password updated.</p>}
+      {saved && <p className="mt-3 text-sm text-primary-600">{t("settings.passwordUpdated")}</p>}
 
       <button
         type="submit"

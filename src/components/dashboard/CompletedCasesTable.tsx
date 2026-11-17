@@ -29,7 +29,7 @@ export default function CompletedCasesTable({ rows }: { rows: CompletedCaseRow[]
     return (
       <div className="rounded-2xl bg-white p-6 shadow-sm">
         <p className="py-6 text-center text-sm text-gray-400">
-          No completed cases yet. Cases appear here once they&apos;re resolved.
+          {t("completed.empty")}
         </p>
       </div>
     );
