@@ -15,6 +15,7 @@ import { stepAfterPayment } from "@/lib/postPaymentStep";
 import { prepareBillFile } from "@/lib/billUpload";
 import CaseInformationStep, { type CaseInformation } from "@/components/dashboard/CaseInformationStep";
 import { useT } from "@/lib/i18n/client";
+import TableScroller from "@/components/TableScroller";
 
 const EMPTY_CASE_INFORMATION: CaseInformation = {
   clientName: "",
@@ -460,7 +461,7 @@ export default function DashboardHome() {
               </button>
             </div>
 
-            <div className="mt-4 overflow-x-auto">
+            <TableScroller className="mt-4">
               <table className="w-full min-w-[640px] text-left text-sm">
                 <thead>
                   <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
@@ -499,7 +500,7 @@ export default function DashboardHome() {
                   </tr>
                 </tbody>
               </table>
-            </div>
+            </TableScroller>
 
             <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-primary-50 px-5 py-4">
               <p className="text-sm text-primary-800">

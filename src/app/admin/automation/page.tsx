@@ -14,6 +14,7 @@ import {
   successRate,
   STALLED_AFTER_MINUTES,
 } from "@/lib/adminAnalytics";
+import TableScroller from "@/components/TableScroller";
 
 // Every figure here is measured, not illustrative. The panels that depend
 // on the AI service (per-stage OCR/agent progress) say so plainly when it
@@ -146,7 +147,7 @@ export default async function AutomationMonitoringPage() {
             </p>
             {stalled.length > 0 ? (
               <>
-                <div className="overflow-x-auto">
+                <TableScroller>
                   <table className="w-full min-w-[520px] text-left text-sm">
                     <thead>
                       <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -179,7 +180,7 @@ export default async function AutomationMonitoringPage() {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </TableScroller>
                 <div className="mt-4">
                   <RetryStalledCases
                     caseIds={stalled.map((c) => c.id)}

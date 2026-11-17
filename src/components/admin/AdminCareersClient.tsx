@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import JobPostingsPanel from "@/components/admin/JobPostingsPanel";
+import TableScroller from "@/components/TableScroller";
 
 type Posting = {
   id: string;
@@ -219,7 +220,7 @@ export default function AdminCareersClient({
           ) : filteredApplicants.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">No applicants match your search.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <TableScroller>
               <table className="w-full min-w-[640px] text-left text-sm">
                 <thead>
                   <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -252,7 +253,7 @@ export default function AdminCareersClient({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableScroller>
           )}
         </div>
       )}

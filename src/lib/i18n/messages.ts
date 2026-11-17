@@ -189,6 +189,7 @@ export const MESSAGES = {
     "table.savings": "Savings",
     "table.negotiating": "Negotiating",
     "table.errorsFound": "{count} found",
+    "table.swipe": "Swipe to see more",
 
     // --- information step ---
     "info.personal": "Personal Information",
@@ -416,6 +417,7 @@ export const MESSAGES = {
     "table.savings": "Ahorro",
     "table.negotiating": "Negociando",
     "table.errorsFound": "{count} encontrados",
+    "table.swipe": "Desliza para ver más",
 
     "info.personal": "Información personal",
     "info.hospital": "Información del hospital",

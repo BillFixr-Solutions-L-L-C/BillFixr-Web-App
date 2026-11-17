@@ -9,6 +9,7 @@ import AppealLetterCard, { type AppealLetterData } from "@/components/dashboard/
 import HeaderInformationCard from "@/components/dashboard/HeaderInformationCard";
 import WatermarkOverlay from "@/components/dashboard/WatermarkOverlay";
 import type { HeaderField } from "@/lib/headerInfo";
+import TableScroller from "@/components/TableScroller";
 
 const PRIORITY_TAG: Record<BillIssue["priority"], string> = {
   High: "bg-danger text-white",
@@ -184,7 +185,7 @@ export default function DocumentAnalysisClient({
 
       <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
         <p className="text-sm font-semibold text-primary-700">Total Amount Breakdown</p>
-        <div className="mt-4 overflow-x-auto">
+        <TableScroller className="mt-4">
           <table className="w-full min-w-[560px] text-left text-sm">
             <thead>
               <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
@@ -205,7 +206,7 @@ export default function DocumentAnalysisClient({
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroller>
       </div>
 
       <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
@@ -215,7 +216,7 @@ export default function DocumentAnalysisClient({
             {analysis.lineItems.filter((item) => item.status).length} Error Found
           </span>
         </div>
-        <div className="mt-4 overflow-x-auto">
+        <TableScroller className="mt-4">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
@@ -246,7 +247,7 @@ export default function DocumentAnalysisClient({
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroller>
       </div>
 
       {appealLetter && <AppealLetterCard letter={appealLetter} />}

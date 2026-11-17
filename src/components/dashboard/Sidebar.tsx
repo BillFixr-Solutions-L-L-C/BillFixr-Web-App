@@ -79,7 +79,7 @@ export default function Sidebar({
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open menu"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-50"
+          className="-mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-50"
         >
           <MenuIcon />
         </button>
@@ -109,7 +109,7 @@ export default function Sidebar({
             type="button"
             onClick={close}
             aria-label="Close menu"
-            className="text-gray-400 hover:text-gray-600 md:hidden"
+            className="-mr-2 flex h-11 w-11 items-center justify-center text-gray-400 hover:text-gray-600 md:hidden"
           >
             ✕
           </button>

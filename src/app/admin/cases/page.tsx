@@ -6,6 +6,7 @@ import AdminTableToolbar from "@/components/admin/AdminTableToolbar";
 import Pagination from "@/components/admin/Pagination";
 import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
+import TableScroller from "@/components/TableScroller";
 
 // Figma draws exactly two status values on this table — "In Progress" and
 // "Completed" — so the filter offers those rather than the full set of
@@ -81,7 +82,7 @@ export default async function AdminCasesPage({
             {filtering ? "No cases match your search." : "No cases yet."}
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <TableScroller>
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
                 <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -126,7 +127,7 @@ export default async function AdminCasesPage({
                 })}
               </tbody>
             </table>
-          </div>
+          </TableScroller>
         )}
 
         <Pagination page={page} totalPages={totalPages} />

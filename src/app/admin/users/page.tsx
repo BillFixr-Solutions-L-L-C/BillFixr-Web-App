@@ -5,6 +5,7 @@ import AdminTableToolbar from "@/components/admin/AdminTableToolbar";
 import Pagination from "@/components/admin/Pagination";
 import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
+import TableScroller from "@/components/TableScroller";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "All statuses" },
@@ -59,7 +60,7 @@ export default async function AdminUsersPage({
             {search || (status && status !== "all") ? "No customers match your search." : "No customers yet."}
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <TableScroller>
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
                 <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -107,7 +108,7 @@ export default async function AdminUsersPage({
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroller>
         )}
 
         <Pagination page={page} totalPages={totalPages} />

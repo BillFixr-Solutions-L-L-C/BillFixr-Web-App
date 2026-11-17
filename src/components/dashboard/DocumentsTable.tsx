@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import DocumentViewer from "./DocumentViewer";
 import { useT } from "@/lib/i18n/client";
+import TableScroller from "@/components/TableScroller";
 
 export type DocumentRow = {
   key: string;
@@ -35,7 +36,7 @@ export default function DocumentsTable({ rows }: { rows: DocumentRow[] }) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl bg-white shadow-sm">
+    <TableScroller className="rounded-2xl bg-white shadow-sm">
       <table className="w-full min-w-[560px] text-left text-sm">
         <thead>
           <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
@@ -93,6 +94,6 @@ export default function DocumentsTable({ rows }: { rows: DocumentRow[] }) {
           onClose={() => setViewing(null)}
         />
       )}
-    </div>
+    </TableScroller>
   );
 }

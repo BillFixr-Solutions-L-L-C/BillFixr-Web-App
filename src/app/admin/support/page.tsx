@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
+import TableScroller from "@/components/TableScroller";
 
 type Ticket = {
   id: string;
@@ -427,7 +428,7 @@ export default function AdminSupportPage() {
         ) : filteredTickets.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">No tickets match your search.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <TableScroller>
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
                 <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -462,7 +463,7 @@ export default function AdminSupportPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroller>
         )}
       </div>
     </div>
