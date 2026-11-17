@@ -4,6 +4,7 @@ import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { confirmCompletionPayment } from "@/lib/automation-engine";
 import { isBackendConfigured } from "@/lib/aiStack";
+import { notifyCustomer } from "@/lib/customerNotifications";
 
 // Source of truth for payment confirmation — never the client. Verifies
 // Stripe's signature against the RAW request body (stripe.webhooks.
@@ -228,7 +229,22 @@ async function unlockRevisedBill(negotiationId: string, caseId: string, paymentI
 }
 
 async function handleFailed(admin: ReturnType<typeof createAdminClient>, intent: Stripe.PaymentIntent) {
-  await admin.from("payment_records").update({ status: "failed" }).eq("processor_ref", intent.id).neq("status", "paid");
+  const { data: failed } = await admin
+    .from("payment_records")
+    .update({ status: "failed" })
+    .eq("processor_ref", intent.id)
+    .neq("status", "paid")
+    .select("user_id");
+
+  // Only when a record actually moved to failed. Stripe retries this event
+  // and the webhook's own dedupe is per event id, not per intent, so
+  // notifying unconditionally would tell someone twice that one payment
+  // failed -- which reads like two failed payments.
+  for (const record of failed ?? []) {
+    if (record.user_id) {
+      await notifyCustomer(admin, { userId: record.user_id as string, type: "payment_failed" });
+    }
+  }
 }
 
 // Source of truth for how much of a payment has actually been refunded —

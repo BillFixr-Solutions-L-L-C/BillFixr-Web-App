@@ -4,6 +4,7 @@ import { isBackendConfigured } from "@/lib/aiStack";
 import { auditBill, startNegotiation } from "@/lib/automation-engine";
 import { storedBillData } from "@/lib/engineBillData";
 import type { AutomationNegotiation } from "@/types/automation-engine";
+import { notifyCustomer } from "@/lib/customerNotifications";
 
 // Starting a negotiation is the one call in this app that makes the
 // engine write to a real hospital, so it lives in one place with its
@@ -134,7 +135,16 @@ export async function startNegotiationForCase(
     })
     .eq("id", caseRow.id)
     .is("negotiation_id", null)
-    .select("id");
+    // user_id comes back from the update that already had to run, rather
+    // than from a second read or a wider StartableCase every caller would
+    // have to remember to select.
+    .select("id, user_id");
+
+  if (!linkError && linked && linked.length === 1) {
+    // Only the start that won the `negotiation_id is null` race gets here,
+    // so the customer is told once that we have written to their provider.
+    await notifyCustomer(admin, { userId: linked[0].user_id as string, type: "letter_sent" });
+  }
 
   if (linkError || !linked || linked.length === 0) {
     return {

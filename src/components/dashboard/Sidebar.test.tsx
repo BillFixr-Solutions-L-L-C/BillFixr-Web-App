@@ -10,6 +10,22 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
+// The sidebar now carries the notification bell, which opens a Supabase
+// browser client in an effect to poll for new rows. There are no keys in
+// the test environment, and this suite is about the nav, not the bell --
+// which has its own tests.
+vi.mock("@/lib/supabase/client", () => ({
+  createClient: () => ({
+    auth: { getUser: async () => ({ data: { user: null } }) },
+    from: () => ({
+      select: () => ({
+        eq: () => ({ order: () => ({ limit: async () => ({ data: [] }) }) }),
+      }),
+      update: () => ({ eq: async () => ({ error: null }) }),
+    }),
+  }),
+}));
+
 const USER = { name: "Jane Doe", status: "active" as const, avatarUrl: null };
 
 function activeLabel() {

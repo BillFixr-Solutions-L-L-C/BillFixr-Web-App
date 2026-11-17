@@ -22,6 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   let name = "";
   let status: "active" | "suspended" = "active";
   let avatarUrl: string | null = null;
+  let initialNotifications: { id: string; type: string; message: string; read: boolean; created_at: string }[] = [];
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -31,9 +32,24 @@ export default async function DashboardLayout({ children }: { children: React.Re
     name = profile?.name ?? "";
     status = profile?.status ?? "active";
     avatarUrl = profile?.avatar_url ?? null;
+
+    // The same query the admin layout has always run. RLS on
+    // notifications is `user_id = auth.uid() or is_admin()`, so a
+    // customer reading with their own session gets exactly their own
+    // rows -- the table was never admin-only, nothing had ever written
+    // a customer one.
+    const { data: notifications } = await supabase
+      .from("notifications")
+      .select("id, type, message, read, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    initialNotifications = notifications ?? [];
   }
 
   return (
-    <DashboardShell user={{ name, status, avatarUrl }}>{children}</DashboardShell>
+    <DashboardShell user={{ name, status, avatarUrl }} initialNotifications={initialNotifications}>
+      {children}
+    </DashboardShell>
   );
 }

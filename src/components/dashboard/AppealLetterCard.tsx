@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Modal from "@/components/dashboard/Modal";
 import { toggleBullets, toggleWrap, type Selection } from "@/lib/letterFormat";
+import { useLanguage, useT } from "@/lib/i18n/client";
 
 export type AppealLetterData = {
   caseId: string;
@@ -15,6 +16,8 @@ export type AppealLetterData = {
 };
 
 export default function AppealLetterCard({ letter }: { letter: AppealLetterData }) {
+  const t = useT();
+  const language = useLanguage();
   const [revealed, setRevealed] = useState(Boolean(letter.sentAt));
   const [text, setText] = useState(letter.text ?? "");
   const [savedText, setSavedText] = useState(letter.text ?? "");
@@ -100,8 +103,8 @@ export default function AppealLetterCard({ letter }: { letter: AppealLetterData 
     <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-lg font-bold text-[#0f7545]">Appeal Letter</p>
-          <p className="mt-1 text-sm text-gray-500">Generate your letter to negotiate on the errors found</p>
+          <p className="text-lg font-bold text-[#0f7545]">{t("appeal.title")}</p>
+          <p className="mt-1 text-sm text-gray-500">{t("appeal.subtitle")}</p>
         </div>
 
         {!revealed ? (
@@ -109,18 +112,18 @@ export default function AppealLetterCard({ letter }: { letter: AppealLetterData 
             type="button"
             onClick={() => setRevealed(true)}
             disabled={!letter.text}
-            title={letter.text ? undefined : "Your letter isn't ready yet"}
+            title={letter.text ? undefined : t("appeal.notReady")}
             className="rounded-full bg-[#0f7545] px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Generate Appeal Letter
+            {t("appeal.generate")}
           </button>
         ) : (
           <div className="flex gap-3">
             <button type="button" onClick={downloadPdf} className={outlineButton}>
-              ⬇ Download as PDF
+              ⬇ {t("appeal.download")}
             </button>
             <button type="button" onClick={() => setSendOpen(true)} disabled={readOnly} className={outlineButton}>
-              ✉ {readOnly ? "Letter Sent" : "Send Letter"}
+              ✉ {readOnly ? t("appeal.sentLabel") : t("appeal.send")}
             </button>
           </div>
         )}
@@ -131,7 +134,7 @@ export default function AppealLetterCard({ letter }: { letter: AppealLetterData 
           <div className="flex items-center gap-1 rounded-t-lg bg-gray-100 px-3 py-2">
             <button
               type="button"
-              aria-label="Bold"
+              aria-label={t("appeal.bold")}
               disabled={readOnly}
               onClick={() => applyFormat((s) => toggleWrap(s, "**"))}
               className="h-8 w-8 rounded text-sm font-bold text-gray-800 hover:bg-gray-200 disabled:opacity-40"
@@ -140,7 +143,7 @@ export default function AppealLetterCard({ letter }: { letter: AppealLetterData 
             </button>
             <button
               type="button"
-              aria-label="Italic"
+              aria-label={t("appeal.italic")}
               disabled={readOnly}
               onClick={() => applyFormat((s) => toggleWrap(s, "*"))}
               className="h-8 w-8 rounded text-sm italic text-gray-800 hover:bg-gray-200 disabled:opacity-40"
@@ -149,7 +152,7 @@ export default function AppealLetterCard({ letter }: { letter: AppealLetterData 
             </button>
             <button
               type="button"
-              aria-label="Bulleted list"
+              aria-label={t("appeal.bullets")}
               disabled={readOnly}
               onClick={() => applyFormat(toggleBullets)}
               className="h-8 w-8 rounded text-sm text-gray-800 hover:bg-gray-200 disabled:opacity-40"
@@ -163,21 +166,27 @@ export default function AppealLetterCard({ letter }: { letter: AppealLetterData 
             readOnly={readOnly}
             onChange={(e) => setText(e.target.value)}
             onBlur={saveIfChanged}
-            aria-label="Appeal letter"
+            aria-label={t("appeal.textarea")}
             rows={18}
             className="w-full rounded-b-lg border border-gray-100 px-4 py-3 text-sm leading-relaxed text-gray-700 focus:border-primary-400 focus:outline-none"
           />
           <div className="mt-2 min-h-5 text-xs">
             {readOnly && sent && (
               <p className="text-primary-600">
-                Sent to {sent.email} on{" "}
-                {new Date(sent.at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.
+                {t("appeal.sentTo", {
+                  email: sent.email,
+                  date: new Date(sent.at).toLocaleDateString(language === "es" ? "es-US" : "en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  }),
+                })}
               </p>
             )}
-            {!readOnly && saveState === "saving" && <p className="text-gray-400">Saving…</p>}
-            {!readOnly && saveState === "saved" && <p className="text-primary-600">Saved.</p>}
+            {!readOnly && saveState === "saving" && <p className="text-gray-400">{t("appeal.saving")}</p>}
+            {!readOnly && saveState === "saved" && <p className="text-primary-600">{t("appeal.saved")}</p>}
             {!readOnly && saveState === "error" && (
-              <p className="text-danger">Couldn&apos;t save your changes. They&apos;ll be kept here until you leave the page.</p>
+              <p className="text-danger">{t("appeal.saveError")}</p>
             )}
             {downloadError && <p className="text-danger">{downloadError}</p>}
           </div>
@@ -186,16 +195,14 @@ export default function AppealLetterCard({ letter }: { letter: AppealLetterData 
 
       {sendOpen && (
         <Modal onClose={() => setSendOpen(false)}>
-          <h2 className="font-serif text-xl font-bold text-gray-900">Send your appeal letter</h2>
-          <p className="mt-2 text-sm text-gray-500">
-            Enter your provider&apos;s billing department email. Replies will come to your own email address.
-          </p>
+          <h2 className="font-serif text-xl font-bold text-gray-900">{t("appeal.modalTitle")}</h2>
+          <p className="mt-2 text-sm text-gray-500">{t("appeal.modalBody")}</p>
           <input
             type="email"
             value={providerEmail}
             onChange={(e) => setProviderEmail(e.target.value)}
             placeholder="billing@provider.com"
-            aria-label="Provider email"
+            aria-label={t("appeal.providerEmail")}
             className="mt-4 w-full rounded-full border border-gray-200 px-5 py-3 text-sm focus:border-primary-400 focus:outline-none"
           />
           {sendError && <p className="mt-3 text-sm text-danger">{sendError}</p>}
@@ -205,7 +212,7 @@ export default function AppealLetterCard({ letter }: { letter: AppealLetterData 
             disabled={sending || !providerEmail.trim()}
             className="mt-5 w-full rounded-full bg-[#0f7545] py-3 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60"
           >
-            {sending ? "Sending…" : "Send"}
+            {sending ? t("appeal.sending") : t("appeal.sendShort")}
           </button>
         </Modal>
       )}

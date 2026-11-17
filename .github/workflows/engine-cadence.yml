@@ -1,0 +1,100 @@
+# Keeps the negotiation engine's inbox and follow-up cadence moving more
+# often than once a day.
+#
+# Why this exists: the Vercel account is on Hobby, which rejects any cron
+# expression that would run more than once a day -- a deploy with
+# `0 */4 * * *` was refused outright. So vercel.json runs
+# /api/cron/negotiation-status at 13:00 and nothing else until the next
+# day. That means a hospital reply could sit unread for up to 24 hours,
+# and a "72-hour follow-up" fired whenever the engine next happened to be
+# awake rather than at 72 hours.
+#
+# The route is unchanged and still does the right things in the right
+# order: it makes the engine read its mailbox FIRST, then sweeps the
+# running negotiations. This workflow only calls it more often.
+#
+# The Vercel crons stay as they are on purpose. GitHub's scheduler is
+# best-effort -- runs are delayed under load, and a scheduled workflow is
+# disabled automatically after 60 days without repository activity -- so
+# the daily Vercel run remains the backstop that does not depend on this.
+name: Engine cadence
+
+on:
+  schedule:
+    # Every 30 minutes. A provider reply is then visible to the customer
+    # within half an hour instead of within a day.
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      route:
+        description: "Which cron route to call"
+        required: false
+        default: negotiation-status
+        type: choice
+        options:
+          - negotiation-status
+          - follow-ups
+
+permissions:
+  contents: read
+
+concurrency:
+  # One at a time. Two overlapping runs would both ask the engine to sync
+  # the same mailbox, and the second would be deciding what to chase from
+  # a half-applied view of the first.
+  group: engine-cadence
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Call the cron route
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BASE: ${{ vars.CRON_BASE_URL || 'https://www.billfixr.com' }}
+          ROUTE: ${{ github.event.inputs.route || 'negotiation-status' }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::error::CRON_SECRET is not set on this repository."
+            echo "Add it with the same value as the Vercel environment variable:"
+            echo "  gh secret set CRON_SECRET"
+            exit 1
+          fi
+
+          # The engine runs on Render's free tier and spins down when idle,
+          # so the first request of a run is usually waking it up. That cold
+          # start is slow but not a failure, hence the generous timeout and
+          # the retries.
+          attempt=1
+          max=3
+          while [ "${attempt}" -le "${max}" ]; do
+            echo "attempt ${attempt}/${max}: GET /api/cron/${ROUTE}"
+            code=$(curl -sS -o response.json -w '%{http_code}' \
+              --max-time 240 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              "${BASE}/api/cron/${ROUTE}") || code="000"
+
+            if [ "${code}" = "200" ]; then
+              echo "ok"
+              # The body is a count summary -- no patient data, no secrets.
+              cat response.json
+              exit 0
+            fi
+
+            if [ "${code}" = "401" ]; then
+              echo "::error::401 from the cron route -- CRON_SECRET here does not match the one deployed on Vercel."
+              exit 1
+            fi
+
+            echo "::warning::HTTP ${code} on attempt ${attempt}"
+            attempt=$((attempt + 1))
+            [ "${attempt}" -le "${max}" ] && sleep 30
+          done
+
+          echo "::error::/api/cron/${ROUTE} did not return 200 after ${max} attempts."
+          cat response.json || true
+          exit 1
