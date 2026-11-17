@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { CaseDocumentRow } from "@/lib/caseDocuments";
 import DocumentViewer from "./DocumentViewer";
+import { useT } from "@/lib/i18n/client";
 
 function formatDate(value: string | null) {
   if (!value) return "—";
@@ -19,6 +20,7 @@ export default function CaseDocumentList({
       heading above and passes none. */
   title?: string;
 }) {
+  const t = useT();
   // View opens the document over this page rather than navigating away to
   // it. Working through a case means opening several of these in turn, and
   // the old target="_blank" link lost the case from view every time.
@@ -46,7 +48,7 @@ export default function CaseDocumentList({
                 {doc.available ? (
                   <span className="text-primary-600">✓ {doc.status}</span>
                 ) : (
-                  <span className="text-gray-400">Not available yet</span>
+                  <span className="text-gray-400">{t("case.notAvailableYet")}</span>
                 )}
               </p>
             </div>

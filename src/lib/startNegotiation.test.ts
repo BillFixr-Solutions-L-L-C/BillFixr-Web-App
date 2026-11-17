@@ -80,7 +80,10 @@ function readyToStart({
   fee = { processor_ref: "pi_1" } as { processor_ref: string | null } | null,
   stored = { result: STORED } as { result: unknown } | null,
   feePercentage = 20 as number | null,
-  link = { data: [{ id: "case-1" }], error: null } as { data: unknown; error: { message: string } | null },
+  link = { data: [{ id: "case-1", user_id: "user-1" }], error: null } as {
+    data: unknown;
+    error: { message: string } | null;
+  },
 } = {}) {
   isBackendConfigured.mockReturnValue(true);
   adminMock.queueResult("bills", { data: bill, error: null });
@@ -162,9 +165,11 @@ describe("startNegotiationForCase", () => {
 
     await startNegotiationForCase(adminMock.client as never, CASE);
 
-    // cases is the only table this writes to, so its builder is the last
-    // one the mock handed out.
-    const update = adminMock.from.mock.results.at(-1)!.value.update as ReturnType<typeof vi.fn>;
+    // Located by table rather than by position: this used to take the
+    // last builder the mock handed out, which silently stopped being the
+    // cases update as soon as anything ran after it.
+    const casesCall = adminMock.from.mock.calls.findIndex(([table]) => table === "cases");
+    const update = adminMock.from.mock.results[casesCall]!.value.update as ReturnType<typeof vi.fn>;
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
         negotiation_id: "neg-1",

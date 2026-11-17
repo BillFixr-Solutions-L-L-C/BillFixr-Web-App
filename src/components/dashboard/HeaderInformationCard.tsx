@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { EMPTY_VALUE, isEmptyValue, type HeaderField, type HeaderKey } from "@/lib/headerInfo";
+import { useT } from "@/lib/i18n/client";
 
 // billId is set only when the details came from a real AI analysis —
 // that's when there is something stored to edit. Without it (the sample
@@ -13,6 +14,7 @@ export default function HeaderInformationCard({
   fields: HeaderField[];
   billId?: string | null;
 }) {
+  const t = useT();
   const [saved, setSaved] = useState<Record<HeaderKey, string>>(
     () => Object.fromEntries(fields.map((f) => [f.key, f.value])) as Record<HeaderKey, string>,
   );
@@ -59,7 +61,7 @@ export default function HeaderInformationCard({
   return (
     <div className="rounded-2xl bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">Header Information</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">{t("header.information")}</p>
         {billId && !draft && (
           <button
             type="button"
@@ -115,12 +117,12 @@ export default function HeaderInformationCard({
             disabled={saving}
             className="rounded-full border border-gray-200 px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           {error && <p className="text-sm text-danger">{error}</p>}
         </div>
       )}
-      {justSaved && !draft && <p className="mt-3 text-xs text-primary-600">Saved.</p>}
+      {justSaved && !draft && <p className="mt-3 text-xs text-primary-600">{t("common.saved")}</p>}
     </div>
   );
 }

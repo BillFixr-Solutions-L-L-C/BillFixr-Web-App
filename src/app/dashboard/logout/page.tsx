@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { signOutAndRecord } from "@/lib/signOut";
+import { useT } from "@/lib/i18n/client";
 
 export default function LogoutPage() {
+  const t = useT();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -23,7 +25,7 @@ export default function LogoutPage() {
         href="/dashboard"
         className="rounded-full bg-primary-600 px-8 py-3 text-sm font-semibold text-white hover:bg-primary-700"
       >
-        Back to Dashboard
+        {t("logout.backToDashboard")}
       </Link>
       <button
         type="button"

@@ -1,16 +1,18 @@
 import Link from "next/link";
 import Navbar from "@/components/landing/Navbar";
+import { getT } from "@/lib/i18n/server";
 
-export default function NotFound() {
+export default async function NotFound() {
+  const t = await getT();
   return (
     <main className="flex-1 bg-gradient-to-b from-primary-50 via-white to-white">
       <Navbar />
       <div className="mx-auto max-w-2xl px-6 py-24 text-center">
         <h1 className="flex items-center justify-center gap-4 text-6xl font-bold sm:text-7xl">
-          <span className="text-primary-900">Error</span>
+          <span className="text-primary-900">{t("notFound.error")}</span>
           <span className="text-primary-500">404</span>
         </h1>
-        <h2 className="mt-6 text-2xl font-bold text-primary-900">Oops! Page not found.</h2>
+        <h2 className="mt-6 text-2xl font-bold text-primary-900">{t("notFound.body")}</h2>
         <p className="mt-4 text-primary-900/50">
           The page you&apos;re looking for doesn&apos;t exist or may have been moved. Check the
           URL, or head back home and try again.
@@ -19,7 +21,7 @@ export default function NotFound() {
           href="/"
           className="mt-8 inline-flex items-center justify-center rounded-full border border-primary-600 px-7 py-3 text-sm font-semibold text-primary-700 transition hover:bg-primary-50"
         >
-          Back to home
+          {t("notFound.home")}
         </Link>
       </div>
     </main>

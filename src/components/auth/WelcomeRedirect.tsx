@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n/client";
 
 export default function WelcomeRedirect() {
   const router = useRouter();
@@ -21,5 +22,6 @@ export default function WelcomeRedirect() {
     })();
   }, [router]);
 
-  return <p className="mt-8 text-sm text-gray-500">Setting up your account…</p>;
+  const t = useT();
+  return <p className="mt-8 text-sm text-gray-500">{t("auth.settingUp")}</p>;
 }

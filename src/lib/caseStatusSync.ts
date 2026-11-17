@@ -8,6 +8,7 @@ import { syncSettlementFigures } from "@/lib/settlementFigures";
 import { notifyAdmins } from "@/lib/adminNotifications";
 import type { AutomationNegotiation } from "@/types/automation-engine";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { notifyCustomer } from "@/lib/customerNotifications";
 
 // The real trigger that `/api/dev/advance-case` stood in for.
 //
@@ -71,7 +72,20 @@ export async function syncCaseFromNegotiation(
   // function's callers need it, and a third would otherwise have to
   // remember.
   try {
-    await syncSettlementFigures(admin, caseRow, negotiation);
+    const settlement = await syncSettlementFigures(admin, caseRow, negotiation);
+    // Only the first time a settlement figure lands on this case.
+    // `adjusted_total` is written by the settlement sync and by an admin
+    // uploading a corrected bill, and by nothing else -- so a null one
+    // means no settlement has ever been recorded here. Gating on
+    // `written` alone would tell the customer again every time a revised
+    // settlement moved the figure by a cent.
+    if (settlement.written && caseRow.adjusted_total == null) {
+      await notifyCustomer(admin, {
+        userId: caseRow.user_id,
+        type: "settlement_reached",
+        amount: settlement.figures.savingsFound,
+      });
+    }
   } catch (err) {
     // The status sync must still run. A case stuck on "awaiting a reply"
     // when the provider has answered is the more visible failure, and
@@ -116,6 +130,12 @@ export async function syncCaseFromNegotiation(
       : `A provider replied — case ${caseRow.id.slice(0, 8)}`,
     domain: "negotiation",
   });
+
+  // And the customer, in the same once-per-case block. The email below
+  // says the same thing, but email is a message, not a record: someone
+  // who opens the dashboard next week with the mail archived had no way
+  // to see that the provider ever answered.
+  await notifyCustomer(admin, { userId: caseRow.user_id, type: "provider_replied" });
 
   let emailed = false;
   // communication_language, not the display cookie: what the customer

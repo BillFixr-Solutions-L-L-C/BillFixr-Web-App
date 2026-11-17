@@ -1,3 +1,6 @@
+"use client";
+import { useT } from "@/lib/i18n/client";
+
 /* eslint-disable @next/next/no-img-element */
 // Shows the customer's own uploaded bill.
 //
@@ -22,13 +25,14 @@ type Props = {
 };
 
 export default function BillPreview({ src, isImage = true, fileName }: Props) {
+  const t = useT();
   const frame =
     "aspect-[3/4] w-full overflow-hidden rounded-lg border border-gray-100 bg-white text-[11px] leading-normal text-gray-500";
 
   if (!src) {
     return (
       <div className={`${frame} flex flex-col items-center justify-center gap-2 px-6 text-center`}>
-        <p className="text-sm font-semibold text-gray-600">No preview available</p>
+        <p className="text-sm font-semibold text-gray-600">{t("preview.none")}</p>
         <p className="max-w-[26ch] text-xs text-gray-400">
           {fileName
             ? `We couldn't open ${fileName} for preview. You can still download it.`
@@ -45,7 +49,7 @@ export default function BillPreview({ src, isImage = true, fileName }: Props) {
       <div className={frame}>
         <object data={src} type="application/pdf" className="h-full w-full">
           <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-            <p className="text-sm font-semibold text-gray-600">Preview not supported here</p>
+            <p className="text-sm font-semibold text-gray-600">{t("preview.unsupported")}</p>
             <a href={src} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-[#0f7545] underline">
               Open {fileName ?? "the bill"} in a new tab
             </a>

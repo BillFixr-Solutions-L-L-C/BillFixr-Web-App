@@ -5,8 +5,10 @@ import BeforeYouPay from "@/components/landing/BeforeYouPay";
 import Footer from "@/components/landing/Footer";
 import ApplyForm from "@/components/careers/ApplyForm";
 import { getJobPosting } from "@/lib/jobs";
+import { getT } from "@/lib/i18n/server";
 
 export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getT();
   const { id } = await params;
   const job = await getJobPosting(id);
 
@@ -29,12 +31,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           <div>
             <div className="flex flex-wrap gap-x-10 gap-y-1 text-sm text-primary-900">
               <p>
-                <span className="font-semibold">Job Title:</span> {job.title}
+                <span className="font-semibold">{t("careers.jobTitle")}</span> {job.title}
               </p>
               <p>{job.location}</p>
             </div>
 
-            <h2 className="mt-8 text-lg font-bold text-primary-900">Responsibilities</h2>
+            <h2 className="mt-8 text-lg font-bold text-primary-900">{t("careers.responsibilities")}</h2>
             <ul className="mt-3 space-y-2 text-sm text-primary-900/80">
               {job.responsibilities.map((item, i) => (
                 <li key={i} className="flex gap-2">
@@ -44,7 +46,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               ))}
             </ul>
 
-            <h2 className="mt-8 text-lg font-bold text-primary-900">Requirement:</h2>
+            <h2 className="mt-8 text-lg font-bold text-primary-900">{t("careers.requirements")}</h2>
             <ul className="mt-3 space-y-2 text-sm text-primary-900/80">
               {job.requirements.map((item, i) => (
                 <li key={i} className="flex gap-2">
@@ -55,13 +57,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             </ul>
 
             <p className="mt-6 text-sm text-primary-900">
-              <span className="font-bold">Benefit:</span> {job.benefit}
+              <span className="font-bold">{t("careers.benefits")}</span> {job.benefit}
             </p>
           </div>
 
           <aside className="h-fit rounded-2xl border border-primary-100 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-primary-900">Apply for this role</h2>
-            <p className="mt-1 text-sm text-primary-900/60">Input your information</p>
+            <h2 className="text-lg font-bold text-primary-900">{t("careers.applyForRole")}</h2>
+            <p className="mt-1 text-sm text-primary-900/60">{t("careers.inputInfo")}</p>
 
             <ApplyForm jobId={job.id} />
           </aside>

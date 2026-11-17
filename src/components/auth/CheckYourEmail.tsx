@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createAuthEmailClient } from "@/lib/supabase/authEmailClient";
+import { useT } from "@/lib/i18n/client";
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLLS = 300; // ~15 minutes, matching the pairing row's server-side expiry
 const RESEND_COOLDOWN_SECONDS = 90;
 
 export default function CheckYourEmail({ email, userId }: { email: string; userId: string }) {
+  const t = useT();
   const [confirmedElsewhere, setConfirmedElsewhere] = useState(false);
   const pollCount = useRef(0);
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN_SECONDS);
@@ -98,8 +100,8 @@ export default function CheckYourEmail({ email, userId }: { email: string; userI
         {confirmedElsewhere ? "Confirmed! Taking you in..." : "Check your email"}
       </h2>
       <p className="text-sm text-gray-500">
-        We sent a confirmation link to <span className="font-medium text-primary-900">{email}</span>. Click it to
-        activate your account — if you open it on another device, this page will pick it up automatically.
+        {t("auth.confirmationSent")} <span className="font-medium text-primary-900">{email}</span>.{" "}
+        {t("auth.confirmationBody")}
       </p>
 
       {!confirmedElsewhere && (
@@ -121,7 +123,7 @@ export default function CheckYourEmail({ email, userId }: { email: string; userI
       )}
 
       <Link href="/login" className="mt-2 text-sm font-medium text-accent-600">
-        Back to log in
+        {t("auth.backToLogin")}
       </Link>
     </div>
   );

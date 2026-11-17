@@ -81,6 +81,7 @@ function CheckoutInner({
   total: string;
   onSuccess: () => void;
 }) {
+  const t = useT();
   const tr = useT();
   const stripe = useStripe();
   const elements = useElements();
@@ -185,7 +186,7 @@ function CheckoutInner({
           blank fake card reads as broken, so it's gone — the amount being
           charged is what actually belongs at the top. */}
       <div className="mt-5 flex items-baseline justify-between rounded-2xl bg-primary-50 px-5 py-4">
-        <span className="text-sm font-medium text-primary-800">Amount due today</span>
+        <span className="text-sm font-medium text-primary-800">{t("pay.amountDue")}</span>
         <span className="text-2xl font-bold text-[#0f7545]">{total}</span>
       </div>
 
@@ -201,7 +202,7 @@ function CheckoutInner({
             <div className="h-11 animate-pulse rounded-lg bg-gray-100" />
             <div className="h-11 animate-pulse rounded-lg bg-gray-100" />
             <div className="h-11 animate-pulse rounded-lg bg-gray-100" />
-            <p className="pt-2 text-center text-sm text-gray-400">Loading payment options…</p>
+            <p className="pt-2 text-center text-sm text-gray-400">{t("pay.loadingOptions")}</p>
           </div>
         )}
         <PaymentElement options={{ layout: "tabs" }} onReady={() => setElementMounted(true)} />
@@ -216,7 +217,7 @@ function CheckoutInner({
         ))}
         <div className="my-2 border-t border-gray-200" />
         <div className="flex justify-between">
-          <span className="text-sm font-semibold text-primary-700">Total Amount</span>
+          <span className="text-sm font-semibold text-primary-700">{t("pay.totalAmount")}</span>
           <span className="text-sm font-bold text-primary-700">{total}</span>
         </div>
       </div>
@@ -248,10 +249,11 @@ export default function PaymentForm({
   total: string;
   onSuccess: () => void;
 }) {
+  const t = useT();
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-900">Payment Details</h2>
-      <p className="mt-1 text-sm text-gray-500">Enter your card information to continue</p>
+      <h2 className="text-xl font-bold text-gray-900">{t("pay.details")}</h2>
+      <p className="mt-1 text-sm text-gray-500">{t("pay.enterCard")}</p>
 
       <Elements stripe={getStripe()} options={{ clientSecret, appearance: STRIPE_APPEARANCE }}>
         <CheckoutInner lineItems={lineItems} total={total} onSuccess={onSuccess} />

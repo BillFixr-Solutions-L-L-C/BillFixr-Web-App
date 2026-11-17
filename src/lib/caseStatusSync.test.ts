@@ -9,6 +9,9 @@ vi.mock("@/lib/email", () => ({ sendEmail }));
 const notifyAdmins = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/adminNotifications", () => ({ notifyAdmins }));
 
+const notifyCustomer = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/customerNotifications", () => ({ notifyCustomer }));
+
 type UpdateOutcome = { data: { id: string }[] | null; error: { message: string } | null };
 
 // Minimal stand-in for the two calls the sync makes: a conditional update
@@ -54,6 +57,8 @@ describe("syncCaseFromNegotiation", () => {
     sendEmail.mockResolvedValue(undefined);
     notifyAdmins.mockReset();
     notifyAdmins.mockResolvedValue({ sent: 1 });
+    notifyCustomer.mockReset();
+    notifyCustomer.mockResolvedValue({ sent: 1 });
   });
 
   it("advances the case and emails once when the provider has replied", async () => {
@@ -214,5 +219,47 @@ describe("telling the team", () => {
 
     expect(result).toEqual({ changed: false, reason: "status_not_advanceable" });
     expect(notifyAdmins).not.toHaveBeenCalled();
+  });
+});
+
+describe("telling the customer", () => {
+  beforeEach(() => {
+    notifyCustomer.mockReset();
+    notifyCustomer.mockResolvedValue({ sent: 1 });
+  });
+
+  // Email is a message; the bell is a record. Someone who opens the
+  // dashboard next week with the mail archived still needs to see that
+  // the provider answered.
+  it("tells the customer their provider replied", async () => {
+    const { client } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
+
+    await syncCaseFromNegotiation(client, CASE, neg("REPLY_RECEIVED"));
+
+    expect(notifyCustomer).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ userId: "user-1", type: "provider_replied" }),
+    );
+  });
+
+  // The conditional update is what makes this once-per-case: a second
+  // poll matches no row, so nothing below it runs.
+  it("does not tell them again on a poll that changed nothing", async () => {
+    const { client } = adminClient({ data: [], error: null }, PROFILE);
+
+    await syncCaseFromNegotiation(client, CASE, neg("REPLY_RECEIVED"));
+
+    expect(notifyCustomer).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ type: "provider_replied" }),
+    );
+  });
+
+  it("says nothing at all while the provider has not replied", async () => {
+    const { client } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
+
+    await syncCaseFromNegotiation(client, CASE, neg("DISPATCHED"));
+
+    expect(notifyCustomer).not.toHaveBeenCalled();
   });
 });

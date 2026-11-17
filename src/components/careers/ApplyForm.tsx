@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useT } from "@/lib/i18n/client";
 
 function SendIcon() {
   return (
@@ -12,6 +13,7 @@ function SendIcon() {
 }
 
 export default function ApplyForm({ jobId }: { jobId: string }) {
+  const t = useT();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -59,9 +61,9 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
   if (submitted) {
     return (
       <div className="mt-5 rounded-2xl bg-primary-50 p-5 text-center">
-        <p className="text-sm font-semibold text-primary-900">Application submitted</p>
+        <p className="text-sm font-semibold text-primary-900">{t("careers.submitted")}</p>
         <p className="mt-1 text-sm text-primary-900/70">
-          Thanks for applying &mdash; we&apos;ll be in touch if it&apos;s a match.
+          {t("careers.submittedBody")}
         </p>
       </div>
     );
@@ -71,7 +73,7 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
     <form onSubmit={handleSubmit} className="mt-5 space-y-3">
       <input
         type="text"
-        placeholder="Full Name"
+        placeholder={t("careers.fullName")}
         required
         value={fullName}
         onChange={(e) => setFullName(e.target.value)}
@@ -79,7 +81,7 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
       />
       <input
         type="email"
-        placeholder="Email"
+        placeholder={t("auth.email")}
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
@@ -87,7 +89,7 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
       />
       <input
         type="tel"
-        placeholder="Phone number"
+        placeholder={t("careers.phone")}
         required
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
@@ -95,7 +97,7 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
       />
 
       <div>
-        <label className="text-sm text-primary-900">CV/Resume</label>
+        <label className="text-sm text-primary-900">{t("careers.cv")}</label>
         <label className="mt-2 flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-primary-200 px-6 py-8 text-center transition hover:border-primary-400">
           <input
             type="file"
@@ -112,11 +114,11 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
               <span className="font-semibold text-primary-600">{cvFile.name}</span>
             ) : (
               <>
-                Drag &amp; drop your CV, or <span className="font-semibold text-primary-600">browse</span>
+                {t("careers.dragDrop")} <span className="font-semibold text-primary-600">{t("careers.browse")}</span>
               </>
             )}
           </span>
-          <span className="text-xs text-primary-900/40">PDF, DOC, DOCX &bull; Max 3MB</span>
+          <span className="text-xs text-primary-900/40">{t("careers.fileHint")}</span>
         </label>
       </div>
 

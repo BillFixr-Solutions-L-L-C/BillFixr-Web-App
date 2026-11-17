@@ -53,7 +53,7 @@ describe("SupportPage live chat", () => {
 
     expect(await screen.findByText("Start a conversation with our support team below.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start a new conversation" })).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("How can i help you?")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("How can I help you?")).not.toBeInTheDocument();
   });
 
   it("resumes an existing open ticket instead of starting a new one", async () => {
@@ -72,7 +72,7 @@ describe("SupportPage live chat", () => {
     await user.click(screen.getByRole("button", { name: "Open live chat" }));
 
     expect(await screen.findByText("hi")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("How can i help you?")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("How can I help you?")).toBeInTheDocument();
   });
 
   it("shows the support logo on agent messages and the customer's own avatar on their messages", async () => {
@@ -119,7 +119,7 @@ describe("SupportPage live chat", () => {
 
     await openChatAndStartConversation(user);
 
-    await user.type(screen.getByPlaceholderText("How can i help you?"), "Is my case still active?");
+    await user.type(screen.getByPlaceholderText("How can I help you?"), "Is my case still active?");
     const sendButtons = screen.getAllByRole("button", { name: "Send" });
     await user.click(sendButtons[sendButtons.length - 1]);
 
@@ -163,7 +163,7 @@ describe("SupportPage live chat", () => {
         await vi.advanceTimersByTimeAsync(0);
       });
 
-      fireEvent.change(screen.getByPlaceholderText("How can i help you?"), {
+      fireEvent.change(screen.getByPlaceholderText("How can I help you?"), {
         target: { value: "Are you there?" },
       });
       const sendButtons = screen.getAllByRole("button", { name: "Send" });
@@ -254,7 +254,7 @@ describe("SupportPage live chat", () => {
     await user.click(screen.getByText(/Conversation from/));
 
     expect(await screen.findByText("Glad we sorted it out.")).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("How can i help you?")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("How can I help you?")).not.toBeInTheDocument();
   });
 
   it("lets the customer rate a resolved conversation and shows a thank-you after rating", async () => {

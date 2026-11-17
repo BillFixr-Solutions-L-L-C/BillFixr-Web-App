@@ -91,7 +91,7 @@ export default async function PricingPage() {
 
           <section className="rounded-3xl border border-[#0f7545] bg-white p-8">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-primary-900/40">
-              Success fee
+              {t("pricing.successFee")}
             </h2>
             <p className="mt-3 text-4xl font-bold text-[#003322]">
               {percentage}%
@@ -192,13 +192,13 @@ export default async function PricingPage() {
             href="/signup"
             className="rounded-full bg-[#0f7545] px-8 py-3.5 text-sm font-semibold text-white transition hover:bg-primary-700"
           >
-            Review Your Bill
+            {t("pricing.reviewYourBill")}
           </Link>
           <a
             href="mailto:support@billfixr.com"
             className="rounded-full border border-[#0f7545] px-8 py-3.5 text-sm font-semibold text-[#0f7545] transition hover:bg-white"
           >
-            Ask us a question
+            {t("pricing.askQuestion")}
           </a>
         </div>
       </main>

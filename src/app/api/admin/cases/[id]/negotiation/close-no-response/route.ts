@@ -11,6 +11,7 @@ import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { emailCopy } from "@/lib/emailCopy";
 import { customerLanguage } from "@/lib/language";
 import { escapeHtml } from "@/lib/html";
+import { notifyCustomer } from "@/lib/customerNotifications";
 
 // The ending for a case the provider never answered.
 //
@@ -160,6 +161,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // actually happening rather than to the request being made.
   let emailed = false;
   if (!alreadyClosed) {
+
     // communication_language, not the display cookie: what they chose on
     // their first visit is what we write to them in. See lib/language.ts.
     const { data: profile } = await admin
@@ -167,6 +169,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .select("name, email, communication_language")
       .eq("id", caseRow.user_id)
       .single();
+    // Same once-per-case guard as the email, for the same reason: tied to
+    // the status transition, not to the request. Reuses the profile just
+    // read rather than reading the same row again.
+    await notifyCustomer(admin, {
+      userId: caseRow.user_id,
+      type: "case_closed_no_response",
+      language: customerLanguage(profile ?? {}),
+    });
+
     if (profile?.email) {
       try {
         const copy = emailCopy("closedNoResponse", customerLanguage(profile));

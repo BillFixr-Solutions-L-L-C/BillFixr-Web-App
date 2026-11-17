@@ -1,5 +1,5 @@
 import AdminSearch from "@/components/admin/AdminSearch";
-import NotificationBell from "@/components/admin/NotificationBell";
+import NotificationBell from "@/components/NotificationBell";
 
 const today = new Date().toLocaleDateString("en-US", {
   weekday: "short",

@@ -129,7 +129,7 @@ export default function SignUpForm() {
       {error && <p className="text-sm text-danger">{error}</p>}
 
       <Link href="/forgot-password" className="text-sm text-gray-500 hover:text-gray-700">
-        Forget Password
+        {t("auth.forgotPassword")}
       </Link>
 
       <button

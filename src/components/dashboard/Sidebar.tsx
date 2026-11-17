@@ -7,6 +7,8 @@ import Logo from "@/components/Logo";
 import NavIcon, { type NavIconName } from "@/components/dashboard/NavIcon";
 import { SOCIAL_LINKS } from "@/components/socialLinks";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import NotificationBell from "@/components/NotificationBell";
+import type { ShellNotification } from "@/components/dashboard/DashboardShell";
 import { useT } from "@/lib/i18n/client";
 import type { MessageKey } from "@/lib/i18n/messages";
 
@@ -62,8 +64,10 @@ function NavLink({ label, href, icon, onNavigate }: Omit<Link, "labelKey"> & { l
 
 export default function Sidebar({
   user,
+  initialNotifications = [],
 }: {
   user: { name: string; status: "active" | "suspended"; avatarUrl: string | null };
+  initialNotifications?: ShellNotification[];
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -75,14 +79,17 @@ export default function Sidebar({
         <Link href="/dashboard">
           <Logo />
         </Link>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label="Open menu"
-          className="-mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-50"
-        >
-          <MenuIcon />
-        </button>
+        <div className="flex items-center gap-1">
+          <NotificationBell initialNotifications={initialNotifications} />
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label={t("nav.openMenu")}
+            className="-mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-50"
+          >
+            <MenuIcon />
+          </button>
+        </div>
       </div>
 
       {open && (
@@ -105,14 +112,19 @@ export default function Sidebar({
           <Link href="/dashboard">
             <Logo />
           </Link>
-          <button
-            type="button"
-            onClick={close}
-            aria-label="Close menu"
-            className="-mr-2 flex h-11 w-11 items-center justify-center text-gray-400 hover:text-gray-600 md:hidden"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-1">
+            <span className="hidden md:block">
+              <NotificationBell initialNotifications={initialNotifications} />
+            </span>
+            <button
+              type="button"
+              onClick={close}
+              aria-label={t("nav.closeMenu")}
+              className="-mr-2 flex h-11 w-11 items-center justify-center text-gray-400 hover:text-gray-600 md:hidden"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         <nav className="mt-6 flex flex-col gap-2">

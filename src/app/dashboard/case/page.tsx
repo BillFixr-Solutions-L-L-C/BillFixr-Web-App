@@ -450,7 +450,7 @@ export default function ActiveCasePage() {
     return (
       <div>
         <PageHeading title={t("case.title")} />
-        <p className="text-sm text-gray-400">Loading…</p>
+        <p className="text-sm text-gray-400">{t("case.loading")}</p>
       </div>
     );
   }
@@ -461,25 +461,25 @@ export default function ActiveCasePage() {
         <PageHeading title={t("case.title")} />
         {cases.length === 0 ? (
           <div className="rounded-2xl bg-white p-10 text-center text-sm text-gray-500 shadow-sm">
-            No active cases yet. Upload a bill from your dashboard to get started.
+            {t("case.empty")}
           </div>
         ) : (
           <TableScroller className="rounded-2xl bg-white shadow-sm">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
                 <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
-                  <th className="px-4 py-3">Bill</th>
-                  <th className="px-4 py-3">Provider</th>
-                  <th className="px-4 py-3">Upload Date</th>
-                  <th className="px-4 py-3">Appeal Letter</th>
-                  <th className="px-4 py-3">Provider Response</th>
-                  <th className="px-4 py-3">Proposed Savings</th>
+                  <th className="px-4 py-3">{t("table.bill")}</th>
+                  <th className="px-4 py-3">{t("table.provider")}</th>
+                  <th className="px-4 py-3">{t("case.uploadDate")}</th>
+                  <th className="px-4 py-3">{t("case.appealLetter")}</th>
+                  <th className="px-4 py-3">{t("case.providerResponse")}</th>
+                  <th className="px-4 py-3">{t("case.proposedSavings")}</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
                 {cases.map((row) => {
-                  const responseLabel = viewForStatus(row.status) === "received" ? "Received" : "Pending";
+                  const responded = viewForStatus(row.status) === "received";
                   return (
                     <tr
                       key={row.id}
@@ -508,8 +508,8 @@ export default function ActiveCasePage() {
                       >
                         {row.letter_sent_at ? t("case.letterSent") : t("case.letterNotSent")}
                       </td>
-                      <td className={`px-4 py-3 font-medium ${responseLabel === "Received" ? "text-primary-600" : "text-accent-600"}`}>
-                        {responseLabel}
+                      <td className={`px-4 py-3 font-medium ${responded ? "text-primary-600" : "text-accent-600"}`}>
+                        {responded ? t("case.received") : t("case.pending")}
                       </td>
                       {/* The real figure. This used to print a flat
                           $2,345 for every case with a response, which was
@@ -539,7 +539,7 @@ export default function ActiveCasePage() {
         <div className="grid gap-6 sm:grid-cols-2">
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold uppercase tracking-wide text-primary-700">Original Bill</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-primary-700">{t("case.originalBill")}</p>
               {activeBillDoc?.downloadUrl ? (
                 <a
                   href={activeBillDoc.downloadUrl}
@@ -569,7 +569,7 @@ export default function ActiveCasePage() {
           </div>
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-bold uppercase tracking-wide text-primary-700">Adjusted Bill</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-primary-700">{t("case.adjustedBill")}</p>
               <button
                 type="button"
                 disabled
@@ -602,7 +602,7 @@ export default function ActiveCasePage() {
               </div>
               <div className="absolute inset-0 flex items-center justify-center">
                 <p className="rounded-full bg-white/90 px-4 py-2 text-xs font-semibold text-gray-600 shadow-sm">
-                  Unlocked once payment is complete
+                  {t("case.lockedUntilPaid")}
                 </p>
               </div>
               <WatermarkOverlay />
@@ -615,7 +615,7 @@ export default function ActiveCasePage() {
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white p-6 shadow-sm">
           <div className="flex flex-wrap gap-4">
             <div className="rounded-xl border border-[#ebebeb] px-5 py-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-[#a6b1bb]">Over Billed</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-[#a6b1bb]">{t("case.overBilled")}</p>
               <p className="mt-1 text-2xl font-bold text-[#d90000]">
                 {selectedCase?.savings_found != null
                   ? `$${Number(selectedCase.savings_found).toLocaleString()}`
@@ -623,7 +623,7 @@ export default function ActiveCasePage() {
               </p>
             </div>
             <div className="rounded-xl border border-[#ebebeb] px-5 py-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-[#a6b1bb]">Adjusted Charges</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-[#a6b1bb]">{t("case.adjustedCharges")}</p>
               <p className="mt-1 text-2xl font-bold text-[#009966]">
                 {selectedCase?.adjusted_total != null
                   ? `$${Number(selectedCase.adjusted_total).toLocaleString()}`
@@ -653,7 +653,7 @@ export default function ActiveCasePage() {
               onClick={handlePayWithCard}
               className="mt-2 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
             >
-              Pay with Card
+              {t("case.payWithCard")}
             </button>
           </div>
         </div>
@@ -677,12 +677,12 @@ export default function ActiveCasePage() {
                 onSuccess={handlePaymentConfirmed}
               />
               {confirmingPayment && (
-                <p className="mt-3 text-center text-sm text-gray-500">Confirming your payment…</p>
+                <p className="mt-3 text-center text-sm text-gray-500">{t("case.confirmingPayment")}</p>
               )}
               {paymentError && <p className="mt-3 text-center text-sm text-danger">{paymentError}</p>}
             </>
           ) : (
-            <p className="py-10 text-center text-sm text-gray-400">Loading payment form…</p>
+            <p className="py-10 text-center text-sm text-gray-400">{t("case.loadingPaymentForm")}</p>
           )}
         </div>
       </div>
@@ -695,15 +695,15 @@ export default function ActiveCasePage() {
         <BackToCasesButton onClick={backToList} />
         <PageHeading title={t("case.title")} />
         <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
-          <p className="text-2xl font-bold text-primary-700">Payment Successful</p>
+          <p className="text-2xl font-bold text-primary-700">{t("case.paymentSuccessful")}</p>
           <p className="mt-2 text-sm text-gray-500">
-            Your case is now closed. Full documents are unlocked and ready to download.
+            {t("case.closedUnlocked")}
           </p>
           <Link
             href="/testimonial"
             className="mt-6 inline-flex rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
           >
-            Rate our services
+            {t("case.rateUs")}
           </Link>
         </div>
       </div>
@@ -746,7 +746,8 @@ export default function ActiveCasePage() {
               estimate is not a reduction and must not read like one. */}
           {negotiationSavings != null && negotiation.settled_amount != null && (
             <p className="mt-3 text-sm text-gray-600">
-              Agreed: <span className="font-semibold text-gray-900">${negotiation.settled_amount.toLocaleString()}</span>{" "}
+              {t("case.agreed")}{" "}
+              <span className="font-semibold text-gray-900">${negotiation.settled_amount.toLocaleString()}</span>{" "}
               down from ${negotiation.total_billed.toLocaleString()} —{" "}
               <span className="font-semibold text-primary-600">${negotiationSavings.toLocaleString()} saved</span>
             </p>
@@ -781,7 +782,7 @@ export default function ActiveCasePage() {
               rel="noopener noreferrer"
               className="mt-4 inline-block rounded-full bg-primary-600 px-5 py-2 text-sm font-semibold text-white hover:bg-primary-700"
             >
-              View corrected bill
+              {t("case.viewCorrected")}
             </a>
           )}
         </div>
@@ -898,7 +899,7 @@ export default function ActiveCasePage() {
               )}
             </div>
           ))}
-          {rowsToShow.length === 0 && <p className="py-3 text-sm text-gray-400">No documents yet.</p>}
+          {rowsToShow.length === 0 && <p className="py-3 text-sm text-gray-400">{t("case.noDocuments")}</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -945,14 +946,14 @@ export default function ActiveCasePage() {
       {adjustedBillDoc && (
         <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">New Bill</p>
-            <span className="text-sm font-medium text-primary-600">Received</span>
+            <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">{t("case.newBill")}</p>
+            <span className="text-sm font-medium text-primary-600">{t("case.received")}</span>
             <button
               type="button"
               onClick={() => setView("savings")}
               className="rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
             >
-              Check and Proceed
+              {t("case.checkAndProceed")}
             </button>
           </div>
         </div>

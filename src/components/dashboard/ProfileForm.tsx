@@ -4,6 +4,7 @@ import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { missingProfileFields, describeMissingProfile } from "@/lib/requiredProfile";
+import { useT } from "@/lib/i18n/client";
 
 function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   // The label sits above the input rather than wrapping it, so it needs an
@@ -95,6 +96,7 @@ export default function ProfileForm({
   // successful save should carry them on to the dashboard.
   completingProfile?: boolean;
 }) {
+  const t = useT();
   const router = useRouter();
   const [form, setForm] = useState(profile);
   const [saving, setSaving] = useState(false);
@@ -235,7 +237,7 @@ export default function ProfileForm({
     <form onSubmit={handleSubmit} className="flex flex-wrap gap-8">
       <div className="shrink-0">
         <p className="mb-1 text-sm text-gray-600">
-          Profile photo <span className="text-danger">*</span>
+          {t("profile.photo")} <span className="text-danger">*</span>
         </p>
         <div className="relative h-20 w-20">
           {form.avatarUrl ? (
@@ -246,7 +248,7 @@ export default function ProfileForm({
           )}
           <button
             type="button"
-            aria-label="Edit photo"
+            aria-label={t("profile.editPhoto")}
             disabled={uploadingAvatar}
             onClick={() => fileInputRef.current?.click()}
             className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary-600 text-xs text-white ring-2 ring-white disabled:opacity-60"
@@ -262,7 +264,7 @@ export default function ProfileForm({
           />
         </div>
         {!form.avatarUrl && !avatarError && (
-          <p className="mt-2 max-w-[7rem] text-xs text-gray-400">Required to use the dashboard.</p>
+          <p className="mt-2 max-w-[7rem] text-xs text-gray-400">{t("profile.required")}</p>
         )}
         {avatarError && <p className="mt-2 max-w-[7rem] text-xs text-danger">{avatarError}</p>}
       </div>
@@ -301,7 +303,7 @@ export default function ProfileForm({
 
         {error && <p className="sm:col-span-2 text-sm text-danger">{error}</p>}
         {saved && missing.length === 0 && (
-          <p className="sm:col-span-2 text-sm text-primary-600">Profile saved.</p>
+          <p className="sm:col-span-2 text-sm text-primary-600">{t("profile.saved")}</p>
         )}
         {missing.length > 0 && (
           // Saying only "Profile saved." here was actively misleading: the

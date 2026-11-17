@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useT } from "@/lib/i18n/client";
 
 // Opens a document over the page it was opened from.
 //
@@ -31,6 +32,7 @@ export default function DocumentViewer({
   downloadUrl?: string | null;
   onClose: () => void;
 }) {
+  const t = useT();
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -78,7 +80,7 @@ export default function DocumentViewer({
           <div className="flex shrink-0 items-center gap-4">
             {downloadUrl && (
               <a href={downloadUrl} className="text-sm font-medium text-primary-600 hover:text-primary-700">
-                Download
+                {t("viewer.download")}
               </a>
             )}
             {/* The escape hatch the old behaviour gave for free: printing,
@@ -89,13 +91,13 @@ export default function DocumentViewer({
               rel="noopener noreferrer"
               className="text-sm font-medium text-gray-500 hover:text-gray-700"
             >
-              Open in new tab
+              {t("viewer.openInNewTab")}
             </a>
             <button
               ref={closeRef}
               type="button"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t("common.close")}
               className="rounded-full px-2 text-lg leading-none text-gray-400 hover:text-gray-600"
             >
               ✕

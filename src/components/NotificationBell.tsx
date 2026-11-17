@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/timeAgo";
+import { useT } from "@/lib/i18n/client";
 
 type Notification = {
   id: string;
@@ -15,6 +16,7 @@ type Notification = {
 const POLL_MS = 15000;
 
 export default function NotificationBell({ initialNotifications }: { initialNotifications: Notification[] }) {
+  const t = useT();
   const [notifications, setNotifications] = useState(initialNotifications);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -75,9 +77,9 @@ export default function NotificationBell({ initialNotifications }: { initialNoti
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        aria-label="Notifications"
+        aria-label={t("notifications.title")}
         onClick={() => setOpen((o) => !o)}
-        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100"
+        className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path
@@ -95,9 +97,9 @@ export default function NotificationBell({ initialNotifications }: { initialNoti
 
       {open && (
         <div className="absolute right-0 top-full z-20 mt-2 w-80 rounded-2xl border border-gray-100 bg-white p-2 shadow-lg">
-          <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Notifications</p>
+          <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">{t("notifications.title")}</p>
           {notifications.length === 0 ? (
-            <p className="px-3 py-4 text-center text-sm text-gray-400">You&apos;re all caught up.</p>
+            <p className="px-3 py-4 text-center text-sm text-gray-400">{t("notifications.empty")}</p>
           ) : (
             <div className="max-h-80 overflow-y-auto">
               {notifications.map((n) => (
