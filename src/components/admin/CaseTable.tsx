@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isCaseCompleted } from "@/lib/caseStatus";
+import TableScroller from "@/components/TableScroller";
 
 type CaseWithProfile = {
   id: string;
@@ -20,7 +21,7 @@ export default async function CaseTable() {
   const rows = (cases ?? []) as unknown as CaseWithProfile[];
 
   return (
-    <div className="overflow-x-auto">
+    <TableScroller>
       <table className="w-full min-w-[560px] text-left text-sm">
         <thead>
           <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -73,6 +74,6 @@ export default async function CaseTable() {
           )}
         </tbody>
       </table>
-    </div>
+    </TableScroller>
   );
 }

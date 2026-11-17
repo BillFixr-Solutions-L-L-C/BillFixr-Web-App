@@ -83,7 +83,7 @@ export default function PasswordInput({ placeholder, value, onChange, required, 
         onMouseDown={(e) => e.preventDefault()}
         onClick={toggleVisible}
         aria-label={visible ? "Hide password" : "Show password"}
-        className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center text-gray-400 hover:text-gray-600"
+        className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-gray-400 hover:text-gray-600"
       >
         {visible ? <EyeIcon /> : <EyeOffIcon />}
       </button>

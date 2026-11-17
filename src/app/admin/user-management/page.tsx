@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { timeAgo } from "@/lib/timeAgo";
 import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
+import TableScroller from "@/components/TableScroller";
 
 type ActivityLogRow = {
   id: string;
@@ -150,7 +151,7 @@ export default async function UserManagementPage() {
 
           <div className="min-w-0 rounded-2xl bg-white p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold text-gray-900">System Roles &amp; Permissions</h2>
-            <div className="overflow-x-auto">
+            <TableScroller>
               <table className="w-full min-w-[280px] text-left text-sm">
                 <thead>
                   <tr className="text-xs text-gray-400">
@@ -169,7 +170,7 @@ export default async function UserManagementPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableScroller>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">

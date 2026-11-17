@@ -20,6 +20,7 @@ import HeldSettlementPanel from "@/components/admin/HeldSettlementPanel";
 import CloseNoResponsePanel from "@/components/admin/CloseNoResponsePanel";
 import AcceptSettlementPanel from "@/components/admin/AcceptSettlementPanel";
 import PaperReplyPanel from "@/components/admin/PaperReplyPanel";
+import CounterOfferPanel from "@/components/admin/CounterOfferPanel";
 import CaseDocumentsPanel from "@/components/admin/CaseDocumentsPanel";
 import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
@@ -310,6 +311,19 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
               patientBalance={patientBalance(acceptable)}
               currentOffer={acceptable.current_offer ?? null}
               canAccept={canOverride}
+            />
+          )}
+
+          {/* Available for as long as the negotiation is live: the brake
+              matters most precisely when something has gone wrong, and a
+              counter is how a case autopilot stopped on gets moving. */}
+          {negotiation && negotiation.settled_amount == null && !isCaseCompleted(caseRow.status) && (
+            <CounterOfferPanel
+              caseId={id}
+              patientBalance={patientBalance(negotiation)}
+              currentOffer={negotiation.current_offer ?? null}
+              autopilotOn={Boolean(negotiation.auto_pilot_enabled)}
+              canAct={canOverride}
             />
           )}
 

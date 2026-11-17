@@ -17,6 +17,7 @@ import { agreedSavings, clientNotices, describeNegotiationStatus, providerHasRes
 import type { AutomationNegotiation } from "@/types/automation-engine";
 import { useT } from "@/lib/i18n/client";
 import { DEFAULT_LANGUAGE, customerLanguage, type Language } from "@/lib/language";
+import TableScroller from "@/components/TableScroller";
 
 // "letter"/"summary" are gone: the provider's reply is a row in the
 // document list now, and the route to payment is Check and Proceed.
@@ -463,7 +464,7 @@ export default function ActiveCasePage() {
             No active cases yet. Upload a bill from your dashboard to get started.
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl bg-white shadow-sm">
+          <TableScroller className="rounded-2xl bg-white shadow-sm">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
                 <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
@@ -524,7 +525,7 @@ export default function ActiveCasePage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </TableScroller>
         )}
       </div>
     );

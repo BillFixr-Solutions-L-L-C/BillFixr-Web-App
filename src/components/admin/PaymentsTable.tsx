@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import IssueRefundControl from "@/components/admin/IssueRefundControl";
+import TableScroller from "@/components/TableScroller";
 
 type Row = {
   id: string;
@@ -22,7 +23,8 @@ export default function PaymentsTable({ rows, canIssueRefunds = false }: { rows:
   const [selected, setSelected] = useState<Row | null>(null);
 
   return (
-    <div className="overflow-x-auto">
+    <>
+      <TableScroller>
       <table className="w-full min-w-[720px] text-left text-sm">
         <thead>
           <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -65,6 +67,7 @@ export default function PaymentsTable({ rows, canIssueRefunds = false }: { rows:
           ))}
         </tbody>
       </table>
+      </TableScroller>
 
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -132,6 +135,6 @@ export default function PaymentsTable({ rows, canIssueRefunds = false }: { rows:
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

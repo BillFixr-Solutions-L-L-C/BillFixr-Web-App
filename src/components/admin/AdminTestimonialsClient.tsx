@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import TableScroller from "@/components/TableScroller";
 
 type Testimonial = {
   id: string;
@@ -165,7 +166,7 @@ export default function AdminTestimonialsClient({
         ) : filteredTestimonials.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">No testimonials match your search.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <TableScroller>
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
                 <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -192,7 +193,7 @@ export default function AdminTestimonialsClient({
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroller>
         )}
       </div>
     </div>

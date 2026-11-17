@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useT } from "@/lib/i18n/client";
+import TableScroller from "@/components/TableScroller";
 
 export type CompletedCaseRow = {
   id: string;
@@ -36,7 +37,7 @@ export default function CompletedCasesTable({ rows }: { rows: CompletedCaseRow[]
 
   return (
     <div className="rounded-2xl bg-white p-6 shadow-sm">
-      <div className="overflow-x-auto">
+      <TableScroller>
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr className="bg-primary-50 text-xs font-semibold uppercase tracking-wide text-primary-700">
@@ -66,7 +67,7 @@ export default function CompletedCasesTable({ rows }: { rows: CompletedCaseRow[]
             ))}
           </tbody>
         </table>
-      </div>
+      </TableScroller>
     </div>
   );
 }

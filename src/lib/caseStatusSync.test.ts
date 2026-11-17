@@ -6,6 +6,9 @@ import type { AutomationNegotiationStatus } from "@/types/automation-engine";
 const sendEmail = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/email", () => ({ sendEmail }));
 
+const notifyAdmins = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/adminNotifications", () => ({ notifyAdmins }));
+
 type UpdateOutcome = { data: { id: string }[] | null; error: { message: string } | null };
 
 // Minimal stand-in for the two calls the sync makes: a conditional update
@@ -49,6 +52,8 @@ describe("syncCaseFromNegotiation", () => {
   beforeEach(() => {
     sendEmail.mockReset();
     sendEmail.mockResolvedValue(undefined);
+    notifyAdmins.mockReset();
+    notifyAdmins.mockResolvedValue({ sent: 1 });
   });
 
   it("advances the case and emails once when the provider has replied", async () => {
@@ -154,5 +159,60 @@ describe("syncCaseFromNegotiation", () => {
       const result = await syncCaseFromNegotiation(client, CASE, neg(status));
       expect(result, status).toEqual({ changed: false, reason: "no_response_yet" });
     }
+  });
+});
+
+// Nothing told the team a provider had replied, and above all nothing
+// told them a settlement was parked waiting for a person. A case in that
+// state cannot finish until somebody opens it.
+describe("telling the team", () => {
+  beforeEach(() => {
+    sendEmail.mockReset();
+    sendEmail.mockResolvedValue(undefined);
+    notifyAdmins.mockReset();
+    notifyAdmins.mockResolvedValue({ sent: 2 });
+  });
+
+  it("notifies the negotiation team when a provider replies", async () => {
+    const { client } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
+
+    await syncCaseFromNegotiation(client, CASE, neg("REPLY_RECEIVED"));
+
+    expect(notifyAdmins).toHaveBeenCalledTimes(1);
+    expect(notifyAdmins).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ type: "provider_replied", domain: "negotiation" }),
+    );
+  });
+
+  it("says so when the settlement is parked for review", async () => {
+    const { client } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
+
+    await syncCaseFromNegotiation(client, CASE, neg("HELD_FOR_REVIEW"));
+
+    expect(notifyAdmins).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ type: "settlement_held" }),
+    );
+    expect(notifyAdmins.mock.calls[0][1].message).toMatch(/needs review/i);
+  });
+
+  it("stays silent while nothing has come back", async () => {
+    const { client } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
+
+    await syncCaseFromNegotiation(client, CASE, neg("DISPATCHED"));
+
+    expect(notifyAdmins).not.toHaveBeenCalled();
+  });
+
+  it("tells them once, not on every poll", async () => {
+    // The conditional update is what guarantees it: the poll that loses
+    // the race matches no row and returns before this point.
+    const { client } = adminClient({ data: [], error: null }, PROFILE);
+
+    const result = await syncCaseFromNegotiation(client, CASE, neg("REPLY_RECEIVED"));
+
+    expect(result).toEqual({ changed: false, reason: "status_not_advanceable" });
+    expect(notifyAdmins).not.toHaveBeenCalled();
   });
 });

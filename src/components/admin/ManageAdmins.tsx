@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import ConfirmModal from "@/components/ConfirmModal";
+import TableScroller from "@/components/TableScroller";
 
 export type AdminRow = {
   id: string;
@@ -149,7 +150,7 @@ export default function ManageAdmins({
       ) : filteredAdmins.length === 0 ? (
         <p className="py-6 text-center text-sm text-gray-400">No admins match your search.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <TableScroller>
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
               <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -217,7 +218,7 @@ export default function ManageAdmins({
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroller>
       )}
 
       {showAdd && (

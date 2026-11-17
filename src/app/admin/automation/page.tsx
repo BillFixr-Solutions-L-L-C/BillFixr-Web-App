@@ -3,7 +3,7 @@ import RevenueChart from "@/components/admin/RevenueChart";
 import DonutChart from "@/components/admin/DonutChart";
 import RetryStalledCases from "@/components/admin/RetryStalledCases";
 import { createClient } from "@/lib/supabase/server";
-import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
+import { getDomainAccess, hasDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
 import { COMPLETED_STATUSES } from "@/lib/caseStatus";
 import { getAiServiceConfig } from "@/lib/ai-service";
@@ -14,6 +14,7 @@ import {
   successRate,
   STALLED_AFTER_MINUTES,
 } from "@/lib/adminAnalytics";
+import TableScroller from "@/components/TableScroller";
 
 // Every figure here is measured, not illustrative. The panels that depend
 // on the AI service (per-stage OCR/agent progress) say so plainly when it
@@ -41,7 +42,8 @@ function timeOf(iso: string) {
 export default async function AutomationMonitoringPage() {
   const supabase = await createClient();
 
-  if (!hasDomainAccess(await getDomainAccess(supabase, "ai_pipeline"))) {
+  const aiPipelineAccess = await getDomainAccess(supabase, "ai_pipeline");
+  if (!hasDomainAccess(aiPipelineAccess)) {
     return (
       <div>
         <h1 className="mb-6 font-serif text-3xl font-bold text-gray-900">Automation Monitoring Dashboard</h1>
@@ -77,6 +79,9 @@ export default async function AutomationMonitoringPage() {
   const rate = successRate(successCount ?? 0, stalled.length);
   const months = bucketCountByMonth(throughput ?? [], THROUGHPUT_MONTHS);
   const aiConnected = Boolean(getAiServiceConfig());
+  // Starting an analysis on someone else's case needs full access to
+  // this domain, which is what the route enforces too.
+  const canRetry = aiConnected && hasFullDomainAccess(aiPipelineAccess);
   const logs = (recent ?? []) as CaseRow[];
 
   return (
@@ -142,7 +147,7 @@ export default async function AutomationMonitoringPage() {
             </p>
             {stalled.length > 0 ? (
               <>
-                <div className="overflow-x-auto">
+                <TableScroller>
                   <table className="w-full min-w-[520px] text-left text-sm">
                     <thead>
                       <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -169,18 +174,18 @@ export default async function AutomationMonitoringPage() {
                           <td className="py-2 pr-4 text-gray-500">STALLED</td>
                           <td className="py-2 pr-4 text-gray-500">{timeOf(c.created_at)}</td>
                           <td className="py-2">
-                            <RetryStalledCases caseIds={[c.id]} label="Retry" compact disabled={!aiConnected} />
+                            <RetryStalledCases caseIds={[c.id]} label="Retry" compact canRetry={canRetry} />
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </TableScroller>
                 <div className="mt-4">
                   <RetryStalledCases
                     caseIds={stalled.map((c) => c.id)}
                     label="Retry ALL"
-                    disabled={!aiConnected}
+                    canRetry={canRetry}
                   />
                 </div>
               </>

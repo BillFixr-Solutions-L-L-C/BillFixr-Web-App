@@ -6,6 +6,7 @@ import AdminTableToolbar from "@/components/admin/AdminTableToolbar";
 import Pagination from "@/components/admin/Pagination";
 import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
 import AccessRestricted from "@/components/admin/AccessRestricted";
+import TableScroller from "@/components/TableScroller";
 
 type CompletedCaseRow = {
   id: string;
@@ -68,7 +69,7 @@ export default async function AdminCompletedCasesPage({
             {search ? "No completed cases match your search." : "No completed cases yet."}
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <TableScroller>
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead>
                 <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -110,7 +111,7 @@ export default async function AdminCompletedCasesPage({
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroller>
         )}
 
         <Pagination page={page} totalPages={totalPages} />

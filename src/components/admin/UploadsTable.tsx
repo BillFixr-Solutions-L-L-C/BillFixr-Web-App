@@ -4,6 +4,7 @@ import { useState } from "react";
 import DocumentViewer from "@/components/dashboard/DocumentViewer";
 import type { BillDocument } from "@/lib/billDocuments";
 import DeleteBillButton from "@/components/admin/DeleteBillButton";
+import TableScroller from "@/components/TableScroller";
 
 export type UploadRow = {
   id: string;
@@ -39,7 +40,7 @@ export default function UploadsTable({
         {uploads.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">{emptyMessage}</p>
         ) : (
-          <div className="overflow-x-auto">
+          <TableScroller>
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
                 <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -80,7 +81,7 @@ export default function UploadsTable({
                 })}
               </tbody>
             </table>
-          </div>
+          </TableScroller>
         )}
       </div>
 

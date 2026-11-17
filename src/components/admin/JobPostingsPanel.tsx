@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import TableScroller from "@/components/TableScroller";
 
 type Posting = {
   id: string;
@@ -253,7 +254,7 @@ export default function JobPostingsPanel({
       {postings.length === 0 ? (
         <p className="py-6 text-center text-sm text-gray-400">No job postings yet.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <TableScroller>
           <table className="w-full min-w-[560px] text-left text-sm">
             <thead>
               <tr className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -287,7 +288,7 @@ export default function JobPostingsPanel({
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroller>
       )}
     </div>
   );

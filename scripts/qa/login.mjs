@@ -25,8 +25,34 @@
 //   ... then in Playwright: browser.newContext({ storageState: "qa-state.json" })
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
-import { chromium } from "playwright";
+
+// Playwright is not a dependency of this project. It is loaded lazily, and
+// from wherever it happens to be installed, so that the token-minting half
+// of this module can be imported by callers that drive their own browser
+// (see _mobile.mjs) on a machine where Playwright is not on the path.
+async function loadChromium(root) {
+  const candidates = [
+    process.env.PLAYWRIGHT_MODULE,
+    `${root}/scripts/qa/.out/pw/node_modules/playwright/index.js`,
+    "playwright",
+  ].filter(Boolean);
+  for (const spec of candidates) {
+    try {
+      const mod = await import(spec.includes("/") ? pathToFileURL(spec).href : spec);
+      const chromium = (mod.default ?? mod).chromium;
+      if (chromium) return chromium;
+    } catch {
+      /* try the next candidate */
+    }
+  }
+  throw new Error(
+    "Playwright is not installed. Either install it under scripts/qa/.out/pw " +
+      "(npm init -y && npm i playwright && npx playwright install chromium) " +
+      "or point PLAYWRIGHT_MODULE at an existing install.",
+  );
+}
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 
@@ -78,6 +104,7 @@ export async function loginAs({
 } = {}) {
   const tokenHash = await mintLoginToken(email);
 
+  const chromium = await loadChromium(REPO_ROOT);
   const browser = await chromium.launch({ headless });
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
