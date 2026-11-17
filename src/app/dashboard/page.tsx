@@ -16,6 +16,7 @@ import { prepareBillFile } from "@/lib/billUpload";
 import CaseInformationStep, { type CaseInformation } from "@/components/dashboard/CaseInformationStep";
 import { useT } from "@/lib/i18n/client";
 import TableScroller from "@/components/TableScroller";
+import LegalTranslationNotice from "@/components/legal/LegalTranslationNotice";
 
 const EMPTY_CASE_INFORMATION: CaseInformation = {
   clientName: "",
@@ -648,23 +649,16 @@ export default function DashboardHome() {
       {stage === "terms" && (
         <Modal>
           <p className="text-sm leading-relaxed text-gray-600">
-            These Terms &amp; Conditions <strong>(&quot;Terms&quot;)</strong> govern your use of
-            BillFixr, an AI-powered medical bill reduction service operated in the United
-            States. By accessing or using BillFixr, you agree to these Terms. If you do not
-            agree, do not use the service.
+            {t("upload.termsP1Before")} <strong>{t("upload.termsP1Bold")}</strong>{" "}
+            {t("upload.termsP1After")}
           </p>
-          <p className="mt-4 text-sm leading-relaxed text-gray-600">
-            By uploading my medical bill, I authorize BillFixr to analyze, review, and
-            negotiate with my healthcare provider on my behalf.
-          </p>
-          <p className="mt-4 text-sm leading-relaxed text-gray-600">
-            I understand that BillFixr may contact the hospital, request corrections, and
-            obtain a revised bill as part of the reduction process.
-          </p>
-          <p className="mt-4 text-sm leading-relaxed text-gray-600">
-            I agree to the fee structure and confirm that all documents I upload are accurate
-            and legally mine to submit.
-          </p>
+          <p className="mt-4 text-sm leading-relaxed text-gray-600">{t("upload.termsP2")}</p>
+          <p className="mt-4 text-sm leading-relaxed text-gray-600">{t("upload.termsP3")}</p>
+          <p className="mt-4 text-sm leading-relaxed text-gray-600">{t("upload.termsP4")}</p>
+          {/* Same disclaimer as the four legal pages: this is the text the
+              customer is agreeing to before we write to their provider, so
+              the Spanish says which version governs. */}
+          <LegalTranslationNotice />
           <button
             type="button"
             onClick={handleAgree}

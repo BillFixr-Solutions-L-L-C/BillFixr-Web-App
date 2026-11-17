@@ -16,10 +16,18 @@ describe("the dictionary", () => {
   it("has no untranslated Spanish left as English", () => {
     // Catches a copy-paste that leaves the English in the Spanish slot.
     // A handful of strings are legitimately identical in both -- the
-    // language names themselves, "Email", and "Error", which is the same
-    // word in Spanish -- so those are named rather than the rule being
-    // weakened.
-    const identicalOnPurpose = new Set(["lang.en", "lang.es", "info.email", "notFound.error"]);
+    // language names themselves, "Email", "Error", which is the same word
+    // in Spanish, and the two statute acronyms on the compliance page,
+    // which are the names of U.S. laws and are not translated -- so those
+    // are named rather than the rule being weakened.
+    const identicalOnPurpose = new Set([
+      "lang.en",
+      "lang.es",
+      "info.email",
+      "notFound.error",
+      "legal.compliance.navHipaa",
+      "legal.compliance.navDmca",
+    ]);
     const same = (Object.keys(MESSAGES.en) as (keyof typeof MESSAGES.en)[]).filter(
       (key) => !identicalOnPurpose.has(key) && MESSAGES.en[key] === MESSAGES.es[key],
     );
