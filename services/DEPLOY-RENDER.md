@@ -617,11 +617,11 @@ minutes, so on that tier the only thing that reads replies and sends the
 day**, so a reply or a follow-up can be up to ~24 hours late unless a
 customer opens the case (which reconciles it on read).
 
-`.github/workflows/engine-cron.yml` closes that gap without paying for an
-always-on instance: it calls the two cron routes every 30 minutes. Add two
-repository secrets to turn it on, `APP_URL` (the production origin) and
-`CRON_SECRET` (the same value the web app has). Without them it logs a
-warning and does nothing. Moving the engine to a paid instance
+`.github/workflows/engine-cadence.yml` closes that gap without paying for an
+always-on instance: it calls the cron routes every 30 minutes. It needs the
+`CRON_SECRET` repository secret (the same value the web app has) and,
+optionally, a `CRON_BASE_URL` repository variable if the origin is not
+`https://www.billfixr.com`. Moving the engine to a paid instance
 (`render.yaml`) removes the dependency altogether.
 
 **The engine now refuses to start on Render without a durable store.** Set
