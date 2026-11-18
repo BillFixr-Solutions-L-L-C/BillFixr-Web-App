@@ -6,6 +6,7 @@ import Hero from "@/components/landing/Hero";
 import HowItWorks from "@/components/landing/HowItWorks";
 import WhyChooseUs from "@/components/landing/WhyChooseUs";
 import CTABanner from "@/components/landing/CTABanner";
+import Footer from "@/components/landing/Footer";
 import DocumentsTable from "@/components/dashboard/DocumentsTable";
 import CompletedCasesTable from "@/components/dashboard/CompletedCasesTable";
 import DashboardStats from "@/components/dashboard/DashboardStats";
@@ -121,5 +122,29 @@ describe("the dashboard tables follow the language", () => {
     expect(screen.getByText("Carta de reclamación")).toBeInTheDocument();
     expect(screen.getByText("Ahorro propuesto")).toBeInTheDocument();
     expect(screen.queryByText("Appeal Letter")).not.toBeInTheDocument();
+  });
+});
+
+describe("the footer follows the language", () => {
+  // Its legal-link labels and the copyright line were still English
+  // literals in a module-level array -- the same shape that froze
+  // HowItWorks and DashboardStats, except here it had never been
+  // translated at all.
+  it("renders the links to the legal pages in Spanish", () => {
+    inLanguage("es", <Footer />);
+    expect(screen.getByRole("link", { name: "Términos de uso" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Políticas del Servicio" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Terms of Use" })).not.toBeInTheDocument();
+  });
+
+  it("renders the copyright line in Spanish", () => {
+    inLanguage("es", <Footer />);
+    expect(screen.getByText(/Todos los derechos reservados/)).toBeInTheDocument();
+  });
+
+  it("still renders them in English", () => {
+    inLanguage("en", <Footer />);
+    expect(screen.getByRole("link", { name: "Terms of Use" })).toBeInTheDocument();
+    expect(screen.getByText(/All Rights Reserved/)).toBeInTheDocument();
   });
 });

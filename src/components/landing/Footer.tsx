@@ -6,6 +6,7 @@
 // cookies(), which only exists on the server.
 import Logo from "@/components/Logo";
 import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/messages";
 import NewsletterForm from "./NewsletterForm";
 import { SOCIAL_LINKS } from "@/components/socialLinks";
 import {
@@ -17,19 +18,25 @@ import {
   SUPPORT_EMAIL_HREF,
 } from "@/lib/businessContact";
 
-const linkColumns = [
-  { label: "Pricing", href: "/pricing" },
-  { label: "Terms of Use", href: "/terms" },
-  { label: "Privacy Policy", href: "/privacy" },
-  { label: "Govt. Compliance", href: "/compliance" },
-  { label: "Service Policies", href: "/policies" },
-  { label: "Contact Support", href: "mailto:support@billfixr.com" },
+// The hrefs only. The labels are translated at render time by the
+// component below -- a module-level array holding t(...) results freezes
+// in whichever language loaded the module first, which is the bug already
+// fixed three times here (DashboardStats, the landing Navbar, the support
+// complaint dropdown).
+const LINK_COLUMNS: { href: string; labelKey: MessageKey }[] = [
+  { href: "/pricing", labelKey: "site.pricing" },
+  { href: "/terms", labelKey: "footer.linkTerms" },
+  { href: "/privacy", labelKey: "footer.linkPrivacy" },
+  { href: "/compliance", labelKey: "footer.linkCompliance" },
+  { href: "/policies", labelKey: "footer.linkPolicies" },
+  { href: "mailto:support@billfixr.com", labelKey: "footer.linkSupport" },
 ];
 
 const wordmarkTextClass =
   "absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[20vw] font-extrabold leading-none tracking-tight text-white/10";
 
 function WordmarkStrip() {
+  const t = useT();
   return (
     <div className="relative overflow-hidden">
       {/* straight segment, above the glass. Heights/offsets are vw-based
@@ -47,7 +54,7 @@ function WordmarkStrip() {
           BILLFIXR
         </p>
         <p className="relative text-center text-sm text-white/80">
-          © 2026 BillFixr Technologies. All Rights Reserved.
+          {t("footer.copyright")}
         </p>
       </div>
     </div>
@@ -113,9 +120,9 @@ export default function Footer() {
               )}
             </div>
             <nav className="flex flex-col justify-between text-lg font-bold leading-none text-white">
-              {linkColumns.map((link) => (
-                <a key={link.label} href={link.href} className="hover:text-white/80">
-                  {link.label}
+              {LINK_COLUMNS.map((link) => (
+                <a key={link.href} href={link.href} className="hover:text-white/80">
+                  {t(link.labelKey)}
                 </a>
               ))}
             </nav>

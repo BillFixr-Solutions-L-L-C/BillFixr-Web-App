@@ -177,13 +177,7 @@ describe("POST /api/dev/process-with-ai", () => {
     const res = await POST(makeRequest({ caseId: "case-1" }));
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
-      ok: true,
-      alreadyProcessed: true,
-      // Offered even on this path: a case analyzed before the engine was
-      // wired in would otherwise need a paid re-scan to get a letter.
-      negotiation: { running: true, reason: null },
-    });
+    expect(await res.json()).toEqual({ ok: true, alreadyProcessed: true });
     expect(processCase).not.toHaveBeenCalled();
   });
 
@@ -246,37 +240,19 @@ describe("POST /api/dev/process-with-ai", () => {
     expect(adminMock.from).toHaveBeenCalledWith("bill_extractions");
   });
 
-  it("allows a second re-scan", async () => {
-    // Raised from one to two on 2026-11-13, so there is a look available
-    // after reading the analysis and the appeal letter together, just
-    // before Proceed. One used is no longer the end of the allowance.
+  it("refuses the second re-scan", async () => {
+    // One per case since 2026-11-18. See src/lib/rescan.ts for why it
+    // moved back down from two.
     serverMock.getUser.mockResolvedValue({ data: { user: USER } });
     queueCaseRow(
       { analysis_result: { already: "there" } },
       { rescanned_at: "2026-10-05T00:00:00Z", rescan_count: 1 },
-    );
-    adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf"]), error: null });
-    adminMock.queueResult("bill_extractions", { data: null, error: null });
-    processCase.mockResolvedValue(AI_RESPONSE);
-
-    const res = await POST(makeRequest({ caseId: "case-1", force: true }));
-
-    expect(res.status).toBe(200);
-    expect(processCase).toHaveBeenCalled();
-  });
-
-  it("refuses the third re-scan", async () => {
-    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
-    queueCaseRow(
-      { analysis_result: { already: "there" } },
-      { rescanned_at: "2026-10-05T00:00:00Z", rescan_count: 2 },
     );
 
     const res = await POST(makeRequest({ caseId: "case-1", force: true }));
     const body = await res.json();
 
     expect(res.status).toBe(409);
-    expect(body.error).toMatch(/used all 2 re-scans/i);
     expect(body.rescansRemaining).toBe(0);
     expect(processCase).not.toHaveBeenCalled();
   });
@@ -316,11 +292,10 @@ describe("POST /api/dev/process-with-ai", () => {
       ok: true,
       errorsDetected: 1,
       savingsFound: 100,
-      negotiation: { running: true, reason: null },
       // Reported so the screen can say how many are left without a
-      // refetch. Two here: this was a first scan, not a re-scan, so
-      // nothing has been spent.
-      rescansRemaining: 2,
+      // refetch. The full allowance here: this was a first scan, not a
+      // re-scan, so nothing has been spent.
+      rescansRemaining: 1,
     });
     expect(processCase).toHaveBeenCalledWith("case-1", expect.objectContaining({ filename: "bill.pdf" }));
 
@@ -373,7 +348,34 @@ describe("POST /api/dev/process-with-ai", () => {
 
     expect(res.status).toBe(500);
   });
-  it("starts the negotiation for the scanned case", async () => {
+  it("does not write to the provider, so the customer still has a decision to make", async () => {
+    // This is the whole point of the 2026-11-18 change, and the thing no
+    // test asserted before it.
+    //
+    // The scan used to start the negotiation in this same request, and
+    // the engine sends its first letter as part of starting. So the
+    // provider heard from us before the customer had seen a single
+    // finding -- and the Re-scan and Proceed buttons, which show only
+    // while a case has no negotiation_id and no letter_sent_at, could
+    // never appear at all. The page test for those buttons passed the
+    // whole time, on a fixture whose shape this route never produced.
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    queueCaseRow({}, { negotiation_id: null });
+    adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf bytes"]), error: null });
+    processCase.mockResolvedValue(AI_RESPONSE);
+    adminMock.queueResult("bills", { data: null, error: null });
+    adminMock.queueResult("cases", { data: null, error: null });
+
+    const res = await POST(makeRequest({ caseId: "case-1" }));
+
+    expect(res.status).toBe(200);
+    expect(startNegotiationForCase).not.toHaveBeenCalled();
+  });
+
+  it("leaves the case in the state the analysis page offers Re-scan on", async () => {
+    // The fixture trap, closed from the writer's end: whatever this route
+    // writes to `cases` must not set negotiation_id or letter_sent_at, or
+    // the decision point stops existing again and nothing fails.
     serverMock.getUser.mockResolvedValue({ data: { user: USER } });
     queueCaseRow({}, { negotiation_id: null });
     adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf bytes"]), error: null });
@@ -383,62 +385,48 @@ describe("POST /api/dev/process-with-ai", () => {
 
     await POST(makeRequest({ caseId: "case-1" }));
 
-    expect(startNegotiationForCase).toHaveBeenCalledWith(adminMock.client, {
-      id: "case-1",
-      // bill_id comes off the joined bill, not the case column, so a
-      // case row with a null bill_id still reaches the right bill.
-      bill_id: "bill-1",
-      negotiation_id: null,
-    });
+    const caseUpdates = adminMock.from.mock.calls
+      .map((call, index) => ({ table: call[0], result: adminMock.from.mock.results[index] }))
+      .filter((entry) => entry.table === "cases")
+      .flatMap((entry) => {
+        const builder = entry.result?.value as Record<string, { mock?: { calls: unknown[][] } }>;
+        return builder?.update?.mock?.calls ?? [];
+      });
+
+    expect(caseUpdates.length).toBeGreaterThan(0);
+    for (const [written] of caseUpdates) {
+      expect(written).not.toHaveProperty("negotiation_id");
+      expect(written).not.toHaveProperty("letter_sent_at");
+    }
   });
 
-  it("reports the analysis even when no negotiation could be started", async () => {
-    // The customer paid for the reading and it succeeded, so losing it
-    // because the engine would not open a negotiation is the wrong
-    // trade. `running: false` is what stops the UI claiming a letter.
+  it("still returns the figures the screen shows", async () => {
+    // The customer paid for the reading. Whatever happens to the dispute
+    // afterwards, the analysis is theirs and the route hands it back.
     serverMock.getUser.mockResolvedValue({ data: { user: USER } });
     queueCaseRow();
     adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf bytes"]), error: null });
     processCase.mockResolvedValue(AI_RESPONSE);
     adminMock.queueResult("bills", { data: null, error: null });
     adminMock.queueResult("cases", { data: null, error: null });
-    startNegotiationForCase.mockResolvedValue({ started: false, blocked: "no_provider_email" });
 
     const res = await POST(makeRequest({ caseId: "case-1" }));
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({
-      errorsDetected: 1,
-      negotiation: { running: false, reason: "no_provider_email" },
-    });
+    expect(await res.json()).toMatchObject({ errorsDetected: 1 });
   });
 
-  it("survives the start throwing rather than losing the analysis", async () => {
+  it("re-reading an already-analysed case starts nothing either", async () => {
+    // This path used to start a negotiation on purpose, to rescue a case
+    // analysed before the engine was wired in. That rescue now belongs to
+    // Proceed, which is a button the customer can actually see.
     serverMock.getUser.mockResolvedValue({ data: { user: USER } });
-    queueCaseRow();
-    adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf bytes"]), error: null });
-    processCase.mockResolvedValue(AI_RESPONSE);
-    adminMock.queueResult("bills", { data: null, error: null });
-    adminMock.queueResult("cases", { data: null, error: null });
-    startNegotiationForCase.mockRejectedValue(new Error("engine unreachable"));
+    queueCaseRow({ analysis_result: { any: "thing" } }, { negotiation_id: null });
 
     const res = await POST(makeRequest({ caseId: "case-1" }));
 
-    expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ negotiation: { running: false, reason: "engine_refused" } });
-  });
-
-  it("treats a negotiation already running as nothing left to do", async () => {
-    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
-    queueCaseRow({ analysis_result: { any: "thing" } }, { negotiation_id: "neg-existing" });
-    startNegotiationForCase.mockResolvedValue({ started: false, blocked: "already_started" });
-
-    const res = await POST(makeRequest({ caseId: "case-1" }));
-
-    expect(await res.json()).toMatchObject({
-      alreadyProcessed: true,
-      negotiation: { running: true, reason: "already_started" },
-    });
+    expect(await res.json()).toMatchObject({ alreadyProcessed: true });
+    expect(startNegotiationForCase).not.toHaveBeenCalled();
     expect(processCase).not.toHaveBeenCalled();
   });
 });
@@ -587,23 +575,6 @@ describe("POST /api/dev/process-with-ai - reading the bill with the engine", () 
     expect(res.status).toBe(502);
     expect(body.stage).toBe("engine_audit");
     expect(JSON.stringify(body)).not.toContain("engine down");
-  });
-
-  it("stores the letter the engine actually sent", async () => {
-    // Not a second draft nobody sent: the engine writes and dispatches the
-    // letter as part of starting, so the stored text is read back from it.
-    engineCase();
-    auditBill.mockResolvedValue(AUDIT);
-    adminMock.queueResult("cases", { data: { negotiation_id: "neg-1" }, error: null });
-    getNegotiation.mockResolvedValue({
-      id: "neg-1",
-      messages: [{ direction: "OUTBOUND", content_markdown: "Dear Patient Financial Services" }],
-    });
-
-    await POST(makeRequest({ caseId: "case-1" }));
-
-    const stored = updatesTo("cases").find((args) => "appeal_letter_text" in (args[0] as object));
-    expect(stored).toBeTruthy();
   });
 
   it("falls back to the ai-service reading for a bill read before the switch", async () => {

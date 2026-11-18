@@ -281,3 +281,155 @@ def test_the_message_timeline_lookup_is_indexed():
     else:
         rows = _rows(f"SELECT name AS indexname FROM sqlite_master WHERE type='index' AND name='{name}'")
     assert len(rows) == 1, f"index {name} is missing"
+
+
+# --- tracking codes and the replies that cannot be matched -------------
+
+
+def negotiation_for_account(account_number):
+    """make_negotiation() fixes the account number, and this is the one
+    field these tests need to choose."""
+    audit = {
+        "provider_name": "QA Test Medical Center",
+        "patient_name": "Jordan Q. Testcase",
+        "account_number": account_number,
+        "total_billed": 4766.0,
+        "patient_due": 3400.0,
+        "issues": [],
+        "settlement_options": {"aggressive_offer": 363.0, "fair_market_offer": 484.0},
+    }
+    return NegotiationRepository.create_negotiation(
+        provider_name="QA Test Medical Center",
+        patient_name="Jordan Q. Testcase",
+        account_number=account_number,
+        total_billed=4766.0,
+        patient_due=3400.0,
+        initial_offer=363.0,
+        audit_result=audit,
+        initial_letter="# Formal dispute. Test letter.",
+        hipaa_auth_text="Test authorisation.",
+        hospital_email="delivered+qa-hospital@resend.dev",
+    )
+
+
+def test_tracking_code_is_uppercase_even_when_the_account_number_is_not():
+    """The reply path uppercases every code it extracts.
+
+    So a code generated with a lowercase letter in its account segment
+    could never match its own reply: the provider answers, the engine
+    parses the code, finds nothing and drops it -- permanently, because the
+    case id lives on the row it could not find.
+    """
+    neg = negotiation_for_account("acct-t4417")
+
+    assert neg["tracking_code"] == neg["tracking_code"].upper()
+    assert "T4417" in neg["tracking_code"]
+
+
+def test_a_reply_finds_its_negotiation_whatever_case_the_code_arrives_in():
+    neg = negotiation_for_account("acct-t4417")
+    code = neg["tracking_code"]
+
+    assert NegotiationRepository.get_negotiation(code.upper())["id"] == neg["id"]
+    assert NegotiationRepository.get_negotiation(code.lower())["id"] == neg["id"]
+
+
+def test_a_row_written_before_the_fix_is_still_reachable():
+    """Rows created while the generator left the case alone keep theirs.
+
+    An exact comparison would leave every one of them permanently
+    unreachable by its own reply, which is the whole reason the lookup
+    folds case rather than the generator being fixed on its own.
+    """
+    neg = make_negotiation()
+    lowercased = neg["tracking_code"].lower()
+    conn = database.get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE negotiations SET tracking_code = ? WHERE id = ?", (lowercased, neg["id"]))
+    conn.commit()
+    conn.close()
+
+    found = NegotiationRepository.get_negotiation(lowercased.upper())
+    assert found is not None
+    assert found["id"] == neg["id"]
+
+
+def test_an_unmatched_reply_is_loud_once_and_quiet_afterwards():
+    """The poller re-reads the latest fifteen messages on every run and
+    marks nothing seen, so without this the same dead reply reported itself
+    on every sync -- 48 times a day at the current cadence."""
+    first = NegotiationRepository.record_unmatched_reply(
+        tracking_code="BFX-T4417-689C41",
+        sender="QA Test Medical Center Billing <qa-provider@billfixr.com>",
+        subject="Re: Formal dispute",
+        message_id="<qa-1@example.com>",
+    )
+    second = NegotiationRepository.record_unmatched_reply(
+        tracking_code="BFX-T4417-689C41",
+        sender="QA Test Medical Center Billing <qa-provider@billfixr.com>",
+        subject="Re: Formal dispute",
+        message_id="<qa-1@example.com>",
+    )
+
+    assert first is True
+    assert second is False
+
+
+def test_a_second_dead_code_is_its_own_record():
+    NegotiationRepository.record_unmatched_reply(
+        tracking_code="BFX-T4417-689C41", sender="qa@example.com", message_id="<a@example.com>"
+    )
+    first_of_the_other = NegotiationRepository.record_unmatched_reply(
+        tracking_code="BFX-T4417-FBAACD", sender="qa@example.com", message_id="<b@example.com>"
+    )
+
+    assert first_of_the_other is True
+
+
+def test_a_reply_with_no_message_id_still_only_reports_once():
+    """Some senders omit Message-ID. The fallback key is the code and the
+    sender, which can merge two genuinely different replies -- the right
+    way round, since the alternative is a fresh error on every poll."""
+    args = {"tracking_code": "BFX-NOID-000001", "sender": "qa@example.com", "message_id": ""}
+
+    assert NegotiationRepository.record_unmatched_reply(**args) is True
+    assert NegotiationRepository.record_unmatched_reply(**args) is False
+
+
+def test_the_dead_replies_are_queryable_not_just_logged():
+    NegotiationRepository.record_unmatched_reply(
+        tracking_code="BFX-GONE-ABCDEF",
+        sender="billing@example.com",
+        subject="Re: Formal dispute",
+        message_id="<queryable@example.com>",
+    )
+
+    rows = NegotiationRepository.list_unmatched_replies()
+    mine = [r for r in rows if r["message_key"] == "<queryable@example.com>"]
+
+    assert len(mine) == 1
+    assert mine[0]["tracking_code"] == "BFX-GONE-ABCDEF"
+    assert NegotiationRepository.count_unmatched_replies() >= 1
+
+
+def test_health_reports_how_many_replies_were_dropped():
+    NegotiationRepository.record_unmatched_reply(
+        tracking_code="BFX-GONE-HEALTH", sender="qa@example.com", message_id="<health@example.com>"
+    )
+
+    body = client.get("/api/health").json()
+
+    assert body["unmatched_replies"] >= 1
+
+
+def test_the_unmatched_route_is_not_swallowed_by_the_negotiation_id_route():
+    """/api/negotiations/{negotiation_id} would match this path too.
+
+    FastAPI resolves in definition order, so the literal route has to be
+    declared first -- otherwise this returns a 404 for a negotiation called
+    "unmatched-replies" and the detail is unreachable.
+    """
+    response = client.get("/api/negotiations/unmatched-replies")
+
+    assert response.status_code == 200
+    assert "unmatched_replies" in response.json()

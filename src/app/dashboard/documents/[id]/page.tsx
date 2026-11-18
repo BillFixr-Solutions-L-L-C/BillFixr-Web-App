@@ -5,10 +5,12 @@ import { EMPTY_BILL_ANALYSIS, type BillAnalysis } from "@/lib/billAnalysis";
 import DocumentAnalysisClient from "@/components/dashboard/DocumentAnalysisClient";
 import { EMPTY_VALUE, HEADER_FIELD_DEFS, type HeaderField, type HeaderKey } from "@/lib/headerInfo";
 import { isCaseCompleted } from "@/lib/caseStatus";
-import { canRescan, rescanHint } from "@/lib/rescan";
+import { canRescan, remaining, rescanHintKey } from "@/lib/rescan";
+import { getT } from "@/lib/i18n/server";
 
 export default async function DocumentAnalysisPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const t = await getT();
   const supabase = await createClient();
   const {
     data: { user },
@@ -121,7 +123,7 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
       watermark={inProgress}
       caseId={caseRow?.id ?? null}
       canRescan={Boolean(caseRow) && canRescan(caseRow)}
-      rescanHint={rescanHint(caseRow)}
+      rescanHint={t(rescanHintKey(caseRow), { count: remaining(caseRow) })}
       atDecisionPoint={atDecisionPoint}
     />
   );

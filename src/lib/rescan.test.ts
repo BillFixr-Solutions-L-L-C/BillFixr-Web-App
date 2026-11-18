@@ -1,38 +1,40 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_RESCANS, canRescan, remaining, rescanHint, used } from "@/lib/rescan";
+import { MAX_RESCANS, canRescan, remaining, rescanHintKey, used } from "@/lib/rescan";
+import { translate } from "@/lib/i18n/messages";
 
-// Raised from one re-scan to two on 2026-11-13, so a customer has a look
-// available at the point they want it: after reading the analysis and the
-// appeal letter side by side, before pressing Proceed.
+// One re-scan, set on 2026-11-18.
+//
+// It was briefly two, on the assumption that a customer would want a
+// second look after reading the analysis and the appeal letter together.
+// That assumption was never tested in the product: until 2026-11-18 the
+// scan started the negotiation in the same request that wrote the
+// analysis, so a case was never "analysed and not yet disputed" and the
+// button was unreachable at any allowance.
 //
 // Each re-scan is a real AI read and costs money, which is why there is a
 // ceiling. These tests are about that ceiling holding.
 
 describe("the allowance", () => {
-  it("is two", () => {
-    expect(MAX_RESCANS).toBe(2);
+  it("is one", () => {
+    expect(MAX_RESCANS).toBe(1);
   });
 
   it("lets a fresh case re-scan", () => {
     expect(canRescan({ rescan_count: 0 })).toBe(true);
-    expect(remaining({ rescan_count: 0 })).toBe(2);
+    expect(remaining({ rescan_count: 0 })).toBe(1);
   });
 
-  it("lets a case that has used one re-scan again", () => {
-    // This is the change. One used used to be the end of it.
-    expect(canRescan({ rescan_count: 1 })).toBe(true);
-    expect(remaining({ rescan_count: 1 })).toBe(1);
+  it("stops after one", () => {
+    expect(canRescan({ rescan_count: 1 })).toBe(false);
+    expect(remaining({ rescan_count: 1 })).toBe(0);
   });
 
-  it("stops at two", () => {
+  it("stops above the ceiling, rather than going negative", () => {
+    // A count higher than the ceiling -- a case re-scanned twice while
+    // the allowance was two -- must not loop back round to "allowed" or
+    // report a negative allowance.
     expect(canRescan({ rescan_count: 2 })).toBe(false);
-    expect(remaining({ rescan_count: 2 })).toBe(0);
-  });
-
-  it("stops above two, rather than going negative", () => {
-    // A count higher than the ceiling should not loop back round to
-    // "allowed" or report a negative allowance.
     expect(canRescan({ rescan_count: 7 })).toBe(false);
     expect(remaining({ rescan_count: 7 })).toBe(0);
   });
@@ -54,17 +56,25 @@ describe("the allowance", () => {
 });
 
 describe("what the customer is told", () => {
-  it("says how many are left before any are used", () => {
+  // A key, not a sentence: this module is imported by a server component
+  // and an API route, neither of which holds a translator, and the
+  // sentence it used to return was English on an otherwise fully
+  // translated screen.
+  it("says one is available before it is used", () => {
     // Someone who does not know an allowance exists cannot use it.
-    expect(rescanHint({ rescan_count: 0 })).toMatch(/2 re-scans available/i);
-  });
-
-  it("says one is left, in the singular", () => {
-    expect(rescanHint({ rescan_count: 1 })).toMatch(/One more re-scan/i);
-    expect(rescanHint({ rescan_count: 1 })).not.toMatch(/1 re-scans/);
+    expect(rescanHintKey({ rescan_count: 0 })).toBe("rescan.oneLeft");
+    expect(translate("en", rescanHintKey({ rescan_count: 0 }))).toMatch(/One re-scan available/i);
   });
 
   it("says the allowance is spent", () => {
-    expect(rescanHint({ rescan_count: 2 })).toMatch(/used both/i);
+    expect(rescanHintKey({ rescan_count: 1 })).toBe("rescan.noneLeft");
+    expect(translate("en", rescanHintKey({ rescan_count: 1 }))).toMatch(/used your re-scan/i);
+  });
+
+  it("has Spanish for every hint it can return", () => {
+    for (const count of [0, 1, 5]) {
+      const key = rescanHintKey({ rescan_count: count });
+      expect(translate("es", key), key).not.toBe(translate("en", key));
+    }
   });
 });

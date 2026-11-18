@@ -16,6 +16,7 @@ import { prepareBillFile } from "@/lib/billUpload";
 import CaseInformationStep, { type CaseInformation } from "@/components/dashboard/CaseInformationStep";
 import { useT } from "@/lib/i18n/client";
 import TableScroller from "@/components/TableScroller";
+import LegalTranslationNotice from "@/components/legal/LegalTranslationNotice";
 
 const EMPTY_CASE_INFORMATION: CaseInformation = {
   clientName: "",
@@ -344,19 +345,13 @@ export default function DashboardHome() {
       return;
     }
 
-    // The scan starts the negotiation, and the engine sends the first
-    // letter as part of starting. This used to POST /api/dev/advance-case
-    // with toStatus "awaiting_response" and move on regardless — so the
-    // screen said a negotiation was under way whether or not anything had
-    // been sent, and nothing had: no caller ever started one. Show the
-    // negotiating stage only when the engine confirms it is running.
-    if (!analysisBody?.negotiation?.running) {
-      setScanError(
-        "We've read your bill, but we couldn't open the negotiation with your provider yet. We're on it — your analysis is saved.",
-      );
-      scanStartedRef.current = null;
-      return;
-    }
+    // The scan no longer starts the negotiation, so there is nothing to
+    // confirm here any more. It reads the bill and stops; the dispute
+    // goes out when the customer presses Proceed on the analysis, which
+    // is also what makes the Re-scan beside it reachable. This used to
+    // refuse to advance unless the engine reported a running
+    // negotiation -- correct then, and a check for something that no
+    // longer happens in this request now.
 
     // The route already returns both figures. They were being thrown away
     // and the screen showed a hardcoded $2,345 instead.
@@ -490,7 +485,7 @@ export default function DashboardHome() {
                           })
                         : "—"}
                     </td>
-                    <td className="px-4 py-3 font-medium text-accent-600">{t("table.negotiating")}</td>
+                    <td className="px-4 py-3 font-medium text-accent-600">{t("table.analyzed")}</td>
                     <td className="px-4 py-3 font-medium text-red-500">
                       {analysis?.errorsDetected === null || analysis === null
                         ? "—"
@@ -503,14 +498,20 @@ export default function DashboardHome() {
             </TableScroller>
 
             <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-primary-50 px-5 py-4">
+              {/* Says what has actually happened. Until 2026-11-18 this
+                  read "negotiation has started" and sent the customer to
+                  the case screen -- true then, because the scan sent the
+                  letter, and a lie now that nothing leaves until Proceed.
+                  The link goes to the analysis, which is where Re-scan
+                  and Proceed live. */}
               <p className="text-sm text-primary-800">
-                {t("case.negotiationStarted")}
+                {t("dash.analysisReady")}
               </p>
               <Link
-                href="/dashboard/case"
+                href={billId ? `/dashboard/documents/${billId}` : "/dashboard/documents"}
                 className="shrink-0 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
               >
-                {t("dash.continueToCase")}
+                {t("dash.reviewAnalysis")}
               </Link>
             </div>
           </div>
@@ -648,23 +649,16 @@ export default function DashboardHome() {
       {stage === "terms" && (
         <Modal>
           <p className="text-sm leading-relaxed text-gray-600">
-            These Terms &amp; Conditions <strong>(&quot;Terms&quot;)</strong> govern your use of
-            BillFixr, an AI-powered medical bill reduction service operated in the United
-            States. By accessing or using BillFixr, you agree to these Terms. If you do not
-            agree, do not use the service.
+            {t("upload.termsP1Before")} <strong>{t("upload.termsP1Bold")}</strong>{" "}
+            {t("upload.termsP1After")}
           </p>
-          <p className="mt-4 text-sm leading-relaxed text-gray-600">
-            By uploading my medical bill, I authorize BillFixr to analyze, review, and
-            negotiate with my healthcare provider on my behalf.
-          </p>
-          <p className="mt-4 text-sm leading-relaxed text-gray-600">
-            I understand that BillFixr may contact the hospital, request corrections, and
-            obtain a revised bill as part of the reduction process.
-          </p>
-          <p className="mt-4 text-sm leading-relaxed text-gray-600">
-            I agree to the fee structure and confirm that all documents I upload are accurate
-            and legally mine to submit.
-          </p>
+          <p className="mt-4 text-sm leading-relaxed text-gray-600">{t("upload.termsP2")}</p>
+          <p className="mt-4 text-sm leading-relaxed text-gray-600">{t("upload.termsP3")}</p>
+          <p className="mt-4 text-sm leading-relaxed text-gray-600">{t("upload.termsP4")}</p>
+          {/* Same disclaimer as the four legal pages: this is the text the
+              customer is agreeing to before we write to their provider, so
+              the Spanish says which version governs. */}
+          <LegalTranslationNotice />
           <button
             type="button"
             onClick={handleAgree}

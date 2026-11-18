@@ -5,7 +5,8 @@ import DocumentAnalysisClient from "./DocumentAnalysisClient";
 import { MOCK_BILL_ANALYSIS } from "@/lib/billAnalysis";
 
 const refresh = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push }) }));
 
 const originalFetch = global.fetch;
 afterEach(() => {
@@ -48,7 +49,9 @@ describe("DocumentAnalysisClient", () => {
       <DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" atDecisionPoint />,
     );
     expect(screen.getByRole("button", { name: "Re-scan" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Proceed" })).toHaveAttribute("href", "/dashboard/case");
+    // A button, not a link, since 2026-11-18: pressing it is what sends
+    // the dispute, so it cannot be a plain navigation any more.
+    expect(screen.getByRole("button", { name: "Proceed" })).toBeInTheDocument();
   });
 
   // Asked for on 2026-11-13: these two belong to the stretch between
@@ -57,7 +60,7 @@ describe("DocumentAnalysisClient", () => {
   it("shows neither once the case is past the commitment fee", () => {
     render(<DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} caseId="case-1" />);
     expect(screen.queryByRole("button", { name: /Re-scan/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Proceed" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Proceed" })).not.toBeInTheDocument();
   });
 
   it("drops Re-scan once the allowance is spent, leaving Proceed", () => {
@@ -72,20 +75,20 @@ describe("DocumentAnalysisClient", () => {
         caseId="case-1"
         atDecisionPoint
         canRescan={false}
-        rescanHint="You've used both of your re-scans for this bill."
+        rescanHint="You've used your re-scan for this bill."
       />,
     );
     expect(screen.queryByRole("button", { name: /Re-scan/ })).not.toBeInTheDocument();
     // The hint comes from src/lib/rescan.ts so the screen and the route
     // cannot disagree about how many are left.
-    expect(screen.getByText(/both of your re-scans/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Proceed" })).toBeInTheDocument();
+    expect(screen.getByText(/used your re-scan/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Proceed" })).toBeInTheDocument();
   });
 
   it("hides them when there is no case yet", () => {
     render(<DocumentAnalysisClient analysis={MOCK_BILL_ANALYSIS} headerInfo={[]} doc={DOC} atDecisionPoint />);
     expect(screen.queryByRole("button", { name: "Re-scan" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Proceed" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Proceed" })).not.toBeInTheDocument();
   });
 
   it("re-scan asks for a fresh read and refreshes the page", async () => {
@@ -131,5 +134,90 @@ describe("DocumentAnalysisClient", () => {
       />,
     );
     expect(screen.getByText("Appeal Letter")).toBeInTheDocument();
+  });
+});
+
+// Proceed is what sends the dispute, as of 2026-11-18.
+//
+// Before that it was a plain link to the case screen, because the scan
+// had already started the negotiation and the engine had already written
+// to the provider. So the customer's "Proceed" moved them to a page about
+// something that had happened without them, and the Re-scan beside it
+// could never appear.
+describe("Proceed", () => {
+  function atDecision() {
+    return render(
+      <DocumentAnalysisClient
+        analysis={MOCK_BILL_ANALYSIS}
+        headerInfo={[]}
+        doc={DOC}
+        caseId="case-1"
+        atDecisionPoint
+      />,
+    );
+  }
+
+  it("starts the negotiation for this case, then goes to the case screen", async () => {
+    global.fetch = vi.fn(async () => new Response(JSON.stringify({ id: "neg-1" }), { status: 200 }));
+    const user = userEvent.setup();
+    atDecision();
+
+    await user.click(screen.getByRole("button", { name: "Proceed" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard/case"));
+    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/dashboard/cases/case-1/negotiation");
+    expect(init.method).toBe("POST");
+  });
+
+  it("stays put and says why when the dispute could not be sent", async () => {
+    // The route knows which precondition failed, and "add the provider's
+    // billing email" is worth more to the customer than a generic
+    // failure — so its wording wins where it has some.
+    global.fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: "Add the provider's billing department email before starting." }), {
+          status: 409,
+        }),
+    );
+    const user = userEvent.setup();
+    atDecision();
+
+    await user.click(screen.getByRole("button", { name: "Proceed" }));
+
+    expect(await screen.findByText(/billing department email/)).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("cannot be pressed twice into two letters", async () => {
+    // The engine sends a letter as part of starting, so a double press
+    // is a second letter to a real hospital. The button disables on the
+    // first press and the request is never made again.
+    let resolve: (value: Response) => void = () => {};
+    global.fetch = vi.fn(() => new Promise<Response>((r) => { resolve = r; }));
+    const user = userEvent.setup();
+    atDecision();
+
+    const button = screen.getByRole("button", { name: "Proceed" });
+    await user.click(button);
+    await waitFor(() => expect(button).toBeDisabled());
+    await user.click(button);
+
+    expect((global.fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+    resolve(new Response(JSON.stringify({ id: "neg-1" }), { status: 200 }));
+  });
+
+  it("disables Re-scan while the dispute is being sent", async () => {
+    // Re-reading the bill mid-send would replace the findings the letter
+    // is being written from.
+    let resolve: (value: Response) => void = () => {};
+    global.fetch = vi.fn(() => new Promise<Response>((r) => { resolve = r; }));
+    const user = userEvent.setup();
+    atDecision();
+
+    await user.click(screen.getByRole("button", { name: "Proceed" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Re-scan" })).toBeDisabled());
+    resolve(new Response(JSON.stringify({ id: "neg-1" }), { status: 200 }));
   });
 });
