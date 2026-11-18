@@ -55,12 +55,14 @@ owns it.
 **Neither is deployed.** No `AI_SERVICE_BASE_URL` or
 `AUTOMATION_ENGINE_BASE_URL` is set in any environment, so every AI path
 answers "unavailable" and no case advances on its own. Deploying them is
-the remaining work: see `docs/AUTOMATION-ENGINE.md`, which also covers the
-order it has to happen in — the engine cannot start a negotiation until
-something has extracted a bill.
+the remaining work: see `services/DEPLOY-RENDER.md` and
+`services/automation-engine/INTEGRATION.md`. Since 2026-11-10 the engine
+reads the bill itself (`/api/extract`) and refuses to start a negotiation
+without that reading, so the engine is the service to bring up first;
+ai-service is no longer on the critical path.
 
-CI runs the TypeScript suite only. The Python suites (32 for the engine,
-41 for ai-service) have to be run by hand.
+CI runs the TypeScript suite and both Python suites (the engine's also
+against Postgres). Locally: 219 engine tests and 83 ai-service tests.
 
 ## How BillFixr is paid
 

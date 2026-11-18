@@ -3,11 +3,14 @@
 Neither service has ever been deployed. `render.yaml` beside this file is
 the blueprint; this is what to put into it and the order to do it in.
 
-**Order is not a preference.** ai-service reads bills into
-`bill_extractions`; the engine negotiates from that extraction and refuses
-to start a case without one. The table is empty today. Bring ai-service up
-first and confirm a real bill comes out the other side before touching the
-engine.
+**Order is not a preference.** The engine negotiates from a bill
+extraction and refuses to start a case without one. Since 2026-11-10 the
+web app's extract route has the engine read the bill (`/api/extract`) and
+stores the result in `bill_extractions.engine_result`, so the engine is
+the service that has to be up first. ai-service is no longer on that
+path (its `/v1/providers/contact` and negotiation endpoints were removed
+here); bring it up afterwards if you still want its document pipeline.
+Confirm a real bill comes out the other side before enabling negotiation.
 
 Until `AI_SERVICE_BASE_URL` and `AUTOMATION_ENGINE_BASE_URL` are set on
 Vercel, the web app behaves exactly as it does now — every AI path answers
@@ -582,7 +585,7 @@ Then check, on one real case, in this order:
 4. Reply from the test address. The inbound poller picks it up and the
    negotiation advances. **This is the step most likely to fail**, because
    it depends on the Message-ID Resend assigned being read back correctly
-   — see the engine notes in `docs/AUTOMATION-ENGINE.md`.
+   — see the engine notes in `services/automation-engine/INTEGRATION.md`.
 
 ---
 
@@ -601,3 +604,24 @@ Then check, on one real case, in this order:
   prepared on. Its dependencies were checked against its imports and the
   service was booted directly from source, but the first real build will
   happen on Render. Watch that build.
+
+---
+
+## What drives follow-ups and replies on the free tier
+
+The engine's inbox poller and autopilot are in-process loops. Render's
+free tier stops them when it spins the service down after ~15 idle
+minutes, so on that tier the only thing that reads replies and sends the
+72-hour follow-up is the web app's Vercel cron (`/api/cron/follow-ups`,
+`/api/cron/negotiation-status`). Vercel Hobby limits those to **once a
+day**, so a reply or a follow-up can be up to ~24 hours late unless a
+customer opens the case (which reconciles it on read).
+
+To tighten that without paying for an always-on instance, call the two
+cron routes from an external scheduler every 15-60 minutes with
+`Authorization: Bearer $CRON_SECRET`. Moving the engine to a paid
+instance (`render.yaml`) removes the dependency altogether.
+
+The inbox poller now logs `[INBOX POLLER] sync failed: ...` when the
+mailbox cannot be read, instead of failing silently; check the engine log
+if replies stop arriving.

@@ -4,6 +4,7 @@ Extracts structured medical bill metadata, CPT/HCPCS codes, revenue codes,
 and line-item amounts from images and PDF documents.
 """
 
+import asyncio
 import os
 import json
 import base64
@@ -20,6 +21,9 @@ load_service_env()
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 VISION_MODEL = os.getenv("VISION_MODEL", "google/gemini-2.5-flash")
 FALLBACK_VISION_MODEL = "qwen/qwen2.5-vl-72b-instruct"
+# A multi-page bill at 8000 output tokens does not fit in the 45s this used
+# to allow; the web app already waits up to 240s for the whole call.
+VISION_TIMEOUT_SECONDS = float(os.getenv("VISION_TIMEOUT_SECONDS", "90"))
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 EXTRACTION_SYSTEM_PROMPT = """You are an expert US Medical Billing Auditor and Multimodal Document AI.
@@ -218,6 +222,62 @@ class VisionExtractor:
 
         return (result["choices"][0]["message"]["content"] or "").strip()
 
+    @staticmethod
+    def _parse_model_json(raw_content: str) -> Dict[str, Any]:
+        """Pull a JSON object out of a model reply, repairing a truncated one."""
+        cleaned = (raw_content or "").strip()
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:].strip()
+        elif cleaned.startswith("```"):
+            cleaned = cleaned[3:].strip()
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3].strip()
+
+        if not cleaned.startswith("{") and "{" in cleaned:
+            first_brace = cleaned.find("{")
+            last_brace = cleaned.rfind("}")
+            if last_brace > first_brace:
+                cleaned = cleaned[first_brace:last_brace + 1]
+
+        try:
+            parsed = json.loads(cleaned)
+        except json.JSONDecodeError:
+            last_brace = cleaned.rfind("}")
+            if last_brace == -1:
+                raise ValueError(f"Failed to parse structured JSON from vision response: {raw_content[:300]}")
+            attempt = cleaned[:last_brace + 1]
+            # The reply was cut off mid line-item: close what is open.
+            if attempt.count("[") > attempt.count("]"):
+                attempt += "\n  ]\n}"
+            elif attempt.count("{") > attempt.count("}"):
+                attempt += "\n}"
+            try:
+                parsed = json.loads(attempt)
+            except Exception:
+                match = re.search(r"(\{[\s\S]*\})", cleaned)
+                if not match:
+                    raise ValueError(f"Failed to parse structured JSON from vision response: {raw_content[:300]}")
+                parsed = json.loads(match.group(1))
+        if not isinstance(parsed, dict):
+            raise ValueError("the vision reply was not a JSON object")
+        return parsed
+
+    @staticmethod
+    def _looks_like_a_bill(data: Dict[str, Any]) -> bool:
+        """True when the reading carries something to audit.
+
+        An empty object, or a reply with neither line items nor any total, is
+        the model giving up politely. Auditing it would score a $0 bill and
+        report it clean, which is the failure the audit's own guard exists for.
+        """
+        items = data.get("line_items")
+        has_items = isinstance(items, list) and len(items) > 0
+        has_total = any(
+            isinstance(data.get(k), (int, float)) and data.get(k) > 0
+            for k in ("total_billed", "patient_due", "total_charges")
+        )
+        return has_items or has_total
+
     async def extract_bill_multi(self, files_data: list[tuple[bytes, str]]) -> Dict[str, Any]:
         """
         Extracts structured medical bill metadata using multimodal AI (Gemini 2.5 Flash / Qwen 2.5 VL).
@@ -274,66 +334,35 @@ class VisionExtractor:
             "max_tokens": 8000
         }
 
-        async with httpx.AsyncClient(timeout=45.0) as client:
-            try:
-                resp = await client.post(OPENROUTER_URL, headers=headers, json=payload)
-                if resp.status_code != 200:
-                    # Fallback to secondary vision model
-                    payload["model"] = FALLBACK_VISION_MODEL
-                    resp = await client.post(OPENROUTER_URL, headers=headers, json=payload)
-            except Exception:
-                payload["model"] = FALLBACK_VISION_MODEL
-                resp = await client.post(OPENROUTER_URL, headers=headers, json=payload)
-
-            if resp.status_code != 200:
-                raise RuntimeError(f"OpenRouter API error (HTTP {resp.status_code}): {resp.text}")
-
-            result = resp.json()
-            raw_content = result["choices"][0]["message"]["content"]
-
-        # Robust JSON extraction from model output
-        cleaned = raw_content.strip()
-        # Strip ```json or ``` from start if present
-        if cleaned.startswith("```json"):
-            cleaned = cleaned[7:].strip()
-        elif cleaned.startswith("```"):
-            cleaned = cleaned[3:].strip()
-        
-        # Strip trailing ``` if present
-        if cleaned.endswith("```"):
-            cleaned = cleaned[:-3].strip()
-
-        # If still not starting with {, search for first { and last }
-        if not cleaned.startswith("{") and "{" in cleaned:
-            first_brace = cleaned.find("{")
-            last_brace = cleaned.rfind("}")
-            if last_brace > first_brace:
-                cleaned = cleaned[first_brace:last_brace + 1]
-
-        # In case the JSON was cut off mid-line_item, try auto-closing it
-        try:
-            parsed_data = json.loads(cleaned)
-        except json.JSONDecodeError:
-            # Attempt repair for truncated arrays
-            last_brace = cleaned.rfind("}")
-            if last_brace != -1:
-                attempt = cleaned[:last_brace + 1]
-                # If unclosed line_items array, try closing
-                if attempt.count("[") > attempt.count("]"):
-                    attempt += "\n  ]\n}"
-                elif attempt.count("{") > attempt.count("}"):
-                    attempt += "\n}"
+        # A reading is only as reliable as the weakest link, and the weak link
+        # here is a model that sometimes answers HTTP 200 with something that
+        # is not a bill: truncated JSON, prose, or an empty object. The old
+        # code retried only on a transport error or a non-200 status, so those
+        # 200s surfaced as a failed scan for a customer who had already paid.
+        # Each model is tried in turn, and the primary gets a second go after
+        # the fallback, before giving up.
+        models = [VISION_MODEL, FALLBACK_VISION_MODEL, VISION_MODEL]
+        last_error: Exception = RuntimeError("no vision model was tried")
+        parsed_data = None
+        async with httpx.AsyncClient(timeout=VISION_TIMEOUT_SECONDS) as client:
+            for attempt, model in enumerate(models):
+                payload["model"] = model
                 try:
-                    parsed_data = json.loads(attempt)
-                except Exception:
-                    # Try finding the largest valid JSON substring
-                    match = re.search(r"(\{[\s\S]*\})", cleaned)
-                    if match:
-                        parsed_data = json.loads(match.group(1))
-                    else:
-                        raise ValueError(f"Failed to parse structured JSON from vision response: {raw_content[:500]}")
-            else:
-                raise ValueError(f"Failed to parse structured JSON from vision response: {raw_content[:500]}")
+                    resp = await client.post(OPENROUTER_URL, headers=headers, json=payload)
+                    if resp.status_code != 200:
+                        raise RuntimeError(f"OpenRouter API error (HTTP {resp.status_code}): {resp.text[:300]}")
+                    raw_content = resp.json()["choices"][0]["message"]["content"]
+                    candidate = self._parse_model_json(raw_content)
+                    if not self._looks_like_a_bill(candidate):
+                        raise ValueError("the reading contained no charges and no total")
+                    parsed_data = candidate
+                    break
+                except Exception as err:  # noqa: BLE001 -- try the next model
+                    last_error = err
+                    if attempt < len(models) - 1:
+                        await asyncio.sleep(min(2.0 * (attempt + 1), 5.0))
+        if parsed_data is None:
+            raise RuntimeError(f"The bill could not be read after {len(models)} attempts: {last_error}")
 
         if not parsed_data.get("id"):
             parsed_data["id"] = f"bill-real-{len(files_data)}p"

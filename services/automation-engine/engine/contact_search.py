@@ -26,10 +26,13 @@ or as a Gmail account, will not be found. A wrong address that looks right
 is not recoverable; a miss is.
 """
 
+import http.client
+import ipaddress
 import json
 import os
 import re
 import socket
+import ssl
 import time
 import urllib.error
 import urllib.parse
@@ -59,6 +62,11 @@ PAGE_TIMEOUT_SECONDS = float(os.getenv("CONTACT_SEARCH_PAGE_TIMEOUT_SECONDS", "8
 MAX_PAGE_BYTES = 2_000_000
 
 CACHE_TTL_SECONDS = 60 * 60 * 24
+# A search that completed and found nothing is remembered for much less: a
+# hospital that publishes nothing today may publish tomorrow, and a lookup
+# that merely had a bad run should not be locked in for a day.
+EMPTY_CACHE_TTL_SECONDS = 60 * 60
+CACHE_MAX_ENTRIES = 512
 _cache: Dict[str, Tuple[float, Dict[str, Any]]] = {}
 
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
@@ -207,16 +215,51 @@ def _normalize(text: str) -> str:
     return " ".join((text or "").lower().split())
 
 
-def _registrable(host: str) -> str:
-    """The last two labels of a hostname: 'www.mwchc.org' -> 'mwchc.org'.
+# Second-level public suffixes, where "the last two labels" is the suffix
+# itself and would treat every site under it as one organisation. Not the
+# full Public Suffix List -- that needs a dependency and a data refresh --
+# but the ones a US provider's mail is realistically published under.
+_MULTI_LABEL_SUFFIXES = frozenset({
+    "co.uk", "org.uk", "ac.uk", "gov.uk", "nhs.uk", "ltd.uk", "plc.uk",
+    "com.au", "org.au", "net.au", "edu.au", "gov.au",
+    "co.nz", "org.nz", "govt.nz", "ac.nz",
+    "co.in", "org.in", "gov.in", "ac.in",
+    "co.za", "org.za", "gov.za", "ac.za",
+    "com.br", "org.br", "gov.br", "com.mx", "org.mx", "gob.mx",
+    "co.jp", "or.jp", "ac.jp", "go.jp", "com.sg", "org.sg", "gov.sg",
+    "ca.us", "state.us", "k12.us", "co.us",
+})
 
-    Deliberately naive. It over-merges a few public suffixes (an address on
-    `foo.co.uk` and a page on `bar.co.uk` would be treated as the same
-    domain), which is why this is one check of three rather than the only
-    one: the address must also appear verbatim on that page.
+
+def _registrable(host: str) -> str:
+    """The organisation's domain: 'www.mwchc.org' -> 'mwchc.org',
+    'www.foo.co.uk' -> 'foo.co.uk'.
+
+    Still not the full Public Suffix List, which is why this is one check of
+    three rather than the only one: the address must also appear verbatim on
+    the page it cites.
     """
     labels = (host or "").lower().strip(".").split(".")
-    return ".".join(labels[-2:]) if len(labels) >= 2 else (host or "").lower()
+    if len(labels) < 2:
+        return (host or "").lower()
+    if ".".join(labels[-2:]) in _MULTI_LABEL_SUFFIXES and len(labels) >= 3:
+        return ".".join(labels[-3:])
+    return ".".join(labels[-2:])
+
+
+def _ip_is_public(ip: str) -> bool:
+    try:
+        addr = ipaddress.ip_address(ip.split("%")[0])
+    except ValueError:
+        return False
+    # An IPv4-mapped IPv6 address ("::ffff:127.0.0.1") is judged by what it maps to.
+    mapped = getattr(addr, "ipv4_mapped", None)
+    if mapped is not None:
+        addr = mapped
+    return not (
+        addr.is_private or addr.is_loopback or addr.is_link_local
+        or addr.is_reserved or addr.is_multicast or addr.is_unspecified
+    )
 
 
 def _is_public_url(url: str) -> bool:
@@ -239,17 +282,7 @@ def _is_public_url(url: str) -> bool:
         infos = socket.getaddrinfo(host, None)
     except OSError:
         return False
-    for info in infos:
-        ip = info[4][0]
-        try:
-            import ipaddress
-
-            addr = ipaddress.ip_address(ip.split("%")[0])
-        except ValueError:
-            return False
-        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
-            return False
-    return True
+    return bool(infos) and all(_ip_is_public(info[4][0]) for info in infos)
 
 
 def _chat(payload: Dict[str, Any], api_key: str) -> Dict[str, Any]:
@@ -268,9 +301,70 @@ def _chat(payload: Dict[str, Any], api_key: str) -> Dict[str, Any]:
         return json.loads(res.read().decode("utf-8", "replace"))
 
 
+def _connect_public(host: str, port: int, timeout) -> socket.socket:
+    """Resolve once, refuse anything non-public, and connect to the address
+    that was checked.
+
+    Checking a hostname and then letting the HTTP library resolve it again
+    leaves a window where a DNS answer changes between the two (rebinding).
+    Connecting to the very IP that passed closes it.
+    """
+    infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    if not infos or not all(_ip_is_public(info[4][0]) for info in infos):
+        raise OSError(f"{host} does not resolve to a public address")
+    last: Optional[OSError] = None
+    for info in infos:
+        try:
+            return socket.create_connection((info[4][0], port), timeout)
+        except OSError as err:
+            last = err
+    raise last or OSError(f"could not connect to {host}")
+
+
+class _PublicHTTPConnection(http.client.HTTPConnection):
+    def connect(self):
+        self.sock = _connect_public(self.host, self.port, self.timeout)
+
+
+class _PublicHTTPSConnection(http.client.HTTPSConnection):
+    def connect(self):
+        sock = _connect_public(self.host, self.port, self.timeout)
+        self.sock = self._context.wrap_socket(sock, server_hostname=self.host)
+
+
+class _PublicHTTPHandler(urllib.request.HTTPHandler):
+    def http_open(self, req):
+        return self.do_open(_PublicHTTPConnection, req)
+
+
+class _PublicHTTPSHandler(urllib.request.HTTPSHandler):
+    def https_open(self, req):
+        return self.do_open(_PublicHTTPSConnection, req, context=self._context)
+
+
+class _CheckedRedirect(urllib.request.HTTPRedirectHandler):
+    """Every hop of a redirect chain must itself be a public http(s) URL.
+
+    The first URL is vetted by _is_public_url, but a public page can answer
+    302 -> http://169.254.169.254/ and the library would follow it. The
+    connection classes above refuse non-public addresses at connect time;
+    this refuses the redirect before a request is even built, and caps it.
+    """
+
+    max_redirections = 5
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not _is_public_url(urllib.parse.urljoin(req.full_url, newurl)):
+            raise urllib.error.URLError(f"redirect to a non-public address refused: {newurl}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 def _fetch_page(url: str) -> str:
+    opener = urllib.request.build_opener(
+        _PublicHTTPHandler, _PublicHTTPSHandler(context=ssl.create_default_context()), _CheckedRedirect
+    )
     req = urllib.request.Request(url, headers={"User-Agent": "BillFixr/1.0 (+https://billfixr.com)"})
-    with urllib.request.urlopen(req, timeout=PAGE_TIMEOUT_SECONDS) as res:
+    with opener.open(req, timeout=PAGE_TIMEOUT_SECONDS) as res:
         return res.read(MAX_PAGE_BYTES).decode("utf-8", "replace")
 
 
@@ -441,8 +535,13 @@ def _verify(email: str, source_url: str) -> Optional[EmailFind]:
     return EmailFind(email=email, source_url=source_url, page_domain=page_host, confirmed=True)
 
 
-def _ask(question: str, api_key: str) -> Dict[str, "EmailFind"]:
-    """One search. Returns whatever survived verification, which may be {}."""
+def _ask(question: str, api_key: str) -> Tuple[Dict[str, Any], bool]:
+    """One search. Returns (whatever survived verification, whether the call worked).
+
+    The flag matters to the caller: {} from a hospital that publishes
+    nothing is an answer worth remembering, but {} from an OpenRouter
+    outage is not, and caching it would make "no email" stick for a day.
+    """
     payload = {
         "model": MODEL,
         "messages": [
@@ -455,7 +554,10 @@ def _ask(question: str, api_key: str) -> Dict[str, "EmailFind"]:
     try:
         data = _chat(payload, api_key)
     except Exception:  # noqa: BLE001 -- a failed attempt is "no email", which is a normal answer
-        return {}
+        return {}, False
+    if isinstance(data, dict) and data.get("error"):
+        # OpenRouter reports some rejections as HTTP 200 with an error body.
+        return {}, False
 
     choices = data.get("choices") or []
     content = (choices[0].get("message", {}).get("content") if choices else "") or ""
@@ -479,7 +581,7 @@ def _ask(question: str, api_key: str) -> Dict[str, "EmailFind"]:
         )
         if checked_address:
             found["billing_address"] = checked_address
-    return found
+    return found, True
 
 
 def _better_address(candidate: Optional["AddressFind"], incumbent: Optional["AddressFind"]) -> bool:
@@ -534,8 +636,11 @@ def search_emails(provider_name: str, address: Optional[str] = None) -> Dict[str
 
     key = f"{_normalize(provider_name)}|{_normalize(address or '')}"
     hit = _cache.get(key)
-    if hit and time.time() - hit[0] < CACHE_TTL_SECONDS:
-        return hit[1]
+    if hit:
+        age = time.time() - hit[0]
+        if age < (CACHE_TTL_SECONDS if hit[1] else EMPTY_CACHE_TTL_SECONDS):
+            return hit[1]
+        _cache.pop(key, None)
 
     name = provider_name.strip()
     # The address is what keeps this on the right building. Searching a
@@ -562,8 +667,10 @@ def search_emails(provider_name: str, address: Optional[str] = None) -> Dict[str
     max_attempts = max(1, min(len(attempts), int(os.getenv("CONTACT_SEARCH_MAX_ATTEMPTS", "3"))))
 
     found: Dict[str, Any] = {}
+    any_failed = False
     for question in attempts[:max_attempts]:
-        result = _ask(question, api_key)
+        result, worked = _ask(question, api_key)
+        any_failed = any_failed or not worked
         for kind in ("billing", "support"):
             if _better(result.get(kind), found.get(kind)):
                 found[kind] = result[kind]
@@ -576,7 +683,12 @@ def search_emails(provider_name: str, address: Optional[str] = None) -> Dict[str
         if billing and billing.confirmed:
             break
 
-    _cache[key] = (time.time(), found)
+    # Never remember "nothing" when part of the search did not run: that is
+    # an outage, not a finding.
+    if found or not any_failed:
+        if len(_cache) >= CACHE_MAX_ENTRIES:
+            _cache.pop(min(_cache, key=lambda k: _cache[k][0]), None)
+        _cache[key] = (time.time(), found)
     return found
 
 
