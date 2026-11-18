@@ -9,7 +9,7 @@ import WatermarkOverlay from "@/components/dashboard/WatermarkOverlay";
 import { createClient } from "@/lib/supabase/client";
 import { pollPaymentStatus } from "@/lib/pollPaymentStatus";
 import { getBillDocuments, type BillDocument } from "@/lib/billDocuments";
-import { buildCaseDocumentRows, type CaseDocumentRow } from "@/lib/caseDocuments";
+import { buildCaseDocumentRows, opensInNewTab, type CaseDocumentRow } from "@/lib/caseDocuments";
 import { summarizeLetterEvents, describeLetterTracking, type LetterEvent } from "@/lib/letterTracking";
 import { stripQuotedTail } from "@/lib/quotedEmail";
 import { COMPLETED_STATUSES } from "@/lib/caseStatus";
@@ -232,7 +232,17 @@ export default function ActiveCasePage() {
         // customer's own uploads now -- so this row is how it is reached.
         // It is the only place it can be read from without being in the
         // middle of the upload flow.
-        analysisUrl: selectedCase.bill_id ? `/dashboard/documents/${selectedCase.bill_id}` : null,
+        // `from=case` so the sidebar keeps Active Case highlighted. The
+        // analysis lives under /dashboard/documents/, so opening it from
+        // here used to move the highlight to My Document and make it look
+        // as though the customer had left their case.
+        analysisUrl: selectedCase.bill_id
+          ? `/dashboard/documents/${selectedCase.bill_id}?from=case`
+          : null,
+        // The letter itself, rather than nothing. Without this the
+        // "Appeal Letter" row rendered with no link at all and the only
+        // way to read it was inside the analysis page.
+        appealLetterUrl: `/api/dashboard/cases/${selectedCase.id}/appeal-letter`,
         stored: stored ?? [],
       });
       if (!cancelled) setDocRows(rows);
@@ -870,7 +880,7 @@ export default function ActiveCasePage() {
                       of this app -- a page and a card further down this
                       screen -- and opening those in a new tab would lose
                       the case the customer is reading. */}
-                  {doc.previewUrl.startsWith("/") || doc.previewUrl.startsWith("#") ? (
+                  {!opensInNewTab(doc.previewUrl) ? (
                     <Link href={doc.previewUrl} className="text-sm font-medium text-primary-600">
                       👁 View
                     </Link>
