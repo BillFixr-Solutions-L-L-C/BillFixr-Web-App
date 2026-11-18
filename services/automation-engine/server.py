@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from engine.env import load_service_env
 
 import asyncio
+from contextlib import asynccontextmanager
 from engine.vision_extractor import VisionExtractor
 from engine.audit_engine import BillAuditor
 from engine.letter_generator import LetterGenerator
@@ -49,7 +50,10 @@ CORS_ORIGINS = [o.strip() for o in os.getenv("ENGINE_CORS_ORIGINS", "*").split("
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
+    # A wildcard origin with credentials is a combination browsers refuse
+    # and that would let any site act as a signed-in caller if it were
+    # honoured. Credentials are only allowed for an explicit origin list.
+    allow_credentials="*" not in CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -86,14 +90,12 @@ def _cadence_due(neg: dict) -> bool:
     return (datetime.now(timezone.utc) - last_sent).total_seconds() >= CADENCE_SECONDS
 
 # Automated Background Gmail Inbox Poller (Every 30 seconds)
-@app.on_event("startup")
 async def check_configuration():
     """First thing on startup, so a misconfigured deploy says so in its log
     rather than running on and looking healthy."""
     readiness.enforce()
 
 
-@app.on_event("startup")
 async def start_background_inbox_poller():
     async def poll_loop():
         await asyncio.sleep(5)
@@ -102,30 +104,59 @@ async def start_background_inbox_poller():
                 # TESTING also keeps the app away from the live inbox.
                 if inbound_poller.is_configured() and not os.getenv("TESTING"):
                     await inbound_poller.sync_inbound_emails()
-            except Exception:
-                pass
+            except Exception as e:
+                # Was `pass`: a bad password or a blocked IMAP port looked
+                # identical to an empty inbox, and replies silently stopped.
+                print(f"[INBOX POLLER] sync failed: {type(e).__name__}: {e}", flush=True)
             await asyncio.sleep(30)
 
-    asyncio.create_task(poll_loop())
+    return asyncio.create_task(poll_loop())
 
-@app.on_event("startup")
 async def start_autopilot_loop():
     """Runs autopilot follow-ups on a timer, so the client doesn't have to click anything."""
     async def autopilot_loop():
         await asyncio.sleep(10)
         while True:
             try:
-                for item in NegotiationRepository.list_negotiations():
+                items = NegotiationRepository.list_negotiations()
+            except Exception as e:
+                print(f"[AUTO-PILOT LOOP] could not list negotiations: {e}", flush=True)
+                items = []
+            for item in items:
+                # One bad record must not stop the sweep. This try used to wrap
+                # the whole for-loop, so a single negotiation that raised
+                # (a malformed timestamp, a failed send) ended the pass and
+                # every negotiation after it was skipped, every minute.
+                try:
                     if not item.get("auto_pilot_enabled") or item["status"] in STOP_FOLLOW_UP_STATUSES:
                         continue
                     neg = NegotiationRepository.get_negotiation(item["id"])
                     if neg and _cadence_due(neg):
                         await cadence_tick(neg["id"])
-            except Exception as e:
-                print(f"[AUTO-PILOT LOOP] {e}")
+                except Exception as e:
+                    print(f"[AUTO-PILOT LOOP] negotiation {item.get('id')}: {type(e).__name__}: {e}", flush=True)
             await asyncio.sleep(AUTOPILOT_CHECK_SECONDS)
 
-    asyncio.create_task(autopilot_loop())
+    return asyncio.create_task(autopilot_loop())
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Startup checks and the two background loops, replacing the deprecated
+    @app.on_event("startup") hooks. The order is unchanged: configuration is
+    checked first, so a misconfigured deploy refuses to start before either
+    loop runs."""
+    await check_configuration()
+    tasks = [await start_background_inbox_poller(), await start_autopilot_loop()]
+    try:
+        yield
+    finally:
+        for task in tasks:
+            if task:
+                task.cancel()
+
+
+app.router.lifespan_context = lifespan
 
 # Joins a transcribed document to a typed note so the two read as separate
 # paragraphs rather than running together mid-sentence.
@@ -338,7 +369,10 @@ def _hospital_billing_email(email: Optional[str]) -> str:
 @app.post("/api/providers/contact")
 async def find_provider_contact(payload: ProviderContactSearchRequest):
     try:
-        res = contact_finder.find_contact(payload.provider_name, payload.address)
+        # Blocking network calls (registry, web search, page fetches) that can
+        # take a minute. Run inline they froze the whole event loop, including
+        # the inbox poller, autopilot and the health check, for that long.
+        res = await asyncio.to_thread(contact_finder.find_contact, payload.provider_name, payload.address)
         return res.model_dump()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -361,6 +395,15 @@ async def start_negotiation(payload: StartNegotiationRequest):
             account_number=account_number,
             dob=payload.patient_dob or "On File"
         )
+
+        # Idempotent on the caller's reference. If this case already has a
+        # negotiation, return it and send nothing: a retry after a timeout or
+        # a lost link must not put a second dispute letter in a hospital's inbox.
+        existing_id = NegotiationRepository.find_id_by_external_ref(payload.external_ref or "")
+        if existing_id:
+            existing = NegotiationRepository.get_negotiation(existing_id)
+            if existing:
+                return existing
 
         target_hosp_email = _hospital_billing_email(payload.hospital_email)
         target_support_email = (payload.support_email or "").strip() or target_hosp_email
@@ -398,7 +441,8 @@ async def start_negotiation(payload: StartNegotiationRequest):
         NegotiationRepository.set_support_email(record["id"], target_support_email)
 
         # Shared thread dual-recipient dispatch
-        receipt = email_dispatcher.dispatch_dispute_packet(
+        receipt = await asyncio.to_thread(
+            email_dispatcher.dispatch_dispute_packet,
             recipient_email=target_hosp_email,
             support_email=target_support_email,
             subject=f"Formal Billing Dispute & Settlement Offer [{record['tracking_code']}]",

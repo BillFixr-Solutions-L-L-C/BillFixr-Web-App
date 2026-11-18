@@ -488,6 +488,29 @@ class NegotiationRepository:
         return neg
 
     @staticmethod
+    def find_id_by_external_ref(external_ref: str) -> Optional[str]:
+        """The negotiation already opened for this caller-supplied reference, if any.
+
+        The web app passes its case id here. It lets a repeated start (a
+        timed-out request, a retry after a lost link) find the negotiation
+        that exists instead of creating a second one and writing to the
+        hospital again.
+        """
+        if not external_ref:
+            return None
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id FROM negotiations WHERE external_ref = ? ORDER BY created_at ASC LIMIT 1",
+                (external_ref,),
+            )
+            row = cursor.fetchone()
+            return dict(row)["id"] if row else None
+        finally:
+            conn.close()
+
+    @staticmethod
     def list_negotiations() -> List[Dict[str, Any]]:
         conn = get_connection()
         cursor = conn.cursor()

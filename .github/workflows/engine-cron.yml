@@ -1,0 +1,55 @@
+name: Engine cron
+
+# Vercel Hobby runs a cron at most once a day, and on Render's free tier the
+# engine's own inbox poller and autopilot stop whenever it spins down. The two
+# cron routes are what read provider replies and send the 72-hour follow-ups,
+# so on that setup replies and follow-ups can be ~24 hours late.
+#
+# This calls those routes every 30 minutes instead. It needs two repository
+# secrets (Settings > Secrets and variables > Actions); without them it logs a
+# warning and does nothing, rather than failing every run.
+#
+#   APP_URL      The production origin, e.g. https://www.billfixr.com
+#   CRON_SECRET  The same value the web app has as CRON_SECRET
+#
+# negotiation-status goes first: it makes the engine read its mailbox before
+# anything decides to chase a provider, so a reply that arrived overnight is
+# seen before a follow-up is sent. Keep that order.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: engine-cron
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    name: Read replies and send due follow-ups
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Call the cron routes
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -uo pipefail
+          if [ -z "${APP_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::warning title=Engine cron not configured::Set the APP_URL and CRON_SECRET repository secrets to enable it."
+            exit 0
+          fi
+          status=0
+          for route in negotiation-status follow-ups; do
+            # --max-time covers a cold-starting engine on the free tier.
+            code=$(curl -sS --max-time 300 -o body.json -w '%{http_code}' \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              "${APP_URL%/}/api/cron/${route}") || code="curl-failed"
+            echo "${route}: HTTP ${code}"
+            cat body.json 2>/dev/null || true
+            echo
+            case "$code" in 200) ;; *) status=1 ;; esac
+          done
+          exit $status

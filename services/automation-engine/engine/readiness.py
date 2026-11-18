@@ -91,9 +91,17 @@ def check(env: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         })
 
     durable_store = present("ENGINE_DATABASE_URL")
-    if not durable_store:
+    # On Render, a SQLite file is only durable when a disk is mounted over it.
+    # The paid blueprint says so with ENGINE_STORE_ON_DISK=1; the free tier has
+    # no disk, so there the file dies on every deploy and spin-down.
+    on_render = present("RENDER")
+    on_disk = present("ENGINE_STORE_ON_DISK")
+    if not durable_store and not (on_render and on_disk):
+        lost_on_restart = on_render and not on_disk
         problems.append({
-            "severity": "warning",
+            # Critical where it is known to lose data (Render, no disk); a
+            # warning on a laptop, where SQLite is a legitimate way to run.
+            "severity": "critical" if lost_on_restart else "warning",
             "setting": "ENGINE_DATABASE_URL",
             "effect": (
                 "Negotiations are kept in a SQLite file on this container's filesystem. On any "
@@ -102,6 +110,12 @@ def check(env: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
                 "provider - so after a restart their reply is read, parsed, matched against "
                 "nothing and dropped. Letters already sent stay unanswered forever and nothing "
                 "reports it."
+                + (
+                    " Set ENGINE_DATABASE_URL to a Postgres database, or mount a disk and set "
+                    "ENGINE_STORE_ON_DISK=1."
+                    if lost_on_restart
+                    else ""
+                )
             ),
         })
 
@@ -110,7 +124,8 @@ def check(env: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         "letters_tracked": resend,
         "replies_read": mailbox,
         "api_protected": present("ENGINE_API_KEY"),
-        "store_durable": durable_store,
+        "store_durable": durable_store or (on_render and on_disk),
+        "store_kind": "postgres" if durable_store else ("disk" if (on_render and on_disk) else "local"),
         "advocate_email": advocate or None,
         "problems": problems,
     }
@@ -122,7 +137,7 @@ def format_report(result: Dict[str, Any]) -> str:
     lines.append(f"  letters tracked (Resend) : {'yes' if result['letters_tracked'] else 'NO'}")
     lines.append(f"  replies read (IMAP)      : {'yes' if result['replies_read'] else 'NO'}")
     lines.append(f"  API key required         : {'yes' if result['api_protected'] else 'NO'}")
-    lines.append(f"  store survives restart   : {'yes (Postgres)' if result['store_durable'] else 'NO (SQLite on local disk)'}")
+    lines.append(f"  store survives restart   : {'yes (Postgres)' if result.get('store_kind') == 'postgres' else 'yes (disk)' if result.get('store_kind') == 'disk' else 'NO (SQLite on local disk)'}")
     lines.append(f"  sending as               : {result['advocate_email'] or '(unset)'}")
     if not result["problems"]:
         lines.append("  no problems found")

@@ -1,6 +1,7 @@
 import logging
 import tempfile
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -50,18 +51,22 @@ from app.processing import ProcessingService
 from app.repository import Repository
 from app.storage import LocalDocumentStore
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """First thing on startup, so a misconfigured deploy says so in its log
+    instead of coming up healthy with its doors open. (Replaces the
+    deprecated @app.on_event("startup") hook.)"""
+    readiness.enforce(get_settings())
+    yield
+
+
 app = FastAPI(
     title="BillFixr AI Service",
     version="0.1.0",
     description="AI ingestion, OCR, and structured extraction service for medical bill negotiation.",
+    lifespan=lifespan,
 )
-
-
-@app.on_event("startup")
-def check_configuration() -> None:
-    """First thing on startup, so a misconfigured deploy says so in its log
-    instead of coming up healthy with its doors open."""
-    readiness.enforce(get_settings())
 
 configure_logging(get_settings())
 logger = logging.getLogger("billfixr.api")
