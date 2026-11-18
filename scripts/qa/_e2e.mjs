@@ -14,7 +14,7 @@ import { readFileSync, mkdirSync } from "node:fs";
 // Playwright is not a dependency of this project, so it is resolved
 // from wherever it is installed rather than added to the app's tree.
 // Point PLAYWRIGHT_MODULE at a local install if it is not on the path.
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 async function loadChromium() {
   const spec = process.env.PLAYWRIGHT_MODULE ?? "playwright";
   try {
@@ -207,15 +207,20 @@ try {
   step("scanning stage reached");
   await shot("07-scanning");
 
-  // Either it reaches negotiating, or it shows an error. Wait for whichever.
+  // Either the scan finishes, or it shows an error. Wait for whichever.
+  //
+  // It used to wait for "Negotiating". Until 2026-11-18 the scan started
+  // the negotiation in the same request that wrote the analysis, so the
+  // letter was already with the provider by the time this screen
+  // appeared. It now stops at "Analyzed" and nothing has been sent.
   const outcome = await Promise.race([
     page
-      .getByText(/Negotiating/i)
+      .getByText(/Analyzed/i)
       .first()
       .waitFor({ timeout: 300_000 })
-      .then(() => "negotiating"),
+      .then(() => "analyzed"),
     page
-      .getByText(/couldn't analyze|couldn't open the negotiation|Please try again/i)
+      .getByText(/couldn't analyze|Please try again/i)
       .first()
       .waitFor({ timeout: 300_000 })
       .then(() => "error"),
@@ -225,6 +230,21 @@ try {
 
   const visible = await page.locator("body").innerText();
   step("screen text", visible.replace(/\s+/g, " ").slice(0, 600));
+
+  // --- the decision point -------------------------------------------------
+  // The part Segun reported missing on 2026-11-18: Re-scan should be on
+  // the analysis, and nothing should have reached the provider yet.
+  if (outcome === "analyzed") {
+    await page.getByRole("link", { name: /Review your analysis/i }).click();
+    await page.waitForURL(/\/dashboard\/documents\//, { timeout: 60_000 });
+    await page.waitForTimeout(1500);
+    await shot("09-analysis");
+
+    const rescan = await page.getByRole("button", { name: /^Re-scan$/ }).count();
+    const proceed = await page.getByRole("button", { name: /^Proceed$/ }).count();
+    step("DECISION POINT", `re-scan=${rescan} proceed=${proceed}`);
+    if (!rescan || !proceed) step("MISSING", "the decision point did not render both buttons");
+  }
 } catch (err) {
   step("FAILED", String(err).slice(0, 400));
   await shot("99-failure");

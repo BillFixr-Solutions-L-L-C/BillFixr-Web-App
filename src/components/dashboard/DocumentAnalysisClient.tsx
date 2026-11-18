@@ -92,6 +92,8 @@ export default function DocumentAnalysisClient({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [rescanning, setRescanning] = useState(false);
   const [rescanError, setRescanError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [proceedError, setProceedError] = useState<string | null>(null);
   const router = useRouter();
 
   // Reads the bill again and replaces the analysis, for when the result
@@ -109,10 +111,40 @@ export default function DocumentAnalysisClient({
     setRescanning(false);
     if (!res?.ok) {
       const body = await res?.json().catch(() => null);
-      setRescanError(body?.error ?? "We couldn't re-scan this bill. Please try again.");
+      setRescanError(body?.error ?? t("rescan.failed"));
       return;
     }
     router.refresh();
+  }
+
+  // Proceed is what sends the dispute.
+  //
+  // It used to be a plain link to the case screen, because the scan had
+  // already started the negotiation and the engine had already written to
+  // the provider -- so "Proceed" moved the customer to a page about
+  // something that had happened without them. Since 2026-11-18 the scan
+  // stops at the analysis and nothing leaves the building until this is
+  // pressed, which is what makes the Re-scan beside it worth having.
+  async function proceed() {
+    if (!caseId) return;
+    setSending(true);
+    setProceedError(null);
+    const res = await fetch(`/api/dashboard/cases/${caseId}/negotiation`, {
+      method: "POST",
+    }).catch(() => null);
+    if (!res?.ok) {
+      const body = await res?.json().catch(() => null);
+      setSending(false);
+      // The route's own wording where it has some -- it knows which
+      // precondition failed, and "add the provider's billing email" is
+      // worth more than a generic failure.
+      setProceedError(body?.error ?? t("analysis.proceedFailed"));
+      return;
+    }
+    // Not setSending(false): the case screen is being navigated to and
+    // the button should stay spent rather than flicker back to Proceed
+    // on a page that is about to be replaced.
+    router.push("/dashboard/case");
   }
 
   return (
@@ -280,26 +312,29 @@ export default function DocumentAnalysisClient({
               <button
                 type="button"
                 onClick={rescan}
-                disabled={rescanning}
+                disabled={rescanning || sending}
                 title={rescanHint}
                 className="rounded-full border border-[#0f7545] px-8 py-3 text-sm font-semibold text-[#0f7545] hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {rescanning ? "Re-scanning…" : "Re-scan"}
+                {rescanning ? t("rescan.running") : t("rescan.button")}
               </button>
             ) : (
               rescanHint && <p className="max-w-xs text-xs text-gray-400">{rescanHint}</p>
             )}
-            <Link
-              href="/dashboard/case"
-              className="rounded-full bg-[#0f7545] px-8 py-3 text-sm font-semibold text-white hover:bg-primary-700"
+            <button
+              type="button"
+              onClick={proceed}
+              disabled={sending || rescanning}
+              className="rounded-full bg-[#0f7545] px-8 py-3 text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {t("analysis.proceed")}
-            </Link>
+              {sending ? t("analysis.sending") : t("analysis.proceed")}
+            </button>
           </div>
         )}
       </div>
 
       {rescanError && <p className="mt-3 text-right text-sm text-danger">{rescanError}</p>}
+      {proceedError && <p className="mt-3 text-right text-sm text-danger">{proceedError}</p>}
 
       {previewOpen && doc.previewUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

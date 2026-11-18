@@ -345,19 +345,13 @@ export default function DashboardHome() {
       return;
     }
 
-    // The scan starts the negotiation, and the engine sends the first
-    // letter as part of starting. This used to POST /api/dev/advance-case
-    // with toStatus "awaiting_response" and move on regardless — so the
-    // screen said a negotiation was under way whether or not anything had
-    // been sent, and nothing had: no caller ever started one. Show the
-    // negotiating stage only when the engine confirms it is running.
-    if (!analysisBody?.negotiation?.running) {
-      setScanError(
-        "We've read your bill, but we couldn't open the negotiation with your provider yet. We're on it — your analysis is saved.",
-      );
-      scanStartedRef.current = null;
-      return;
-    }
+    // The scan no longer starts the negotiation, so there is nothing to
+    // confirm here any more. It reads the bill and stops; the dispute
+    // goes out when the customer presses Proceed on the analysis, which
+    // is also what makes the Re-scan beside it reachable. This used to
+    // refuse to advance unless the engine reported a running
+    // negotiation -- correct then, and a check for something that no
+    // longer happens in this request now.
 
     // The route already returns both figures. They were being thrown away
     // and the screen showed a hardcoded $2,345 instead.
@@ -491,7 +485,7 @@ export default function DashboardHome() {
                           })
                         : "—"}
                     </td>
-                    <td className="px-4 py-3 font-medium text-accent-600">{t("table.negotiating")}</td>
+                    <td className="px-4 py-3 font-medium text-accent-600">{t("table.analyzed")}</td>
                     <td className="px-4 py-3 font-medium text-red-500">
                       {analysis?.errorsDetected === null || analysis === null
                         ? "—"
@@ -504,14 +498,20 @@ export default function DashboardHome() {
             </TableScroller>
 
             <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-primary-50 px-5 py-4">
+              {/* Says what has actually happened. Until 2026-11-18 this
+                  read "negotiation has started" and sent the customer to
+                  the case screen -- true then, because the scan sent the
+                  letter, and a lie now that nothing leaves until Proceed.
+                  The link goes to the analysis, which is where Re-scan
+                  and Proceed live. */}
               <p className="text-sm text-primary-800">
-                {t("case.negotiationStarted")}
+                {t("dash.analysisReady")}
               </p>
               <Link
-                href="/dashboard/case"
+                href={billId ? `/dashboard/documents/${billId}` : "/dashboard/documents"}
                 className="shrink-0 rounded-full bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
               >
-                {t("dash.continueToCase")}
+                {t("dash.reviewAnalysis")}
               </Link>
             </div>
           </div>

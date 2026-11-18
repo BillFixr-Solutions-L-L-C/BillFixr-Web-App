@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isBackendConfigured } from "@/lib/aiStack";
-import { auditBill, startNegotiation } from "@/lib/automation-engine";
+import { auditBill, getNegotiation, startNegotiation } from "@/lib/automation-engine";
 import { storedBillData } from "@/lib/engineBillData";
 import type { AutomationNegotiation } from "@/types/automation-engine";
 import { notifyCustomer } from "@/lib/customerNotifications";
@@ -153,6 +153,32 @@ export async function startNegotiationForCase(
       negotiationId: negotiation.id,
       cause: linkError ?? "another start linked a negotiation first",
     };
+  }
+
+  // The appeal letter is not a separate draft on the engine path: the
+  // engine writes it and sends it as part of starting, so the text is
+  // read back here. That makes cases.appeal_letter_text the letter the
+  // provider actually received rather than a second draft nobody sent.
+  //
+  // This used to live in the scan route, which was the only caller that
+  // started a negotiation. Since 2026-11-18 the scan stops at the
+  // analysis and the customer's Proceed starts the negotiation, so the
+  // readback belongs with the start itself -- otherwise whichever caller
+  // was not updated silently leaves the case with no copy of its own
+  // letter.
+  try {
+    const sent = await getNegotiation(negotiation.id);
+    const letter = (sent.messages ?? []).find(
+      (m) => m.direction === "OUTBOUND" && m.content_markdown,
+    )?.content_markdown;
+    if (letter) {
+      await admin.from("cases").update({ appeal_letter_text: letter }).eq("id", caseRow.id);
+    }
+  } catch (cause) {
+    // The letter went out either way. Not holding a copy of it is worth a
+    // log line, not a failed start -- reporting failure here would tell
+    // the customer nothing was sent when something was.
+    console.error("Could not store the sent letter for case", caseRow.id, cause);
   }
 
   return { started: true, negotiation };

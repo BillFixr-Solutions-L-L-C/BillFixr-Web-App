@@ -6,11 +6,17 @@ import { negotiationSummary, startNegotiationForCase } from "@/lib/startNegotiat
 const adminMock = createSupabaseMock();
 const auditBill = vi.fn();
 const startNegotiation = vi.fn();
+const getNegotiation = vi.fn();
 const isBackendConfigured = vi.fn();
 
 vi.mock("@/lib/automation-engine", () => ({
   auditBill: (...a: unknown[]) => auditBill(...a),
   startNegotiation: (...a: unknown[]) => startNegotiation(...a),
+  // Read back after a successful start, for the letter the engine
+  // actually sent. Omitting it here did not fail anything -- the call
+  // threw into its own catch and the letter was simply never stored,
+  // which is the failure it exists to prevent.
+  getNegotiation: (...a: unknown[]) => getNegotiation(...a),
 }));
 vi.mock("@/lib/aiStack", () => ({ isBackendConfigured: (...a: unknown[]) => isBackendConfigured(...a) }));
 
@@ -310,5 +316,56 @@ describe("negotiationSummary", () => {
       running: true,
       reason: null,
     });
+  });
+});
+
+// The engine writes the first dispute letter and sends it as part of
+// starting, so the text is read back here and stored on the case. That
+// makes cases.appeal_letter_text the letter the provider actually
+// received rather than a second draft nobody sent.
+//
+// This readback used to live in the scan route, which was the only
+// caller that started a negotiation. Since 2026-11-18 the scan stops at
+// the analysis and Proceed starts the negotiation, so it belongs with
+// the start itself.
+describe("the letter the provider received", () => {
+  function storedLetter(): string | undefined {
+    const calls = adminMock.from.mock.calls
+      .map((call, i) => ({ table: call[0], result: adminMock.from.mock.results[i] }))
+      .filter((entry) => entry.table === "cases")
+      .flatMap((entry) => {
+        const builder = entry.result?.value as Record<string, { mock?: { calls: unknown[][] } }>;
+        return builder?.update?.mock?.calls ?? [];
+      });
+    const written = calls.find((args) => "appeal_letter_text" in (args[0] as object));
+    return written ? (written[0] as { appeal_letter_text?: string }).appeal_letter_text : undefined;
+  }
+
+  it("stores the outbound text the engine sent", async () => {
+    readyToStart();
+    getNegotiation.mockResolvedValue({
+      id: "neg-1",
+      messages: [
+        { direction: "INBOUND", content_markdown: "not ours" },
+        { direction: "OUTBOUND", content_markdown: "Dear Patient Financial Services" },
+      ],
+    });
+
+    await startNegotiationForCase(adminMock.client as never, CASE);
+
+    expect(storedLetter()).toBe("Dear Patient Financial Services");
+  });
+
+  it("still reports the start as successful when the letter cannot be read back", async () => {
+    // The letter has already gone. Reporting failure here would tell the
+    // customer nothing was sent when something was.
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    readyToStart();
+    getNegotiation.mockRejectedValue(new Error("engine unreachable"));
+
+    const result = await startNegotiationForCase(adminMock.client as never, CASE);
+
+    expect(result).toMatchObject({ started: true });
+    expect(storedLetter()).toBeUndefined();
   });
 });

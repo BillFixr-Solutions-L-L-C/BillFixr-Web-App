@@ -10,9 +10,8 @@ import {
   mapCaseFieldsFromEngine,
 } from "@/lib/engineAnalysisMapping";
 import { storedBillData } from "@/lib/engineBillData";
-import { auditBill, getNegotiation } from "@/lib/automation-engine";
+import { auditBill } from "@/lib/automation-engine";
 import { guessContentType } from "@/lib/contentType";
-import { negotiationSummary, startNegotiationForCase, type StartableCase } from "@/lib/startNegotiation";
 import type { AiCaseProcessingResponse } from "@/types/ai";
 import { MAX_RESCANS, canRescan, remaining, used } from "@/lib/rescan";
 
@@ -98,23 +97,10 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
-  // Exactly the three fields the start reads, and bill_id taken from the
-  // joined bill rather than the case column so a case row whose bill_id
-  // is null still resolves to the right bill.
-  const startable: StartableCase = {
-    id: caseRow.id,
-    bill_id: bill.id,
-    negotiation_id: caseRow.negotiation_id,
-  };
-
   // Idempotent: already analyzed, don't re-call the AI service or
   // overwrite an existing result — unless this is an explicit re-scan.
   if (bill.analysis_result && !force) {
-    // Still offered a negotiation: a case analyzed before the engine was
-    // wired in has an analysis and no negotiation, and this is the only
-    // way to start one without paying for a second AI read.
-    const negotiation = await beginNegotiation(admin, startable);
-    return NextResponse.json({ ok: true, alreadyProcessed: true, negotiation });
+    return NextResponse.json({ ok: true, alreadyProcessed: true });
   }
 
   // One re-scan per case: it's a free second AI read, meant as a one-off
@@ -287,67 +273,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: caseUpdateError.message }, { status: 500 });
   }
 
-  // The scan is where a negotiation can finally start: the commitment
-  // fee bought the case, and the extraction this route just wrote is the
-  // bill data the engine audits. Before this, nothing in the app ever
-  // started one — the route that could was never called, and the case
-  // was moved to "awaiting_response" by the client asking for it, with
-  // no letter behind the claim.
-  const negotiation = await beginNegotiation(admin, startable);
-
-  // On the engine path the appeal letter is not a separate draft: the
-  // engine writes it and sends it as part of starting, so the stored
-  // letter is read back from the negotiation afterwards. That makes
-  // cases.appeal_letter_text the text the provider actually received,
-  // rather than a second draft nobody sent.
-  if (usingEngine && negotiation?.running) {
-    const { data: linked } = await admin.from("cases").select("negotiation_id").eq("id", caseId).maybeSingle();
-    if (linked?.negotiation_id) {
-      try {
-        const sent = await getNegotiation(linked.negotiation_id);
-        const letter = (sent.messages ?? []).find(
-          (m) => m.direction === "OUTBOUND" && m.content_markdown,
-        )?.content_markdown;
-        if (letter) {
-          appealLetterText = letter;
-          await admin.from("cases").update({ appeal_letter_text: letter }).eq("id", caseId);
-        }
-      } catch (err) {
-        // The letter went out either way; not having a copy of it stored
-        // is worth a log line, not a failed scan.
-        console.error("Could not store the sent letter for case", caseId, err);
-      }
-    }
-  }
+  // The scan deliberately stops here, with the bill read and nothing
+  // sent.
+  //
+  // It used to start the negotiation in this same request, which meant
+  // the engine's first letter reached the provider before the customer
+  // had seen a single finding. That also made the Re-scan and Proceed
+  // buttons on the analysis page unreachable: they show only while the
+  // case has no negotiation_id and no letter_sent_at, and this request
+  // wrote both the moment the analysis existed. Segun asked for the
+  // re-scan on 2026-11-18 and it had never once been possible to see it.
+  //
+  // The negotiation now starts from POST /api/dashboard/cases/[id]/
+  // negotiation, which is what Proceed calls. That route shares
+  // src/lib/startNegotiation.ts with this one's old path, so the
+  // preconditions cannot drift.
 
   return NextResponse.json({
     ok: true,
     errorsDetected,
     savingsFound,
-    negotiation,
     rescansRemaining: remaining({ rescan_count: used(caseRow) + (force ? 1 : 0) }),
   });
 }
 
-// The engine writes to a real hospital here, so this never throws into
-// the scan: the analysis above is already saved and worth returning even
-// when the negotiation could not start. The outcome is handed back so the
-// customer is told a letter went out only when one actually did.
-async function beginNegotiation(admin: ReturnType<typeof createAdminClient>, caseRow: StartableCase) {
-  try {
-    const result = await startNegotiationForCase(admin, caseRow);
-    const summary = negotiationSummary(result);
-    if (!summary.running) {
-      // Logged with the reason: "blocked" states are recoverable through
-      // POST /api/dashboard/cases/[id]/negotiation once the missing piece
-      // is in place, and a link_lost carries a live negotiation id that
-      // must not disappear.
-      const cause = result.started || "blocked" in result ? "" : result.cause;
-      console.error("No negotiation running for case", caseRow.id, summary.reason, cause);
-    }
-    return summary;
-  } catch (err) {
-    console.error("Could not start a negotiation for case", caseRow.id, err);
-    return { running: false, reason: "engine_refused" };
-  }
-}

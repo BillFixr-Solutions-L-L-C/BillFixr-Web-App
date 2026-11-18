@@ -587,6 +587,19 @@ export const MESSAGES = {
     "upload.termsP2": "By uploading my medical bill, I authorize BillFixr to analyze, review, and negotiate with my healthcare provider on my behalf.",
     "upload.termsP3": "I understand that BillFixr may contact the hospital, request corrections, and obtain a revised bill as part of the reduction process.",
     "upload.termsP4": "I agree to the fee structure and confirm that all documents I upload are accurate and legally mine to submit.",
+
+    // --- the re-scan / proceed decision point ---
+    "rescan.noneLeft": "You've used your re-scan for this bill.",
+    "rescan.oneLeft": "One re-scan available for this bill.",
+    "rescan.manyLeft": "{count} re-scans available for this bill.",
+    "rescan.button": "Re-scan",
+    "rescan.running": "Re-scanning…",
+    "rescan.failed": "We couldn't re-scan this bill. Please try again.",
+    "analysis.sending": "Sending…",
+    "analysis.proceedFailed": "We couldn't send your dispute to the provider. Please try again.",
+    "table.analyzed": "Analyzed",
+    "dash.analysisReady": "We've read your bill and found what looks wrong. Review it, then send your dispute to the provider.",
+    "dash.reviewAnalysis": "Review your analysis",
   },
 
   es: {
@@ -1128,6 +1141,19 @@ export const MESSAGES = {
     "upload.termsP2": "Al subir mi factura médica, autorizo a BillFixr a analizarla, revisarla y negociar con mi proveedor de atención médica en mi nombre.",
     "upload.termsP3": "Entiendo que BillFixr puede contactar al hospital, solicitar correcciones y obtener una factura corregida como parte del proceso de reducción.",
     "upload.termsP4": "Acepto la estructura de tarifas y confirmo que todos los documentos que subo son exactos y que tengo derecho legal a enviarlos.",
+
+    // --- the re-scan / proceed decision point ---
+    "rescan.noneLeft": "Ya usó su nuevo análisis para esta factura.",
+    "rescan.oneLeft": "Tiene un nuevo análisis disponible para esta factura.",
+    "rescan.manyLeft": "Tiene {count} nuevos análisis disponibles para esta factura.",
+    "rescan.button": "Analizar de nuevo",
+    "rescan.running": "Analizando de nuevo…",
+    "rescan.failed": "No pudimos volver a analizar esta factura. Inténtelo de nuevo.",
+    "analysis.sending": "Enviando…",
+    "analysis.proceedFailed": "No pudimos enviar su reclamación al proveedor. Inténtelo de nuevo.",
+    "table.analyzed": "Analizada",
+    "dash.analysisReady": "Leímos su factura y encontramos lo que parece incorrecto. Revísela y después envíe su reclamación al proveedor.",
+    "dash.reviewAnalysis": "Revisar su análisis",
   },
 } as const satisfies Record<Language, Record<string, string>>;
 
