@@ -125,7 +125,6 @@ describe("CaseInformationStep", () => {
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
     await waitFor(() => expect(screen.getByLabelText(/^Billing Department Email/)).toHaveValue("billing@riverside.com"));
-    expect(screen.getByText(/Found — check it's right/i)).toBeInTheDocument();
     const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.map(([u]) => String(u));
     expect(calls.some((u) => u.endsWith("/find-contact"))).toBe(true);
   });
@@ -142,10 +141,11 @@ describe("CaseInformationStep", () => {
     expect(JSON.parse(call[1].body)).toMatchObject({ field: "supportEmail", hospitalName: "Riverside General" });
   });
 
-  it("names the domain an email was found on", async () => {
-    // An address that simply appears in a box is not a reason to trust it.
-    // It was accepted because it is published on a page on its own domain,
-    // and the note says which.
+  it("says nothing under the field about where the email came from", async () => {
+    // The lookup used to name the domain it found the address on, so the
+    // customer could see why it was accepted. Removed on request
+    // 2026-11-18: it read like a log line on a form. The route still
+    // reports emailSource; nothing shows it.
     mockFetch({
       extract: BILL_READ,
       contact: { status: 200, body: { ok: true, value: "billing@mwchc.org", emailSource: "mwchc.org" } },
@@ -157,7 +157,8 @@ describe("CaseInformationStep", () => {
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
     await waitFor(() => expect(screen.getByLabelText(/^Billing Department Email/)).toHaveValue("billing@mwchc.org"));
-    expect(screen.getByText(/Found on mwchc\.org/i)).toBeInTheDocument();
+    expect(screen.queryByText(/mwchc\.org/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/check it's right/i)).not.toBeInTheDocument();
   });
 
   it("will not search until the hospital address is filled in", async () => {
@@ -227,15 +228,13 @@ describe("CaseInformationStep", () => {
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
     await waitFor(() => expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("615-327-9400"));
-    expect(screen.getByText(/filled in the billing phone/i)).toBeInTheDocument();
 
-    // The address IS named now. A hospital that publishes no billing
-    // email still has somewhere to post a letter, and that is the thing
-    // that unblocks the case -- so it is stated rather than implied.
-    expect(screen.getByText(/doesn't publish a billing email/i)).toBeInTheDocument();
-    expect(screen.getByText(/1035 14TH AVE N/)).toBeInTheDocument();
+    // Nothing is said about any of it. The phone reaching its box is the
+    // whole of the feedback now.
+    expect(screen.queryByText(/filled in the billing phone/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/doesn't publish a billing email/i)).not.toBeInTheDocument();
 
-    // The rest of the lookup's workings still stay off the screen.
+    // The lookup's workings stay off the screen, as they always did.
     expect(screen.queryByText(/NPI registry record/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Not the right one/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Matthew Walker Smyrna/)).not.toBeInTheDocument();
@@ -243,9 +242,9 @@ describe("CaseInformationStep", () => {
     expect(screen.queryByText(/Clinic or Health Center/)).not.toBeInTheDocument();
   });
 
-  it("does not claim to have filled a phone box that was already filled", async () => {
-    // BILL_READ puts a billing phone on the form, so there is nothing to
-    // fill and the note must not say otherwise.
+  it("leaves a phone box that was already filled alone", async () => {
+    // BILL_READ puts a billing phone on the form, so the registry's
+    // number must not replace it.
     mockFetch({
       extract: BILL_READ,
       contact: { status: 200, body: { ok: true, value: null, fallback: { providerName: "Riverside General", phone: "615-396-4100" } } },
@@ -256,12 +255,8 @@ describe("CaseInformationStep", () => {
 
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
-    expect(await screen.findByText(/doesn't publish a billing email/i)).toBeInTheDocument();
-    // Deliberately not "publishes no email": a failed lookup is not evidence
-    // the hospital publishes none, and every real hospital tested so far
-    // publishes one we could not verify.
-    expect(screen.queryByText(/no email is published/i)).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("555-0100");
+    await waitFor(() => expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("555-0100"));
+    expect(screen.queryByText(/doesn't publish a billing email/i)).not.toBeInTheDocument();
   });
 
   it("puts the engine's registry record in the boxes it belongs in", async () => {
@@ -296,8 +291,8 @@ describe("CaseInformationStep", () => {
       expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("739 PRESIDENT PL, SMYRNA, TN 37167"),
     );
     expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("615-984-4290");
-    // And it says which boxes it touched, rather than printing findings.
-    expect(await screen.findByText(/filled in .*from the provider registry/i)).toBeInTheDocument();
+    // Silently. The boxes changing is what the customer sees.
+    expect(screen.queryByText(/from the provider registry/i)).not.toBeInTheDocument();
   });
 
   it("a registry name-prefix match never overwrites what the customer typed", async () => {
@@ -327,13 +322,12 @@ describe("CaseInformationStep", () => {
 
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
-    await screen.findByText(/doesn't publish a billing email/i);
     // Both already held a value from the bill, so both are left alone.
-    expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd");
+    await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
     expect(screen.getByLabelText(/^Billing Phone Number/)).toHaveValue("555-0100");
   });
 
-  it("fills in an address the engine could not confirm, and says so", async () => {
+  it("fills in an address the engine could not confirm, without flagging it", async () => {
     // The point of the change: four real hospitals publish a billing
     // address that this fetcher cannot verify -- one blocks it, one has a
     // broken TLS chain, one uses a different mail domain, one renders the
@@ -362,33 +356,17 @@ describe("CaseInformationStep", () => {
     await waitFor(() =>
       expect(screen.getByLabelText(/^Billing Department Email/)).toHaveValue("patientbilling@partners.org"),
     );
-    // And labelled, so it is checked rather than trusted.
-    expect(await screen.findByText(/not confirmed/i)).toBeInTheDocument();
-    expect(screen.getByText(/not on its own domain/i)).toBeInTheDocument();
-  });
-
-  it("a confirmed address is not hedged", async () => {
-    mockFetch({
-      extract: BILL_READ,
-      contact: {
-        status: 200,
-        body: { ok: true, value: "billing@mwchc.org", emailSource: "mwchc.org", emailConfirmed: true },
-      },
-    });
-    const user = userEvent.setup();
-    renderStep();
-    await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
-
-    await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
-
-    expect(await screen.findByText(/Found on mwchc\.org/i)).toBeInTheDocument();
+    // It used to be labelled "not confirmed", with the reason. That line
+    // went with the rest on 2026-11-18, so an unconfirmed address now
+    // arrives looking exactly like a confirmed one.
     expect(screen.queryByText(/not confirmed/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/not on its own domain/i)).not.toBeInTheDocument();
   });
 
-  it("separates 'could not confirm' from 'no such hospital'", async () => {
-    // Different problems: the first means type the email in, the second
-    // means the name or the address is wrong, which is the one thing the
-    // customer can actually fix.
+  it("says nothing at all when it finds no hospital", async () => {
+    // This used to separate "found the hospital, could not confirm an
+    // email" from "no such hospital" -- different problems, and only the
+    // second is one the customer can fix. Both are silent now.
     mockFetch({ extract: BILL_READ, contact: { status: 200, body: { ok: true, value: null } } });
     const user = userEvent.setup();
     renderStep();
@@ -396,10 +374,15 @@ describe("CaseInformationStep", () => {
 
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
-    expect(await screen.findByText(/No match for that hospital and address/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(/Searching/i)).not.toBeInTheDocument());
+    expect(screen.queryByText(/No match for that hospital/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/doesn't publish a billing email/i)).not.toBeInTheDocument();
+    // The box is left for them to type into, which is the only thing left
+    // to do.
+    expect(screen.getByLabelText(/^Billing Department Email/)).toHaveValue("");
   });
 
-  it("reports a lookup that isn't available, and still lets them type it", async () => {
+  it("still lets them type it in when the lookup isn't available", async () => {
     mockFetch({
       extract: BILL_READ,
       contact: { status: 503, body: { error: "Automatic search isn't available right now — please type it in." } },
@@ -410,7 +393,10 @@ describe("CaseInformationStep", () => {
 
     await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
 
-    expect(await screen.findByText(/Automatic search isn't available right now/i)).toBeInTheDocument();
+    // The 503's wording used to render under the field. It does not any
+    // more -- the button simply stops spinning and the box stays empty.
+    await waitFor(() => expect(screen.queryByText(/Searching/i)).not.toBeInTheDocument());
+    expect(screen.queryByText(/Automatic search isn't available/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/^Billing Department Email/)).toBeInTheDocument();
   });
 
@@ -480,6 +466,76 @@ describe("CaseInformationStep", () => {
       supportEmail: "s@h.com",
       clientHospitalNumber: "45962",
       billingPhone: "555-0100",
+    });
+  });
+  // The lookup says nothing under the field, whatever it finds.
+  //
+  // Removed on request 2026-11-18: the line it used to render read like a
+  // log entry on a form. The tests above each name the phrase they expect
+  // gone, which is not enough on its own -- a differently worded note would
+  // slip past all of them. This one refuses any commentary at all.
+  describe("the lookup narrates nothing", () => {
+    // The note was the only <p> of this shape under a field, so matching
+    // on the element rather than on wording is what makes this hold
+    // against a differently worded one. An earlier version of this test
+    // named the phrases it expected gone, and a note reading "Found on
+    // example.org" walked straight past every one of them.
+    //
+    // The same class carries the "add the hospital's address first" hint,
+    // which is why each of these fills the address in before searching:
+    // with an address present that hint is gone, so any <p> left is a note.
+    const NOTE = "p.mt-1.text-xs.text-gray-500";
+
+    const RESPONSES: [string, Record<string, unknown>][] = [
+      ["an email it confirmed", { ok: true, value: "billing@mwchc.org", emailSource: "mwchc.org", emailConfirmed: true }],
+      [
+        "an email it could not confirm",
+        {
+          ok: true,
+          value: "billing@partners.org",
+          emailSource: "partners.org",
+          emailConfirmed: false,
+          emailUnconfirmedReason: "it is published on another domain",
+        },
+      ],
+      [
+        "no email but a registry record",
+        {
+          ok: true,
+          value: null,
+          fallback: { providerName: "Matthew Walker", phone: "615-327-9400", mailingAddress: "1035 14TH AVE N" },
+        },
+      ],
+      ["no match at all", { ok: true, value: null }],
+    ];
+
+    for (const [what, body] of RESPONSES) {
+      it(`stays silent on ${what}`, async () => {
+        mockFetch({ extract: BILL_READ, contact: { status: 200, body } });
+        const user = userEvent.setup();
+        renderStep();
+        await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
+
+        await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+        await waitFor(() => expect(screen.queryByText(/Searching/i)).not.toBeInTheDocument());
+
+        expect(document.querySelectorAll(NOTE)).toHaveLength(0);
+      });
+    }
+
+    it("stays silent when the lookup itself fails", async () => {
+      mockFetch({
+        extract: BILL_READ,
+        contact: { status: 503, body: { error: "Automatic search isn't available right now — please type it in." } },
+      });
+      const user = userEvent.setup();
+      renderStep();
+      await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
+
+      await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+      await waitFor(() => expect(screen.queryByText(/Searching/i)).not.toBeInTheDocument());
+
+      expect(document.querySelectorAll(NOTE)).toHaveLength(0);
     });
   });
 });

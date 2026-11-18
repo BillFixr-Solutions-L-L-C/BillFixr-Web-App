@@ -60,11 +60,6 @@ type EngineRecord = {
   verificationStatus?: string | null;
 };
 
-function listFields(labels: string[]): string {
-  if (labels.length <= 1) return labels[0] ?? "";
-  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
-}
-
 type Field = {
   key: keyof CaseInformation;
   label: string;
@@ -106,7 +101,6 @@ function Section({
   saving,
   onSearch,
   searchingKey,
-  notes,
   canSearch,
 }: {
   title: string;
@@ -119,7 +113,6 @@ function Section({
   saving: boolean;
   onSearch: (key: keyof CaseInformation) => void;
   searchingKey: keyof CaseInformation | null;
-  notes: Partial<Record<keyof CaseInformation, string>>;
   // Whether the lookup has enough to go on. One hospital name covers
   // facilities in different towns -- Matthew Walker is in both Nashville
   // and Smyrna -- so without an address the search picks the wrong one and
@@ -178,7 +171,6 @@ function Section({
                 same name apart.
               </p>
             )}
-            {notes[f.key] && <p className="mt-1 text-xs text-gray-500">{notes[f.key]}</p>}
           </div>
         ))}
       </div>
@@ -223,7 +215,6 @@ export default function CaseInformationStep({
   const [savedNote, setSavedNote] = useState(false);
   const [reading, setReading] = useState(true);
   const [searching, setSearching] = useState<keyof CaseInformation | null>(null);
-  const [searchNote, setSearchNote] = useState<Partial<Record<keyof CaseInformation, string>>>({});
 
   // Everything that IS printed on the bill is read off it as soon as the
   // step opens, so the customer corrects rather than types. Only blanks are
@@ -310,7 +301,6 @@ export default function CaseInformationStep({
     // route enforces the same rule where it can actually be reached, and
     // its 400 renders through the error path below.
     setSearching(key);
-    setSearchNote((n) => ({ ...n, [key]: "" }));
 
     const res = await fetch(`/api/dashboard/bills/${billId}/find-contact`, {
       method: "POST",
@@ -327,10 +317,6 @@ export default function CaseInformationStep({
     setSearching(null);
 
     if (!res?.ok) {
-      setSearchNote((n) => ({
-        ...n,
-        [key]: body?.error ?? "We couldn't search for this — please type it in.",
-      }));
       return;
     }
 
@@ -339,73 +325,27 @@ export default function CaseInformationStep({
       // No email is the normal outcome, not a failure: the federal registry
       // covers essentially every US provider and has no email field at all,
       // and only 3 of the 16 hospitals in the curated directory publish
-      // one. What does come back is a billing phone number, so put it in
-      // the box it belongs in rather than printing the lookup's findings
-      // under the field.
-      const f = body?.fallback;
-      const filled = applyEngineRecord(f);
-      // Worth keeping these apart in one line each: "found the hospital,
-      // could not confirm an email" means type the email in, while "found
-      // no such hospital" means the name or the address is wrong -- which
-      // is the thing the customer can actually fix.
+      // one. What does come back is a billing phone number and a postal
+      // address, so those are still filled into the boxes they belong in.
       //
-      // This used to refuse to say "no billing email", on the grounds that
-      // one failed lookup is not evidence of absence — four real hospitals
-      // were tested and all four publish an address we could not confirm.
-      // That reasoning was written when the search made a single general
-      // pass. It now makes three, aimed in turn at the provider's billing
-      // page and its patient-financial-services page, and a personal
-      // mailbox is refused rather than offered. After that, "we could not
-      // find one" is worth saying plainly: most clinics genuinely do not
-      // publish a billing email, and leaving the customer to hunt for a
-      // page that does not exist is worse than telling them.
-      //
-      // What makes it safe to say is the second half. A hospital with no
-      // email still has somewhere to post a letter, and that is the thing
-      // that actually unblocks the case — so the address is named, not
-      // merely implied.
-      const matched = Boolean(f && (f.providerName || f.npi || f.mailingAddress || f.phone));
-      const postal = String(f?.billingAddress ?? f?.mailingAddress ?? "").trim();
-      const postalIsRemitTo = Boolean(f?.billingAddress && f?.billingAddressIsRemitTo);
-      const noEmail = postal
-        ? postalIsRemitTo
-          ? `This hospital doesn't publish a billing email. Post it instead — it asks for billing mail at ${postal}.`
-          : `This hospital doesn't publish a billing email, but it does have an address: ${postal}. Post it there.`
-        : "This hospital doesn't publish a billing email — ring the billing line and ask where to send it.";
-
-      setSearchNote((n) => ({
-        ...n,
-        [key]: filled.length
-          ? `${noEmail} Filled in ${listFields(filled)} from the provider registry.`
-          : matched
-            ? noEmail
-            : "No match for that hospital and address — check both, or type the email in.",
-      }));
+      // The lookup used to explain itself underneath the field -- whether
+      // the hospital was found, whether it publishes an email, where to
+      // post the letter instead. Removed on request 2026-11-18: it read
+      // like a log line on a form. The fields it finds still fill
+      // themselves in; nothing is said about the ones it does not.
+      applyEngineRecord(body?.fallback);
       return;
     }
     setValues((v) => (v[key]?.trim() ? v : { ...v, [key]: found }));
     // An email does not mean the rest of the record is uninteresting: the
     // same answer carries the registry's phone and billing address.
     applyEngineRecord(body?.fallback);
-    // Say who published it. An address found on the web is only accepted
-    // when it appears on a page on its own domain, and naming that domain
-    // is what lets the customer see that rather than take it on faith.
-    const source = String(body?.emailSource ?? "").trim();
-    const confirmed = body?.emailConfirmed !== false;
-    const why = String(body?.emailUnconfirmedReason ?? "").trim();
-    // An unconfirmed address is filled in like any other, and labelled.
-    // Hiding it helped nobody: the customer has a browser and can open the
-    // page that defeated our checks, and an empty box tells them nothing.
-    setSearchNote((n) => ({
-      ...n,
-      [key]: confirmed
-        ? source
-          ? `Found on ${source} — check it's right.`
-          : "Found — check it's right."
-        : why
-          ? `Found${source ? ` on ${source}` : ""}, but not confirmed — ${why}. Check it before saving.`
-          : `Found${source ? ` on ${source}` : ""}, but not confirmed — check it before saving.`,
-    }));
+    // The route still reports where the address came from and whether it
+    // could be confirmed (emailSource, emailConfirmed,
+    // emailUnconfirmedReason). Nothing reads them here any more: the line
+    // that named the source and flagged an unconfirmed address was the
+    // one removed on 2026-11-18. The address is filled in either way, as
+    // it was before -- what is gone is the sentence about it.
   }
 
   const missing = missingRequiredInformation({
@@ -463,7 +403,6 @@ export default function CaseInformationStep({
         saving={saving && editing === "personal"}
         onSearch={searchByAi}
         searchingKey={searching}
-        notes={searchNote}
         canSearch={Boolean(values.hospitalAddress.trim())}
       />
 
@@ -480,7 +419,6 @@ export default function CaseInformationStep({
         saving={saving && editing === "hospital"}
         onSearch={searchByAi}
         searchingKey={searching}
-        notes={searchNote}
         canSearch={Boolean(values.hospitalAddress.trim())}
       />
 
