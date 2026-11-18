@@ -1,7 +1,7 @@
 import logging
-from contextlib import asynccontextmanager
 import tempfile
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -50,6 +50,7 @@ from app.pricing.sources import list_pricing_sources, parse_hospital_price_trans
 from app.processing import ProcessingService
 from app.repository import Repository
 from app.storage import LocalDocumentStore
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
