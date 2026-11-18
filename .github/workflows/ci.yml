@@ -258,6 +258,14 @@ jobs:
   # Fire-and-forget: confirming a deploy reached "live" needs the API key,
   # so a green job here means Render accepted the request, not that the new
   # code is serving. Render's own notifyOnFail email is the backstop.
+  #
+  # A missing hook FAILS this job rather than warning. It used to warn and
+  # exit 0, which meant a push that changed one of these services went
+  # green having deployed nothing -- and that is exactly what happened to
+  # PR #38 on 2026-11-18: the engine fixes merged, the job reported
+  # success, and the engine carried on running the old code. These steps
+  # only run when that service's own files changed, so a red job here
+  # always means real code was merged that will never ship.
   deploy-services:
     name: Deploy Render services
     needs: [python, engine-postgres]
@@ -307,8 +315,8 @@ jobs:
         run: |
           set -uo pipefail
           if [ -z "${HOOK:-}" ]; then
-            echo "::warning title=No deploy hook::RENDER_ENGINE_DEPLOY_HOOK is not set, so automation-engine was not deployed. Add it under Settings > Secrets and variables > Actions."
-            exit 0
+            echo "::error title=No deploy hook::RENDER_ENGINE_DEPLOY_HOOK is not set, so the automation-engine changes in this push were NOT deployed. Add it under Settings > Secrets and variables > Actions (Render > the service > Settings > Deploy Hook)."
+            exit 1
           fi
           code=$(curl -sS -o body.json -w '%{http_code}' -X POST "$HOOK")
           echo "HTTP $code"
@@ -323,8 +331,8 @@ jobs:
         run: |
           set -uo pipefail
           if [ -z "${HOOK:-}" ]; then
-            echo "::warning title=No deploy hook::RENDER_AI_DEPLOY_HOOK is not set, so ai-service was not deployed. Add it under Settings > Secrets and variables > Actions."
-            exit 0
+            echo "::error title=No deploy hook::RENDER_AI_DEPLOY_HOOK is not set, so the ai-service changes in this push were NOT deployed. Add it under Settings > Secrets and variables > Actions (Render > the service > Settings > Deploy Hook)."
+            exit 1
           fi
           code=$(curl -sS -o body.json -w '%{http_code}' -X POST "$HOOK")
           echo "HTTP $code"

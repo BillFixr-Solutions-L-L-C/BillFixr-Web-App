@@ -200,3 +200,23 @@ export async function buildCaseDocumentRows(
 
   return rows;
 }
+
+/**
+ * Whether a document row's link points at a file rather than somewhere in
+ * this app.
+ *
+ * Two kinds of row land in the list. The analysis is a page of this app
+ * and the provider's reply is a card further down the same screen, so
+ * both are followed in place -- opening those in a new tab would lose the
+ * case the customer is reading. Everything else is a file, and a file
+ * opens in a new tab rather than navigating the case screen away to a PDF.
+ *
+ * `/api/` is the subtle one: the appeal letter is served as a PDF from
+ * /api/dashboard/cases/[id]/appeal-letter, so it starts with "/" like an
+ * in-app route while being just as much a file as a signed storage URL.
+ */
+export function opensInNewTab(previewUrl: string): boolean {
+  if (previewUrl.startsWith("#")) return false;
+  if (previewUrl.startsWith("/api/")) return true;
+  return !previewUrl.startsWith("/");
+}

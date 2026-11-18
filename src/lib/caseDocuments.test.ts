@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildCaseDocumentRows, formatFileSize, isCaseDocumentType } from "./caseDocuments";
+import { buildCaseDocumentRows, formatFileSize, isCaseDocumentType, opensInNewTab } from "./caseDocuments";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function supabaseWithSignedUrls(): SupabaseClient {
@@ -256,5 +256,29 @@ describe("buildCaseDocumentRows for staff", () => {
 
     const forCustomer = await buildCaseDocumentRows(supabaseWithSignedUrls(), { ...BASE, stored: [STORED] });
     expect(forCustomer.find((r) => r.id === "doc-1")!.sublabel).toBeNull();
+  });
+});
+
+// Which rows open in a new tab.
+//
+// The appeal letter is served as a PDF from an /api/ path, so it starts
+// with "/" like an in-app route while being just as much a file as a
+// signed storage URL. Routed through <Link> it navigated the case screen
+// itself away to a PDF.
+describe("where a document link goes", () => {
+  it("opens a stored file in a new tab", () => {
+    expect(opensInNewTab("https://storage.example.com/signed/bill.pdf")).toBe(true);
+  });
+
+  it("opens the appeal letter in a new tab, although its path is local", () => {
+    expect(opensInNewTab("/api/dashboard/cases/case-1/appeal-letter")).toBe(true);
+  });
+
+  it("follows the analysis in place, because it is a page of this app", () => {
+    expect(opensInNewTab("/dashboard/documents/bill-1?from=case")).toBe(false);
+  });
+
+  it("follows an anchor in place, because it is further down this screen", () => {
+    expect(opensInNewTab("#provider-reply")).toBe(false);
   });
 });

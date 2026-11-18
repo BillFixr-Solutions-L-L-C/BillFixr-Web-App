@@ -3,8 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import Sidebar from "./Sidebar";
 
 let pathname = "/dashboard";
+// What the URL says the customer came from. `?from=case` keeps Active
+// Case highlighted while they read a document that belongs to the case.
+let from: string | null = null;
 vi.mock("next/navigation", () => ({
   usePathname: () => pathname,
+  useSearchParams: () => new URLSearchParams(from ? { from } : {}),
   // The sidebar now carries the language switcher, which refreshes the
   // route so server components re-read the language cookie.
   useRouter: () => ({ refresh: vi.fn() }),
@@ -86,5 +90,44 @@ describe("Sidebar", () => {
     pathname = "/dashboard/completed/case-1";
     render(<Sidebar user={USER} />);
     expect(activeLabel()).not.toContain("Active Case");
+  });
+});
+
+// Reported by Segun on 2026-11-18: "when you open a file in Active Case
+// don't change it to My Document."
+//
+// The analysis of a bill is served from /dashboard/documents/[id], so
+// following it from the case moved the highlight to My Document and read
+// as having been taken somewhere else entirely.
+describe("a document opened from the case", () => {
+  function renderAt(path: string, cameFrom: string | null) {
+    pathname = path;
+    from = cameFrom;
+    const result = render(<Sidebar user={USER} />);
+    from = null;
+    return result;
+  }
+
+  function highlighted(): string[] {
+    return screen
+      .getAllByRole("link")
+      .filter((a) => a.className.includes("bg-[#ebebeb]"))
+      .map((a) => a.textContent?.trim() ?? "");
+  }
+
+  it("keeps Active Case highlighted, not My Document", () => {
+    renderAt("/dashboard/documents/bill-1", "case");
+    expect(highlighted()).toEqual(["Active Case"]);
+  });
+
+  it("still highlights My Document when the customer went there themselves", () => {
+    renderAt("/dashboard/documents/bill-1", null);
+    expect(highlighted()).toEqual(["My Document"]);
+  });
+
+  it("highlights exactly one section either way", () => {
+    // Two highlighted sections would be worse than the wrong one.
+    renderAt("/dashboard/documents/bill-1", "case");
+    expect(highlighted()).toHaveLength(1);
   });
 });

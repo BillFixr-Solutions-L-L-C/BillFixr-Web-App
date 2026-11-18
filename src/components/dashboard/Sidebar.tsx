@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Logo from "@/components/Logo";
 import NavIcon, { type NavIconName } from "@/components/dashboard/NavIcon";
 import { SOCIAL_LINKS } from "@/components/socialLinks";
@@ -41,10 +41,23 @@ function MenuIcon() {
 
 function NavLink({ label, href, icon, onNavigate }: Omit<Link, "labelKey"> & { label: string; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const cameFrom = useSearchParams().get("from");
   // Detail routes live under their section (e.g. /dashboard/documents/[id]),
   // so the section stays highlighted while you're inside one. /dashboard
   // itself is exact — everything else is nested under it.
-  const active = href === "/dashboard" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+  //
+  // `?from=case` overrides that. A document opened from Active Case is
+  // still the customer reading their case: the file happens to be served
+  // from /dashboard/documents/, and following it used to move the
+  // highlight to My Document, which reads as having been taken somewhere
+  // else. The section that owns the journey wins over the one that owns
+  // the URL.
+  const owningHref = cameFrom === "case" ? "/dashboard/case" : null;
+  const active = owningHref
+    ? href === owningHref
+    : href === "/dashboard"
+      ? pathname === href
+      : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <Link
