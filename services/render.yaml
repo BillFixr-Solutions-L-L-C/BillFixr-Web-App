@@ -85,6 +85,10 @@ services:
       mountPath: /app/data
       sizeGB: 2
     envVars:
+      # The disk above is mounted over the SQLite file, so it survives
+      # restarts. Without this the engine refuses to start on Render.
+      - key: ENGINE_STORE_ON_DISK
+        value: "1"
       - key: ENABLE_DEMO_UI
         value: "0"
       # No browser calls this service, so no origin needs allowing.

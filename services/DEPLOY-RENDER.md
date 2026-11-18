@@ -617,10 +617,18 @@ minutes, so on that tier the only thing that reads replies and sends the
 day**, so a reply or a follow-up can be up to ~24 hours late unless a
 customer opens the case (which reconciles it on read).
 
-To tighten that without paying for an always-on instance, call the two
-cron routes from an external scheduler every 15-60 minutes with
-`Authorization: Bearer $CRON_SECRET`. Moving the engine to a paid
-instance (`render.yaml`) removes the dependency altogether.
+`.github/workflows/engine-cron.yml` closes that gap without paying for an
+always-on instance: it calls the two cron routes every 30 minutes. Add two
+repository secrets to turn it on, `APP_URL` (the production origin) and
+`CRON_SECRET` (the same value the web app has). Without them it logs a
+warning and does nothing. Moving the engine to a paid instance
+(`render.yaml`) removes the dependency altogether.
+
+**The engine now refuses to start on Render without a durable store.** Set
+`ENGINE_DATABASE_URL` (Postgres, the right choice on the free tier), or, on
+the paid blueprint, mount a disk and set `ENGINE_STORE_ON_DISK=1` (already in
+`render.yaml`). Otherwise a restart deletes the only record that letters
+were sent, and replies are read and dropped.
 
 The inbox poller now logs `[INBOX POLLER] sync failed: ...` when the
 mailbox cannot be read, instead of failing silently; check the engine log

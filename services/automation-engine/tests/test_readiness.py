@@ -196,3 +196,27 @@ class TestEnforce:
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
 
         assert readiness.enforce()["ready"] is False
+
+
+def test_a_render_container_with_no_durable_store_refuses_to_start():
+    """On Render's free tier the SQLite file is deleted on every spin-down,
+    taking the only record that letters were sent. That is a critical gap
+    there, even though on a laptop it is only a warning."""
+    env = {**without("ENGINE_DATABASE_URL"), "RENDER": "true"}
+    result = readiness.check(env)
+    assert "ENGINE_DATABASE_URL" in criticals(result)
+    assert result["ready"] is False
+    assert "ENGINE_STORE_ON_DISK" in " ".join(p["effect"] for p in result["problems"])
+
+
+def test_a_mounted_disk_on_render_is_a_durable_store():
+    env = {**without("ENGINE_DATABASE_URL"), "RENDER": "true", "ENGINE_STORE_ON_DISK": "1"}
+    result = readiness.check(env)
+    assert result["store_durable"] is True
+    assert result["store_kind"] == "disk"
+    assert "ENGINE_DATABASE_URL" not in settings_of(result)
+
+
+def test_postgres_on_render_is_fine():
+    result = readiness.check({**GOOD, "RENDER": "true"})
+    assert result["ready"] is True and result["store_kind"] == "postgres"
