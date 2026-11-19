@@ -5,25 +5,17 @@ import { sendEmail } from "@/lib/email";
 import { SUPPORT_EMAIL } from "@/lib/businessContact";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { escapeHtml } from "@/lib/html";
+import { emailCopy, fillCopy, greeting, type EmailMessage, type MessageId } from "@/lib/emailCopy";
+import { customerLanguage, type Language } from "@/lib/language";
 
-const STATUS_EMAIL_CONTENT: Record<
-  string,
-  { subject: string; heading: string; body: (subject: string, note?: string) => string }
-> = {
-  in_progress: {
-    subject: "We're looking into your support ticket",
-    heading: "We're on it",
-    body: (subject) => `An agent has picked up your ticket about "${subject}" and is looking into it now.`,
-  },
-  resolved: {
-    subject: "Your support ticket has been resolved",
-    heading: "Your ticket has been resolved",
-    // An admin-written note (from the "Reply to customer" box) replaces
-    // the generic line so the customer sees what was actually fixed.
-    body: (subject, note) =>
-      note ||
-      `Your ticket about "${subject}" has been marked resolved. If you still need help, just send another message from Support.`,
-  },
+// Which status change tells the customer anything, and which copy says
+// it. The sentences themselves live in src/lib/emailCopy.ts, in both
+// languages -- they used to be English literals here, which is why a
+// customer registered in Spanish was told in English that an agent had
+// picked up their ticket.
+const STATUS_EMAIL_COPY: Record<string, MessageId> = {
+  in_progress: "supportInProgress",
+  resolved: "supportResolved",
 };
 
 // Admin marking a ticket in-progress/resolved from AdminSupportPage —
@@ -33,7 +25,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { id } = await params;
   const { status, note } = await request.json();
 
-  if (!(status in STATUS_EMAIL_CONTENT)) {
+  if (!(status in STATUS_EMAIL_COPY)) {
     return NextResponse.json({ error: "invalid request" }, { status: 400 });
   }
   if (note !== undefined && typeof note !== "string") {
@@ -59,7 +51,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .from("support_tickets")
     .update({ status })
     .eq("id", id)
-    .select("subject, profiles(name, email)")
+    .select("subject, profiles(name, email, communication_language)")
     .single();
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -68,9 +60,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   // support_tickets -> profiles is a to-one relationship, so this embed
   // comes back as a plain object at runtime even though supabase-js
   // infers it as an array without generated DB types (see BACKEND-PLAN.md).
-  const profile = updated?.profiles as unknown as { name: string; email: string } | null;
-  const content = STATUS_EMAIL_CONTENT[status];
-  if (profile?.email) {
+  const profile = updated?.profiles as unknown as
+    | { name: string; email: string; communication_language: string | null }
+    | null;
+  const copyId = STATUS_EMAIL_COPY[status];
+  if (profile?.email && copyId) {
+    const language = customerLanguage(profile);
+    const content = emailCopy(copyId, language);
     try {
       await sendEmail({
         to: profile.email,
@@ -79,9 +75,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         // this, hitting Reply mails notifications@, not support.
         replyTo: SUPPORT_EMAIL,
         html: ticketStatusEmailHtml({
-          name: profile.name ?? "there",
-          heading: content.heading,
-          body: content.body(updated?.subject ?? "your ticket", note?.trim() || undefined),
+          name: profile.name,
+          language,
+          copy: content,
+          // An admin-written note replaces the generic line, so the
+          // customer sees what was actually fixed. It is sent as typed:
+          // a human wrote it to this person.
+          body:
+            note?.trim() || fillCopy(content.body, { subject: updated?.subject ?? "" }),
         }),
       });
     } catch (err) {
@@ -93,11 +94,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   return NextResponse.json({ ok: true });
 }
 
-function ticketStatusEmailHtml({ name, heading, body }: { name: string; heading: string; body: string }) {
+function ticketStatusEmailHtml({
+  name,
+  language,
+  copy,
+  body,
+}: {
+  name: string | null | undefined;
+  language: Language;
+  copy: EmailMessage;
+  body: string;
+}) {
   return renderEmailCard({
-    title: heading,
-    heading,
-    bodyHtml: emailParagraph(`Hi ${escapeHtml(name)}, ${escapeHtml(body)}`),
-    cta: { text: "View Support", href: "https://billfixr.com/dashboard/support" },
+    title: copy.heading,
+    heading: copy.heading,
+    language,
+    bodyHtml: emailParagraph(`${escapeHtml(greeting(name, language))} ${escapeHtml(body)}`),
+    cta: { text: copy.cta, href: "https://billfixr.com/dashboard/support" },
   });
 }

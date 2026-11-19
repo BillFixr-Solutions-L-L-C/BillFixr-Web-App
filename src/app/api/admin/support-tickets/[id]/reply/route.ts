@@ -4,6 +4,8 @@ import { getDomainAccess, hasFullDomainAccess } from "@/lib/domainAccess";
 import { sendEmail } from "@/lib/email";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { escapeHtml } from "@/lib/html";
+import { emailCopy, fillCopy, greeting } from "@/lib/emailCopy";
+import { customerLanguage } from "@/lib/language";
 import { SUPPORT_EMAIL } from "@/lib/businessContact";
 
 const MAX_LENGTH = 5000;
@@ -42,7 +44,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const { data: ticket } = await supabase
     .from("support_tickets")
-    .select("id, subject, profiles(name, email)")
+    .select("id, subject, profiles(name, email, communication_language)")
     .eq("id", id)
     .single();
   if (!ticket) {
@@ -52,24 +54,33 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // support_tickets -> profiles is a to-one relationship, so this embed
   // comes back as a plain object at runtime even though supabase-js infers
   // it as an array without generated DB types.
-  const profile = ticket.profiles as unknown as { name: string; email: string } | null;
+  const profile = ticket.profiles as unknown as
+    | { name: string; email: string; communication_language: string | null }
+    | null;
   if (!profile?.email) {
     return NextResponse.json({ error: "This customer has no email address on file." }, { status: 409 });
   }
 
+  // The customer's own language, not the agent's. The agent's message is
+  // sent exactly as typed -- a human wrote those words to this person, and
+  // putting them through a dictionary would be worse than leaving them
+  // alone -- but everything around them is theirs to read.
+  const language = customerLanguage(profile);
+  const copy = emailCopy("supportReply", language);
   try {
     await sendEmail({
       to: profile.email,
-      subject: `Re: ${ticket.subject}`,
+      subject: fillCopy(copy.subject, { subject: ticket.subject ?? "" }),
       replyTo: SUPPORT_EMAIL,
       html: renderEmailCard({
-        title: "A reply from BillFixr Support",
-        heading: "A reply from BillFixr Support",
+        title: copy.heading,
+        heading: copy.heading,
+        language,
         bodyHtml:
-          emailParagraph(`Hi ${escapeHtml(profile.name ?? "there")},`) +
+          emailParagraph(escapeHtml(greeting(profile.name, language))) +
           emailParagraph(escapeHtml(message.trim()).replace(/\n/g, "<br>")) +
-          emailParagraph("You can reply straight to this email and it will reach us."),
-        cta: { text: "View Support", href: "https://billfixr.com/dashboard/support" },
+          emailParagraph(escapeHtml(copy.body)),
+        cta: { text: copy.cta, href: "https://billfixr.com/dashboard/support" },
       }),
     });
   } catch (err) {

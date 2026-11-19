@@ -113,3 +113,66 @@ describe("POST /api/admin/support-tickets/[id]/reply", () => {
     expect((await POST(req({ message: "hi" }), { params })).status).toBe(409);
   });
 });
+
+// A customer who registered in Spanish is written to in Spanish.
+//
+// The agent's own words are sent as typed; the greeting, the heading, the
+// trailer and the button are the customer's to read. All four were
+// English literals in the route handler.
+describe("the language an agent's reply is wrapped in", () => {
+  const SPANISH_TICKET = {
+    id: "ticket-1",
+    subject: "Problema de pago",
+    profiles: { name: "Ana", email: "ana@example.com", communication_language: "es" },
+  };
+
+  it("wraps the agent's message in Spanish", async () => {
+    allowAdmin();
+    serverMock.queueResult("support_tickets", { data: SPANISH_TICKET, error: null });
+    sendEmail.mockResolvedValue({});
+
+    await POST(req({ message: "We have refunded it." }), { params });
+
+    const call = sendEmail.mock.calls[0][0];
+    expect(String(call.html)).toContain("Hola Ana,");
+    expect(String(call.html)).toContain("Una respuesta de Soporte de BillFixr");
+    expect(String(call.html)).toContain("Puede responder directamente a este correo");
+    expect(String(call.html)).toContain('<html lang="es">');
+  });
+
+  it("sends the agent's own words untouched", async () => {
+    // A human wrote them to this person. Translating them would be worse
+    // than leaving them alone.
+    allowAdmin();
+    serverMock.queueResult("support_tickets", { data: SPANISH_TICKET, error: null });
+    sendEmail.mockResolvedValue({});
+
+    await POST(req({ message: "We have refunded the $5 commitment fee." }), { params });
+
+    expect(String(sendEmail.mock.calls[0][0].html)).toContain("We have refunded the $5 commitment fee.");
+  });
+
+  it("keeps the customer's own subject on the Re: line", async () => {
+    allowAdmin();
+    serverMock.queueResult("support_tickets", { data: SPANISH_TICKET, error: null });
+    sendEmail.mockResolvedValue({});
+
+    await POST(req({ message: "hi" }), { params });
+
+    expect(sendEmail.mock.calls[0][0].subject).toBe("Re: Problema de pago");
+  });
+
+  it("still writes English to a customer who registered in English", async () => {
+    allowAdmin();
+    serverMock.queueResult("support_tickets", {
+      data: { ...TICKET, profiles: { ...TICKET.profiles, communication_language: "en" } },
+      error: null,
+    });
+    sendEmail.mockResolvedValue({});
+
+    await POST(req({ message: "hi" }), { params });
+
+    expect(String(sendEmail.mock.calls[0][0].html)).toContain("Hi Jane,");
+    expect(String(sendEmail.mock.calls[0][0].html)).toContain("A reply from BillFixr Support");
+  });
+});

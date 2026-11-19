@@ -126,3 +126,87 @@ describe("PATCH /api/admin/support-tickets/[id]", () => {
     expect(await res.json()).toEqual({ ok: true });
   });
 });
+
+// A customer who registered in Spanish is written to in Spanish.
+//
+// These two emails were English literals in the route handler, so they
+// went out in English however the customer had registered -- the profile
+// column was read correctly everywhere else and never read here. Nothing
+// failed when that was true, which is why it survived.
+describe("the language a ticket email is written in", () => {
+  function ticketFor(language: string | null) {
+    serverMock.getUser.mockResolvedValue({ data: { user: { id: "admin-1" } } });
+    serverMock.queueResult("profiles", { data: { role: "admin" }, error: null });
+    serverMock.queueResult("support_tickets", {
+      data: {
+        subject: "Problema de pago",
+        profiles: { name: "Ana", email: "ana@example.com", communication_language: language },
+      },
+      error: null,
+    });
+  }
+
+  function sentHtml(): string {
+    return String(sendEmail.mock.calls[0][0].html);
+  }
+
+  it("writes the in-progress email in Spanish", async () => {
+    ticketFor("es");
+
+    await PATCH(makeRequest({ status: "in_progress" }), { params });
+
+    expect(sendEmail.mock.calls[0][0].subject).toBe("Estamos revisando su solicitud de soporte");
+    expect(sentHtml()).toContain("Hola Ana,");
+    expect(sentHtml()).toContain("Un agente ha tomado su solicitud");
+    expect(sentHtml()).not.toContain("An agent has picked up");
+  });
+
+  it("writes the resolved email in Spanish, naming the ticket", async () => {
+    ticketFor("es");
+
+    await PATCH(makeRequest({ status: "resolved" }), { params });
+
+    expect(sendEmail.mock.calls[0][0].subject).toBe("Su solicitud de soporte se ha resuelto");
+    expect(sentHtml()).toContain("Problema de pago");
+    expect(sentHtml()).not.toContain("has been marked resolved");
+  });
+
+  it("marks the document as Spanish, not English", async () => {
+    // A Spanish email claiming lang="en" is wrong for a screen reader and
+    // for anything offering to translate it.
+    ticketFor("es");
+
+    await PATCH(makeRequest({ status: "resolved" }), { params });
+
+    expect(sentHtml()).toContain('<html lang="es">');
+  });
+
+  it("still writes English to a customer who registered in English", async () => {
+    ticketFor("en");
+
+    await PATCH(makeRequest({ status: "in_progress" }), { params });
+
+    expect(sendEmail.mock.calls[0][0].subject).toBe("We're looking into your support ticket");
+    expect(sentHtml()).toContain("Hi Ana,");
+  });
+
+  it("falls back to English for a profile recorded before the column existed", async () => {
+    ticketFor(null);
+
+    await PATCH(makeRequest({ status: "in_progress" }), { params });
+
+    expect(sendEmail.mock.calls[0][0].subject).toBe("We're looking into your support ticket");
+  });
+
+  it("sends an admin's own note as typed, not translated", async () => {
+    // A human wrote those words to this person. Running them through a
+    // dictionary would be worse than leaving them alone.
+    ticketFor("es");
+
+    await PATCH(makeRequest({ status: "resolved", note: "We refunded the $5 commitment fee." }), { params });
+
+    expect(sentHtml()).toContain("We refunded the $5 commitment fee.");
+    // The chrome around it is still Spanish.
+    expect(sentHtml()).toContain("Hola Ana,");
+  });
+});

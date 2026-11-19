@@ -129,3 +129,46 @@ describe("POST /api/dev/advance-case", () => {
     expect(adminMock.from).not.toHaveBeenCalled();
   });
 });
+
+// A customer who registered in Spanish is told in Spanish that their
+// letter has gone. This was an English literal in the route handler.
+describe("the language the letter-sent email is written in", () => {
+  function caseFor(language: string | null) {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    serverMock.queueResult("cases", { data: { id: "case-1", user_id: USER.id }, error: null });
+    adminMock.queueResult("cases", { data: null, error: null });
+    serverMock.queueResult("profiles", {
+      data: { name: "Ana", email: "ana@example.com", communication_language: language },
+      error: null,
+    });
+  }
+
+  it("writes it in Spanish", async () => {
+    caseFor("es");
+
+    await POST(makeRequest({ caseId: "case-1", toStatus: "awaiting_response" }));
+
+    const call = sendEmail.mock.calls[0][0];
+    expect(call.subject).toBe("Enviamos su carta de reclamación");
+    expect(String(call.html)).toContain("Hola Ana,");
+    expect(String(call.html)).toContain("Ver su caso");
+    expect(String(call.html)).toContain('<html lang="es">');
+    expect(String(call.html)).not.toContain("on its way");
+  });
+
+  it("still writes English to a customer who registered in English", async () => {
+    caseFor("en");
+
+    await POST(makeRequest({ caseId: "case-1", toStatus: "awaiting_response" }));
+
+    expect(sendEmail.mock.calls[0][0].subject).toBe("Your appeal letter has been sent");
+  });
+
+  it("falls back to English for a profile recorded before the column existed", async () => {
+    caseFor(null);
+
+    await POST(makeRequest({ caseId: "case-1", toStatus: "awaiting_response" }));
+
+    expect(sendEmail.mock.calls[0][0].subject).toBe("Your appeal letter has been sent");
+  });
+});

@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { escapeHtml } from "@/lib/html";
+import { emailCopy, greeting, type EmailMessage, type MessageId } from "@/lib/emailCopy";
+import { customerLanguage, type Language } from "@/lib/language";
 
 // Case status updates are deliberately not writable directly by
 // customers via RLS (see cases_admin_write in the schema) — otherwise
@@ -38,12 +40,12 @@ import { escapeHtml } from "@/lib/html";
 // lever, not because anything depends on it.
 const ALLOWED_STATUSES = new Set(["awaiting_response"]);
 
-const STATUS_EMAIL_CONTENT: Record<string, { subject: string; heading: string; body: string }> = {
-  awaiting_response: {
-    subject: "Your appeal letter has been sent",
-    heading: "Your appeal letter is on its way",
-    body: "We've sent your appeal letter to your provider on your behalf. We'll keep following up automatically and let you know as soon as there's a response.",
-  },
+// Which statuses tell the customer anything. The copy itself lives in
+// src/lib/emailCopy.ts, in both languages -- it used to be an English
+// literal here, which is why a customer registered in Spanish was told in
+// English that their letter had gone.
+const STATUS_EMAIL_COPY: Record<string, MessageId> = {
+  awaiting_response: "letterSent",
 };
 
 export async function POST(request: Request) {
@@ -72,14 +74,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const { data: profile } = await supabase.from("profiles").select("name, email").eq("id", user.id).single();
-  const content = STATUS_EMAIL_CONTENT[toStatus];
-  if (profile?.email && content) {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("name, email, communication_language")
+    .eq("id", user.id)
+    .single();
+  const copyId = STATUS_EMAIL_COPY[toStatus];
+  if (profile?.email && copyId) {
+    const language = customerLanguage(profile);
+    const content = emailCopy(copyId, language);
     try {
       await sendEmail({
         to: profile.email,
         subject: content.subject,
-        html: caseStatusEmailHtml({ name: profile.name ?? "there", heading: content.heading, body: content.body }),
+        html: caseStatusEmailHtml({ name: profile.name, language, copy: content }),
       });
     } catch (err) {
       // Best-effort — the status change itself already succeeded.
@@ -90,11 +98,20 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
-function caseStatusEmailHtml({ name, heading, body }: { name: string; heading: string; body: string }) {
+function caseStatusEmailHtml({
+  name,
+  language,
+  copy,
+}: {
+  name: string | null | undefined;
+  language: Language;
+  copy: EmailMessage;
+}) {
   return renderEmailCard({
-    title: heading,
-    heading,
-    bodyHtml: emailParagraph(`Hi ${escapeHtml(name)}, ${escapeHtml(body)}`),
-    cta: { text: "View Your Case", href: "https://billfixr.com/dashboard/case" },
+    title: copy.heading,
+    heading: copy.heading,
+    language,
+    bodyHtml: emailParagraph(`${escapeHtml(greeting(name, language))} ${escapeHtml(copy.body)}`),
+    cta: { text: copy.cta, href: "https://billfixr.com/dashboard/case" },
   });
 }
