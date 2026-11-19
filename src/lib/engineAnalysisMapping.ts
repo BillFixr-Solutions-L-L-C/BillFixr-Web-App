@@ -77,7 +77,16 @@ export function mapBillAnalysisFromEngine(
   const insurancePaid = Math.max(0, totalBilled - patientDue);
 
   return {
+    // The English sentence, still written: staff read it, and it is what
+    // an older analysis has instead of the parts below.
     analysisSummary: summarize(audit, savings),
+    // The same facts, unformatted into a sentence, so the customer's
+    // screen can compose them in the language it is being read in.
+    summaryParts: {
+      issues: (audit.issues ?? []).length,
+      savings: savings > 0 ? money(savings) : null,
+      risk: audit.risk_level ?? null,
+    },
     memberName: billData.patient_name || "Not found",
     // Neither the engine's extraction nor its audit carries an insurance
     // member id or group. Said plainly rather than invented.

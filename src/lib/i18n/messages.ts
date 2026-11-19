@@ -605,6 +605,16 @@ export const MESSAGES = {
     "upload.dropBefore": "Drag and drop your files,",
     "upload.dropLink": "or click here to choose",
     "upload.dropAfter": "from your device. Supported files includes Jpeg, png, doc, pdf. Max 10MB — select multiple photos for a multi-page bill.",
+
+    // --- the analysis summary, composed from its parts ---
+    "analysis.summaryNone": "We reviewed this bill against the audit rules and found nothing to dispute.",
+    "analysis.summaryOne": "1 issue found on this bill",
+    "analysis.summaryMany": "{count} issues found on this bill",
+    "analysis.summaryWorth": ", worth up to {amount}",
+    "analysis.summaryRisk": "Risk level: {risk}.",
+    "risk.high": "High",
+    "risk.medium": "Medium",
+    "risk.low": "Low",
   },
 
   es: {
@@ -1164,6 +1174,16 @@ export const MESSAGES = {
     "upload.dropBefore": "Arrastre y suelte sus archivos,",
     "upload.dropLink": "o haga clic aquí para elegirlos",
     "upload.dropAfter": "desde su dispositivo. Se admiten archivos Jpeg, png, doc y pdf. Máximo 10 MB: seleccione varias fotos si la factura tiene varias páginas.",
+
+    // --- the analysis summary, composed from its parts ---
+    "analysis.summaryNone": "Revisamos esta factura con nuestras reglas de auditoría y no encontramos nada que reclamar.",
+    "analysis.summaryOne": "Se encontró 1 problema en esta factura",
+    "analysis.summaryMany": "Se encontraron {count} problemas en esta factura",
+    "analysis.summaryWorth": ", con un ahorro de hasta {amount}",
+    "analysis.summaryRisk": "Nivel de riesgo: {risk}.",
+    "risk.high": "Alto",
+    "risk.medium": "Medio",
+    "risk.low": "Bajo",
   },
 } as const satisfies Record<Language, Record<string, string>>;
 

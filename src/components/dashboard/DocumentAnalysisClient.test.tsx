@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import DocumentAnalysisClient from "./DocumentAnalysisClient";
 import { MOCK_BILL_ANALYSIS } from "@/lib/billAnalysis";
+import { LanguageProvider } from "@/lib/i18n/client";
 
 const refresh = vi.fn();
 const push = vi.fn();
@@ -219,5 +220,74 @@ describe("Proceed", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Re-scan" })).toBeDisabled());
     resolve(new Response(JSON.stringify({ id: "neg-1" }), { status: 200 }));
+  });
+});
+
+// The summary sentence follows the language the screen is read in.
+//
+// It used to render a sentence composed in English when the bill was
+// scanned and stored that way, so a customer reading the site in Spanish
+// got one English paragraph in the middle of it.
+describe("the analysis summary", () => {
+  const PARTS = { issues: 2, savings: "$278.54", risk: "High" };
+
+  function renderWith(analysis: Partial<typeof MOCK_BILL_ANALYSIS>, language: "en" | "es") {
+    return render(
+      <LanguageProvider language={language}>
+        <DocumentAnalysisClient
+          analysis={{ ...MOCK_BILL_ANALYSIS, ...analysis } as never}
+          headerInfo={[]}
+          doc={DOC}
+        />
+      </LanguageProvider>,
+    );
+  }
+
+  it("reads in Spanish when the screen is Spanish", () => {
+    renderWith({ analysisSummary: "2 issues found on this bill.", summaryParts: PARTS }, "es");
+
+    expect(screen.getByText(/Se encontraron 2 problemas en esta factura/)).toBeInTheDocument();
+    expect(screen.getByText(/Nivel de riesgo: Alto/)).toBeInTheDocument();
+    expect(screen.queryByText(/issues found on this bill/)).not.toBeInTheDocument();
+  });
+
+  it("reads in English when the screen is English", () => {
+    renderWith({ analysisSummary: "ignored", summaryParts: PARTS }, "en");
+
+    expect(screen.getByText(/2 issues found on this bill/)).toBeInTheDocument();
+    expect(screen.getByText(/Risk level: High/)).toBeInTheDocument();
+  });
+
+  it("says one issue in the singular", () => {
+    renderWith({ summaryParts: { ...PARTS, issues: 1 } }, "en");
+
+    expect(screen.getByText(/1 issue found/)).toBeInTheDocument();
+    expect(screen.queryByText(/1 issues found/)).not.toBeInTheDocument();
+  });
+
+  it("says plainly when there is nothing to dispute", () => {
+    renderWith({ summaryParts: { issues: 0, savings: null, risk: null } }, "es");
+
+    expect(screen.getByText(/no encontramos nada que reclamar/)).toBeInTheDocument();
+  });
+
+  it("leaves out the savings when there are none", () => {
+    renderWith({ summaryParts: { ...PARTS, savings: null } }, "en");
+
+    expect(screen.queryByText(/worth up to/)).not.toBeInTheDocument();
+    expect(screen.getByText(/2 issues found on this bill/)).toBeInTheDocument();
+  });
+
+  it("shows a risk grade it does not recognise rather than dropping it", () => {
+    renderWith({ summaryParts: { ...PARTS, risk: "Critical" } }, "es");
+
+    expect(screen.getByText(/Nivel de riesgo: Critical/)).toBeInTheDocument();
+  });
+
+  it("falls back to the stored sentence for an analysis saved before the parts existed", () => {
+    // English, but true. Better than an empty space where the summary was.
+    renderWith({ analysisSummary: "3 issues found on this bill.", summaryParts: undefined }, "es");
+
+    expect(screen.getByText("3 issues found on this bill.")).toBeInTheDocument();
   });
 });
