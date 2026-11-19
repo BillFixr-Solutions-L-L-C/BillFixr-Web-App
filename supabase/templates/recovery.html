@@ -31,7 +31,7 @@
           <tr>
             <td style="padding:0 40px 8px;">
               <h1 style="margin:0; font-size:22px; line-height:1.3; color:#003322; font-weight:700; text-align:center;">
-                Reset your password
+                Reset your password &middot; Restablezca su contrase&ntilde;a
               </h1>
             </td>
           </tr>
@@ -41,6 +41,10 @@
                 We received a request to reset the password for your BillFixr account
                 (<span style="color:#003322; font-weight:600;">{{ .Email }}</span>).
                 Click the button below to choose a new one. This link expires in 1 hour.
+              </p>
+              <p style="margin:8px 0 0; font-size:13px; line-height:1.6; color:#a6b1bb; text-align:center;">
+                Recibimos una solicitud para restablecer la contrase&ntilde;a de su cuenta de BillFixr.
+                Pulse el bot&oacute;n para elegir una nueva. Este enlace caduca en 1 hora.
               </p>
             </td>
           </tr>
@@ -53,7 +57,7 @@
                   <td align="center" style="border-radius:999px; background-color:#0f7545;">
                     <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password"
                        style="display:inline-block; padding:14px 40px; font-size:14px; font-weight:700; color:#ffffff; text-decoration:none; border-radius:999px;">
-                      Reset Password
+                      Reset Password &middot; Restablecer
                     </a>
                   </td>
                 </tr>
@@ -65,7 +69,8 @@
           <tr>
             <td style="padding:24px 40px 0;">
               <p style="margin:0; font-size:12px; line-height:1.6; color:#a6b1bb; text-align:center;">
-                Button not working? Copy and paste this link into your browser:<br />
+                Button not working? Copy and paste this link into your browser.<br />
+                &iquest;El bot&oacute;n no funciona? Copie y pegue este enlace en su navegador:<br />
                 <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password" style="color:#0f7545; word-break:break-all;">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password</a>
               </p>
             </td>
