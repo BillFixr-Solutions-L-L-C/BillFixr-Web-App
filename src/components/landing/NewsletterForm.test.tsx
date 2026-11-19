@@ -25,7 +25,13 @@ describe("NewsletterForm", () => {
     await waitFor(() => expect(screen.getByText(/You're subscribed/)).toBeInTheDocument());
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/newsletter/subscribe",
-      expect.objectContaining({ method: "POST", body: JSON.stringify({ email: "reader@example.com" }) }),
+      // The language goes with it: a subscriber has no profile, so this
+      // is the only thing that decides what language the confirmation
+      // email is written in.
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ email: "reader@example.com", language: "en" }),
+      }),
     );
   });
 

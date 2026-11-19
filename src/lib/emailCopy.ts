@@ -252,3 +252,46 @@ export const WELCOME_STEPS: Record<Language, { title: string; description: strin
     { title: "Usted ahorra", description: "Reciba su factura reducida" },
   ],
 };
+
+/** The two emails that go to someone who has no account yet.
+ *
+ *  A newsletter subscriber and a job applicant have no profile, so there
+ *  is no communication_language to read. What there is instead is the
+ *  language they were reading the site in when they typed their address,
+ *  which the form sends with the request. It is a weaker signal than a
+ *  registered preference -- it is whatever the switcher happened to be
+ *  on -- but it is a great deal better than assuming English. */
+export const PUBLIC_EMAILS: Record<
+  Language,
+  {
+    newsletter: { subject: string; heading: string; body: string; footer: string };
+    application: { subject: string; heading: string; body: string };
+  }
+> = {
+  en: {
+    newsletter: {
+      subject: "You're subscribed to BillFixr",
+      heading: "You're on the list",
+      body: "Thanks for subscribing. We'll send you occasional updates on medical billing, your rights as a patient, and what BillFixr is working on.",
+      footer: "Didn't subscribe? You can safely ignore this email.",
+    },
+    application: {
+      subject: "We received your application",
+      heading: "Application received",
+      body: "Hi {name}, thanks for applying for {role}. Our team will review your application and reach out if it's a match.",
+    },
+  },
+  es: {
+    newsletter: {
+      subject: "Se suscribió a BillFixr",
+      heading: "Ya está en la lista",
+      body: "Gracias por suscribirse. Le enviaremos novedades ocasionales sobre facturación médica, sus derechos como paciente y en qué está trabajando BillFixr.",
+      footer: "¿No se suscribió? Puede ignorar este mensaje.",
+    },
+    application: {
+      subject: "Recibimos su solicitud",
+      heading: "Solicitud recibida",
+      body: "Hola {name}, gracias por postularse para {role}. Nuestro equipo revisará su solicitud y le escribirá si encaja.",
+    },
+  },
+};

@@ -65,3 +65,55 @@ describe("POST /api/careers/apply", () => {
     expect(await res.json()).toEqual({ ok: true });
   });
 });
+
+// An applicant has no profile either, so the careers page's own language
+// is what the acknowledgement is written in.
+describe("the language the acknowledgement is written in", () => {
+  function apply(language?: string) {
+    serverMock.queueResult("job_applications", { data: null, error: null });
+    serverMock.queueResult("job_postings", { data: { title: "Support Specialist" }, error: null });
+    return POST(makeRequest({ ...VALID_BODY, ...(language ? { language } : {}) }));
+  }
+
+  it("writes it in Spanish when the page was Spanish", async () => {
+    await apply("es");
+
+    const call = sendEmail.mock.calls[0][0];
+    expect(call.subject).toBe("Recibimos su solicitud");
+    expect(String(call.html)).toContain("Hola Jamie Rivera");
+    expect(String(call.html)).toContain("gracias por postularse");
+    expect(String(call.html)).toContain('<html lang="es">');
+  });
+
+  it("names the role inside the sentence, in either language", async () => {
+    await apply("es");
+
+    expect(String(sendEmail.mock.calls[0][0].html)).toContain("Support Specialist");
+  });
+
+  it("escapes the applicant's own name exactly once", async () => {
+    // Escaping the values and then the whole sentence again would show
+    // someone their own name as &amp;.
+    serverMock.queueResult("job_applications", { data: null, error: null });
+    serverMock.queueResult("job_postings", { data: { title: "Billing & Appeals Lead" }, error: null });
+
+    await POST(makeRequest({ ...VALID_BODY, fullName: "Ana & Co", language: "es" }));
+
+    const html = String(sendEmail.mock.calls[0][0].html);
+    expect(html).toContain("Ana &amp; Co");
+    expect(html).not.toContain("Ana &amp;amp; Co");
+    expect(html).toContain("Billing &amp; Appeals Lead");
+  });
+
+  it("writes it in English when the page was English", async () => {
+    await apply("en");
+
+    expect(sendEmail.mock.calls[0][0].subject).toBe("We received your application");
+  });
+
+  it("falls back to English when the form sends nothing", async () => {
+    await apply();
+
+    expect(sendEmail.mock.calls[0][0].subject).toBe("We received your application");
+  });
+});

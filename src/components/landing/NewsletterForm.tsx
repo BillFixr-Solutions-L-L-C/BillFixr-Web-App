@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useT } from "@/lib/i18n/client";
+import { useLanguage, useT } from "@/lib/i18n/client";
 
 export default function NewsletterForm() {
   const t = useT();
+  // Sent with the request so the confirmation email is written in the
+  // language they were reading when they typed their address. A
+  // subscriber has no profile to read one from.
+  const language = useLanguage();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
 
@@ -14,7 +18,7 @@ export default function NewsletterForm() {
     const res = await fetch("/api/newsletter/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, language }),
     });
     if (!res.ok) {
       setStatus("error");
