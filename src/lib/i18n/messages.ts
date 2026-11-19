@@ -600,6 +600,11 @@ export const MESSAGES = {
     "table.analyzed": "Analyzed",
     "dash.analysisReady": "We've read your bill and found what looks wrong. Review it, then send your dispute to the provider.",
     "dash.reviewAnalysis": "Review your analysis",
+
+    // --- the upload dropzone ---
+    "upload.dropBefore": "Drag and drop your files,",
+    "upload.dropLink": "or click here to choose",
+    "upload.dropAfter": "from your device. Supported files includes Jpeg, png, doc, pdf. Max 10MB — select multiple photos for a multi-page bill.",
   },
 
   es: {
@@ -1154,6 +1159,11 @@ export const MESSAGES = {
     "table.analyzed": "Analizada",
     "dash.analysisReady": "Leímos su factura y encontramos lo que parece incorrecto. Revísela y después envíe su reclamación al proveedor.",
     "dash.reviewAnalysis": "Revisar su análisis",
+
+    // --- the upload dropzone ---
+    "upload.dropBefore": "Arrastre y suelte sus archivos,",
+    "upload.dropLink": "o haga clic aquí para elegirlos",
+    "upload.dropAfter": "desde su dispositivo. Se admiten archivos Jpeg, png, doc y pdf. Máximo 10 MB: seleccione varias fotos si la factura tiene varias páginas.",
   },
 } as const satisfies Record<Language, Record<string, string>>;
 

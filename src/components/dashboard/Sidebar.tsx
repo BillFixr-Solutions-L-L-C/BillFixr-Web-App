@@ -93,6 +93,12 @@ export default function Sidebar({
           <Logo />
         </Link>
         <div className="flex items-center gap-1">
+          {/* On a phone the switcher used to live only at the foot of the
+              drawer, below the nav and a flex-1 spacer -- so changing
+              language meant opening the menu and scrolling to find it.
+              Here it is where the bell is: on screen without opening
+              anything. */}
+          <LanguageSwitcher className="mr-1" />
           <NotificationBell initialNotifications={initialNotifications} />
           <button
             type="button"
@@ -156,8 +162,10 @@ export default function Sidebar({
 
         {/* The site's language. Changing it here does NOT change the
             language BillFixr writes to this customer in -- that is fixed
-            at registration. See src/lib/language.ts. */}
-        <div className="mt-6 flex justify-center">
+            at registration. See src/lib/language.ts.
+            Desktop only: on a phone the same control sits in the top bar
+            above, and two of them in one drawer is one too many. */}
+        <div className="mt-6 hidden justify-center md:flex">
           <LanguageSwitcher />
         </div>
 
