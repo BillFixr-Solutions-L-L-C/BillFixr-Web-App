@@ -22,7 +22,20 @@ export type EmailMessage = {
   cta: string;
 };
 
-type MessageId = "responseReceived" | "closedNoResponse" | "stillWaiting" | "welcome" | "accountDeleted";
+export type MessageId =
+  | "responseReceived"
+  | "closedNoResponse"
+  | "stillWaiting"
+  | "welcome"
+  | "accountDeleted"
+  // Added 2026-11-19. These three were written as English literals inside
+  // their route handlers, so a customer registered in Spanish got them in
+  // English -- the profile column was read correctly everywhere it was
+  // read, and these three never read it.
+  | "letterSent"
+  | "supportReply"
+  | "supportInProgress"
+  | "supportResolved";
 
 const MESSAGES: Record<MessageId, Record<Language, EmailMessage>> = {
   // The first thing we ever send them.
@@ -118,7 +131,86 @@ const MESSAGES: Record<MessageId, Record<Language, EmailMessage>> = {
       cta: "Ver su caso",
     },
   },
+
+  // The case has left the building: the appeal letter is with the provider.
+  letterSent: {
+    en: {
+      subject: "Your appeal letter has been sent",
+      heading: "Your appeal letter is on its way",
+      body: "We've sent your appeal letter to your provider on your behalf. We'll keep following up automatically and let you know as soon as there's a response.",
+      cta: "View Your Case",
+    },
+    es: {
+      subject: "Enviamos su carta de reclamación",
+      heading: "Su carta de reclamación va en camino",
+      body: "Enviamos su carta de reclamación a su proveedor en su nombre. Seguiremos insistiendo automáticamente y le avisaremos en cuanto haya respuesta.",
+      cta: "Ver su caso",
+    },
+  },
+
+  // An agent has written back. The agent's own words are sent as typed --
+  // a human wrote them to this customer, and running them through a
+  // dictionary would be worse than leaving them alone. What is translated
+  // is everything around them.
+  supportReply: {
+    en: {
+      subject: "Re: {subject}",
+      heading: "A reply from BillFixr Support",
+      body: "You can reply straight to this email and it will reach us.",
+      cta: "View Support",
+    },
+    es: {
+      subject: "Re: {subject}",
+      heading: "Una respuesta de Soporte de BillFixr",
+      body: "Puede responder directamente a este correo y nos llegará.",
+      cta: "Ver Soporte",
+    },
+  },
+
+  supportInProgress: {
+    en: {
+      subject: "We're looking into your support ticket",
+      heading: "We're on it",
+      body: 'An agent has picked up your ticket about "{subject}" and is looking into it now.',
+      cta: "View Support",
+    },
+    es: {
+      subject: "Estamos revisando su solicitud de soporte",
+      heading: "Estamos en ello",
+      body: "Un agente ha tomado su solicitud sobre «{subject}» y la está revisando ahora.",
+      cta: "Ver Soporte",
+    },
+  },
+
+  supportResolved: {
+    en: {
+      subject: "Your support ticket has been resolved",
+      heading: "Your ticket has been resolved",
+      body: 'Your ticket about "{subject}" has been marked resolved. If you still need help, just send another message from Support.',
+      cta: "View Support",
+    },
+    es: {
+      subject: "Su solicitud de soporte se ha resuelto",
+      heading: "Su solicitud se ha resuelto",
+      body: "Su solicitud sobre «{subject}» se marcó como resuelta. Si todavía necesita ayuda, envíenos otro mensaje desde Soporte.",
+      cta: "Ver Soporte",
+    },
+  },
 };
+
+/**
+ * "Hi <name>," in the customer's language.
+ *
+ * Separate from the body copy because the name is interpolated and the
+ * punctuation differs. It lived inside caseStatusSync.ts, which meant
+ * every other sender either wrote its own English one or did without --
+ * and the support emails wrote their own.
+ */
+export function greeting(name: string | null | undefined, language: Language): string {
+  const who = (name ?? "").trim();
+  if (language === "es") return who ? `Hola ${who},` : "Hola,";
+  return who ? `Hi ${who},` : "Hi there,";
+}
 
 /**
  * The copy for one email in one language.
