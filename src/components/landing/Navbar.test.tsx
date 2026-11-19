@@ -140,3 +140,60 @@ describe("the language switch on a phone", () => {
     expect(switchers()).toHaveLength(2);
   });
 });
+
+// Where the desktop nav is allowed to appear.
+//
+// It used to be `md:flex` (768px), and the six links plus the switcher
+// and two auth buttons do not fit there: measured on the live site, the
+// page overflowed horizontally by 94px at 768 and 42px at 820, and the
+// header wrapped to two lines all the way to 1024. These assert the
+// breakpoint rather than the pixels, because the pixels need a browser
+// and this does not.
+describe("the navbar's breakpoints", () => {
+  function nav(container: HTMLElement) {
+    return [...container.querySelectorAll("nav")];
+  }
+
+  it("shows the link row only from lg, where it fits", () => {
+    const { container } = render(<Navbar dashboardHref={null} />);
+
+    const linkRow = nav(container).find((n) => n.className.includes("hidden"));
+    expect(linkRow).toBeDefined();
+    expect(linkRow!.className).toContain("lg:flex");
+    expect(linkRow!.className).not.toContain("md:flex");
+  });
+
+  it("keeps the hamburger until exactly that point", () => {
+    // If these two ever disagree there is a band of widths with no
+    // navigation at all, or with both at once.
+    render(<Navbar dashboardHref={null} />);
+
+    const burger = screen.getByRole("button", { name: /menu/i });
+    expect(burger.className).toContain("lg:hidden");
+    expect(burger.className).not.toContain("md:hidden");
+  });
+
+  it("opens a menu that closes again at the same width", () => {
+    const { container } = render(<Navbar dashboardHref={null} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /menu/i }));
+
+    const menu = nav(container).find((n) => n.className.includes("absolute"));
+    expect(menu).toBeDefined();
+    expect(menu!.className).toContain("lg:hidden");
+  });
+
+  it("sizes the auth buttons so they fit a 320px phone", () => {
+    // At `px-4 py-2.5 text-sm` the row was ~12px too wide at 320 and
+    // "Sign Up" rode over the logo.
+    render(<Navbar dashboardHref={null} />);
+
+    for (const name of ["Sign Up", "Log in"]) {
+      const button = screen.getByRole("link", { name });
+      expect(button.className).toContain("text-xs");
+      expect(button.className).toContain("sm:text-sm");
+      // Wrapping the label was the other half of the symptom.
+      expect(button.className).toContain("whitespace-nowrap");
+    }
+  });
+});
