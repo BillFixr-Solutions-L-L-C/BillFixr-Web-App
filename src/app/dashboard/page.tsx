@@ -568,10 +568,14 @@ export default function DashboardHome() {
                 </span>
                 <p className="mt-4 text-2xl font-bold text-[#003322]">{t("upload.chooseFile")}</p>
                 <p className="mt-2 max-w-sm text-base text-[#a6b1bb]">
-                  Drag and drop your files,{" "}
-                  <span className="font-medium text-[#0f7545]">or click here to choose</span> from
-                  your device. Supported files includes Jpeg, png, doc, pdf. Max 10MB — select
-                  multiple photos for a multi-page bill.
+                  {/* Three keys because a link sits in the middle of the
+                      sentence. Split this way it stayed English through
+                      every translation pass: the scanner only reads JSX
+                      text that is not broken up by an element, so it
+                      never saw this one. */}
+                  {t("upload.dropBefore")}{" "}
+                  <span className="font-medium text-[#0f7545]">{t("upload.dropLink")}</span>{" "}
+                  {t("upload.dropAfter")}
                 </p>
                 <span className="mt-5 rounded-full bg-[#0f7545] px-8 py-3 text-base font-semibold text-white">
                   {t("upload.cta")}

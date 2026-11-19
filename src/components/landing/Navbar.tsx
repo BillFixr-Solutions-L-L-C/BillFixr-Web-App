@@ -58,7 +58,12 @@ export default function Navbar({ dashboardHref = null }: { dashboardHref?: strin
         <div className="flex items-center gap-2 sm:gap-3">
           {/* The first thing a visitor can choose. chooseLanguage() records
               it as their first-visit language, which becomes the language
-              BillFixr writes to them in once they register. */}
+              BillFixr writes to them in once they register.
+              Below sm it is not here but in the strip under this row:
+              measured at 390px, a fourth control in this row pushes the
+              pill over the logo and wraps "Sign Up" onto two lines. The
+              strip keeps it on screen without a menu, which is the point,
+              without disturbing a header that already fits. */}
           <LanguageSwitcher className="hidden sm:flex" />
           {dashboardHref ? (
             <Link
@@ -95,6 +100,18 @@ export default function Navbar({ dashboardHref = null }: { dashboardHref?: strin
         </div>
       </div>
 
+      {/* The language switch on a phone.
+          A strip of its own rather than a fifth item in the row above:
+          at 390px the row holds a logo, two auth buttons and the menu
+          button with nothing to spare, and adding the pill there put it
+          on top of the logo and wrapped "Sign Up" onto two lines
+          (measured, not guessed). It is deliberately NOT in the hamburger
+          -- someone who cannot read the English menu should not have to
+          open the English menu to find the way out of it. */}
+      <div className="flex justify-end border-t border-primary-100 px-6 py-1.5 sm:hidden">
+        <LanguageSwitcher />
+      </div>
+
       {open && (
         <nav className="absolute inset-x-6 top-full z-40 mt-2 flex flex-col gap-1 rounded-2xl border border-primary-100 bg-white p-4 text-sm font-medium text-primary-900 shadow-lg md:hidden">
           {links.map((link) => (
@@ -108,14 +125,7 @@ export default function Navbar({ dashboardHref = null }: { dashboardHref?: strin
             </Link>
           ))}
 
-          {/* The switcher in the header row is `hidden sm:flex`, so on a
-              phone it is not on screen at all -- which left a Spanish
-              speaker on mobile with no way to change the language. It
-              lives in the menu too, which is where a phone user looks for
-              it anyway. */}
-          <div className="mt-2 border-t border-primary-100 pt-3">
-            <LanguageSwitcher />
-          </div>
+
         </nav>
       )}
     </header>

@@ -40,13 +40,20 @@ export default function LanguageSwitcher({ className = "" }: { className?: strin
           onClick={() => pick(code)}
           disabled={pending}
           aria-current={code === language ? "true" : undefined}
-          className={`rounded-full px-3 py-1 text-xs font-semibold transition disabled:opacity-60 ${
+          className={`rounded-full px-2 py-1 text-xs font-semibold transition disabled:opacity-60 sm:px-3 ${
             code === language
               ? "bg-[#0f7545] text-white"
               : "border border-gray-200 text-gray-600 hover:bg-gray-50"
           }`}
         >
-          {t(code === "en" ? "lang.en" : "lang.es")}
+          {/* Two labels, one control. The full name is what a visitor
+              recognises, but on a phone the header already carries a
+              logo, two buttons and a menu -- which is why this used to be
+              hidden below sm entirely, leaving a Spanish speaker with no
+              visible way to switch. The code is the same control in the
+              space there is. */}
+          <span className="sm:hidden">{code.toUpperCase()}</span>
+          <span className="hidden sm:inline">{t(code === "en" ? "lang.en" : "lang.es")}</span>
         </button>
       ))}
     </div>

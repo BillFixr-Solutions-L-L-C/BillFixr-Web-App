@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import Navbar from "./Navbar";
 import { LanguageProvider } from "@/lib/i18n/client";
@@ -67,5 +67,76 @@ describe("Navbar", () => {
     );
     expect(screen.queryByText("How it works")).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Cómo funciona" }).length).toBeGreaterThan(0);
+  });
+});
+
+// Asked for on 2026-11-19: the language switch has to be on screen, not
+// behind the hamburger.
+//
+// It used to be `hidden sm:flex` in the header with a second copy inside
+// the mobile menu -- so on a phone the one control that changes the
+// site's language was the one you had to open a menu to find. jsdom does
+// not apply media queries, so these assert the structure that decides it:
+// one switcher, in the header, with nothing hiding it.
+describe("the language switch on a phone", () => {
+  function switchers() {
+    return screen.getAllByRole("group", { name: "Language" });
+  }
+
+  function classesOf(el: HTMLElement): string {
+    // The switcher itself, plus whatever wraps it -- which is where the
+    // breakpoint lives for the phone copy.
+    return `${el.className} ${el.parentElement?.className ?? ""}`;
+  }
+
+  it("has one copy for each breakpoint, and both outside the menu", () => {
+    // One `hidden sm:flex` in the header row, one in an `sm:hidden` strip
+    // beneath it. Exactly one of them is on screen at any width.
+    const { container } = render(<Navbar dashboardHref={null} />);
+
+    expect(switchers()).toHaveLength(2);
+    // The menu nav only exists once the hamburger is pressed.
+    expect(container.querySelector("nav")).not.toBeNull();
+    for (const el of switchers()) {
+      expect(el.closest("nav")).toBeNull();
+    }
+  });
+
+  it("puts a copy where a phone can see it without opening anything", () => {
+    render(<Navbar dashboardHref={null} />);
+
+    const phoneCopy = switchers().find((el) => classesOf(el).includes("sm:hidden"));
+    expect(phoneCopy).toBeDefined();
+    // Not itself hidden: `hidden sm:flex` on the phone copy would be the
+    // original bug wearing a different hat.
+    expect(phoneCopy!.className).not.toMatch(/hidden/);
+  });
+
+  it("keeps the header copy for wider screens", () => {
+    render(<Navbar dashboardHref={null} />);
+
+    const headerCopy = switchers().find((el) => el.className.includes("sm:flex"));
+    expect(headerCopy).toBeDefined();
+    expect(headerCopy!.className).toContain("hidden");
+  });
+
+  it("offers both languages as buttons", () => {
+    render(<Navbar dashboardHref={null} />);
+
+    const buttons = within(switchers()[0]).getAllByRole("button");
+    expect(buttons).toHaveLength(2);
+    // Short on a phone, full from sm up -- both are in the DOM and CSS
+    // picks, so the text carries both forms.
+    expect(buttons[0].textContent).toContain("EN");
+    expect(buttons[0].textContent).toContain("English");
+    expect(buttons[1].textContent).toContain("ES");
+  });
+
+  it("does not add a third copy when the menu opens", () => {
+    render(<Navbar dashboardHref={null} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /menu/i }));
+
+    expect(switchers()).toHaveLength(2);
   });
 });

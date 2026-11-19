@@ -131,3 +131,53 @@ describe("a document opened from the case", () => {
     expect(highlighted()).toHaveLength(1);
   });
 });
+
+// Asked for on 2026-11-19: the language switch has to be on screen, not
+// behind the hamburger.
+//
+// On the dashboard it sat at the foot of the drawer, below the nav and a
+// flex-1 spacer, so changing language meant opening the menu and
+// scrolling to the bottom of it. It is in the top bar now, beside the
+// bell -- the bar itself is md:hidden, so this is the phone copy, and the
+// drawer keeps a desktop-only one.
+describe("the language switch on a phone", () => {
+  function switchers() {
+    return screen.getAllByRole("group", { name: "Language" });
+  }
+
+  it("is in the top bar, outside the drawer", () => {
+    const { container } = render(<Sidebar user={USER} />);
+
+    const drawer = container.querySelector("aside");
+    const outside = switchers().filter((el) => !drawer?.contains(el));
+
+    expect(outside).toHaveLength(1);
+  });
+
+  it("sits in the bar that only a phone shows", () => {
+    const { container } = render(<Sidebar user={USER} />);
+
+    const drawer = container.querySelector("aside");
+    const [phoneCopy] = switchers().filter((el) => !drawer?.contains(el));
+    // Walked by className rather than a CSS selector: "md:hidden" needs
+    // escaping in a selector, and an unescaped colon parses as a
+    // pseudo-class that silently matches nothing.
+    let el: HTMLElement | null = phoneCopy;
+    let bar: HTMLElement | null = null;
+    while (el && !bar) {
+      if (el.className.includes("md:hidden")) bar = el;
+      el = el.parentElement;
+    }
+    expect(bar).not.toBeNull();
+  });
+
+  it("keeps the drawer's own copy for desktop only", () => {
+    // Two in one drawer on a phone would be one too many.
+    const { container } = render(<Sidebar user={USER} />);
+
+    const drawer = container.querySelector("aside");
+    const [inDrawer] = switchers().filter((el) => drawer?.contains(el));
+    expect(inDrawer.parentElement?.className).toContain("hidden");
+    expect(inDrawer.parentElement?.className).toContain("md:flex");
+  });
+});
