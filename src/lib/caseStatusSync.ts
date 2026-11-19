@@ -1,6 +1,6 @@
 import { sendEmail } from "@/lib/email";
-import { emailCopy } from "@/lib/emailCopy";
-import { customerLanguage, type Language } from "@/lib/language";
+import { emailCopy, greeting } from "@/lib/emailCopy";
+import { customerLanguage } from "@/lib/language";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { escapeHtml } from "@/lib/html";
 import { providerHasResponded } from "@/lib/negotiationStatus";
@@ -29,14 +29,6 @@ import { notifyCustomer } from "@/lib/customerNotifications";
 // a case forward to the point the provider replied, and never rewrites a
 // settled, paid or closed case from the engine's view of the negotiation.
 const ADVANCEABLE = new Set(["uploaded", "scanning", "analyzed", "letter_sent", "awaiting_response"]);
-
-/** "Hi <name>," in the customer's language. Separate from the body copy
- *  because the name is interpolated and the punctuation differs. */
-function greeting(name: string | null | undefined, language: Language): string {
-  const who = (name ?? "").trim();
-  if (language === "es") return who ? `Hola ${who},` : "Hola,";
-  return who ? `Hi ${who},` : "Hi there,";
-}
 
 export const RESPONSE_RECEIVED_EMAIL = {
   subject: "Your provider responded",

@@ -1,3 +1,4 @@
+import type { Language } from "@/lib/language";
 // Shared branded card wrapper for transactional emails sent via
 // src/lib/email.ts (sendEmail). Matches the look of the Supabase Auth
 // templates (supabase/templates/*.html) and the earlier welcome-email /
@@ -10,15 +11,20 @@ export function renderEmailCard({
   bodyHtml,
   cta,
   footerNote,
+  // The document's own language. Defaults to English so every existing
+  // caller keeps working, but a Spanish email claiming lang="en" is wrong
+  // for a screen reader and for anything that offers to translate it.
+  language = "en",
 }: {
   title: string;
   heading: string;
   bodyHtml: string;
   cta?: { text: string; href: string };
   footerNote?: string;
+  language?: Language;
 }): string {
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${language}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />

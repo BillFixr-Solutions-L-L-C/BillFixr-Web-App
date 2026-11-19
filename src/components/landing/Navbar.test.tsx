@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import Navbar from "./Navbar";
 import { LanguageProvider } from "@/lib/i18n/client";
@@ -67,5 +67,133 @@ describe("Navbar", () => {
     );
     expect(screen.queryByText("How it works")).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Cómo funciona" }).length).toBeGreaterThan(0);
+  });
+});
+
+// Asked for on 2026-11-19: the language switch has to be on screen, not
+// behind the hamburger.
+//
+// It used to be `hidden sm:flex` in the header with a second copy inside
+// the mobile menu -- so on a phone the one control that changes the
+// site's language was the one you had to open a menu to find. jsdom does
+// not apply media queries, so these assert the structure that decides it:
+// one switcher, in the header, with nothing hiding it.
+describe("the language switch on a phone", () => {
+  function switchers() {
+    return screen.getAllByRole("group", { name: "Language" });
+  }
+
+  function classesOf(el: HTMLElement): string {
+    // The switcher itself, plus whatever wraps it -- which is where the
+    // breakpoint lives for the phone copy.
+    return `${el.className} ${el.parentElement?.className ?? ""}`;
+  }
+
+  it("has one copy for each breakpoint, and both outside the menu", () => {
+    // One `hidden sm:flex` in the header row, one in an `sm:hidden` strip
+    // beneath it. Exactly one of them is on screen at any width.
+    const { container } = render(<Navbar dashboardHref={null} />);
+
+    expect(switchers()).toHaveLength(2);
+    // The menu nav only exists once the hamburger is pressed.
+    expect(container.querySelector("nav")).not.toBeNull();
+    for (const el of switchers()) {
+      expect(el.closest("nav")).toBeNull();
+    }
+  });
+
+  it("puts a copy where a phone can see it without opening anything", () => {
+    render(<Navbar dashboardHref={null} />);
+
+    const phoneCopy = switchers().find((el) => classesOf(el).includes("sm:hidden"));
+    expect(phoneCopy).toBeDefined();
+    // Not itself hidden: `hidden sm:flex` on the phone copy would be the
+    // original bug wearing a different hat.
+    expect(phoneCopy!.className).not.toMatch(/hidden/);
+  });
+
+  it("keeps the header copy for wider screens", () => {
+    render(<Navbar dashboardHref={null} />);
+
+    const headerCopy = switchers().find((el) => el.className.includes("sm:flex"));
+    expect(headerCopy).toBeDefined();
+    expect(headerCopy!.className).toContain("hidden");
+  });
+
+  it("offers both languages as buttons", () => {
+    render(<Navbar dashboardHref={null} />);
+
+    const buttons = within(switchers()[0]).getAllByRole("button");
+    expect(buttons).toHaveLength(2);
+    // Short on a phone, full from sm up -- both are in the DOM and CSS
+    // picks, so the text carries both forms.
+    expect(buttons[0].textContent).toContain("EN");
+    expect(buttons[0].textContent).toContain("English");
+    expect(buttons[1].textContent).toContain("ES");
+  });
+
+  it("does not add a third copy when the menu opens", () => {
+    render(<Navbar dashboardHref={null} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /menu/i }));
+
+    expect(switchers()).toHaveLength(2);
+  });
+});
+
+// Where the desktop nav is allowed to appear.
+//
+// It used to be `md:flex` (768px), and the six links plus the switcher
+// and two auth buttons do not fit there: measured on the live site, the
+// page overflowed horizontally by 94px at 768 and 42px at 820, and the
+// header wrapped to two lines all the way to 1024. These assert the
+// breakpoint rather than the pixels, because the pixels need a browser
+// and this does not.
+describe("the navbar's breakpoints", () => {
+  function nav(container: HTMLElement) {
+    return [...container.querySelectorAll("nav")];
+  }
+
+  it("shows the link row only from lg, where it fits", () => {
+    const { container } = render(<Navbar dashboardHref={null} />);
+
+    const linkRow = nav(container).find((n) => n.className.includes("hidden"));
+    expect(linkRow).toBeDefined();
+    expect(linkRow!.className).toContain("lg:flex");
+    expect(linkRow!.className).not.toContain("md:flex");
+  });
+
+  it("keeps the hamburger until exactly that point", () => {
+    // If these two ever disagree there is a band of widths with no
+    // navigation at all, or with both at once.
+    render(<Navbar dashboardHref={null} />);
+
+    const burger = screen.getByRole("button", { name: /menu/i });
+    expect(burger.className).toContain("lg:hidden");
+    expect(burger.className).not.toContain("md:hidden");
+  });
+
+  it("opens a menu that closes again at the same width", () => {
+    const { container } = render(<Navbar dashboardHref={null} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /menu/i }));
+
+    const menu = nav(container).find((n) => n.className.includes("absolute"));
+    expect(menu).toBeDefined();
+    expect(menu!.className).toContain("lg:hidden");
+  });
+
+  it("sizes the auth buttons so they fit a 320px phone", () => {
+    // At `px-4 py-2.5 text-sm` the row was ~12px too wide at 320 and
+    // "Sign Up" rode over the logo.
+    render(<Navbar dashboardHref={null} />);
+
+    for (const name of ["Sign Up", "Log in"]) {
+      const button = screen.getByRole("link", { name });
+      expect(button.className).toContain("text-xs");
+      expect(button.className).toContain("sm:text-sm");
+      // Wrapping the label was the other half of the symptom.
+      expect(button.className).toContain("whitespace-nowrap");
+    }
   });
 });
