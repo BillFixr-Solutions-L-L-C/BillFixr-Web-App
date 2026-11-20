@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
 import { escapeHtml } from "@/lib/html";
-import { emailCopy, WELCOME_STEPS, type EmailMessage } from "@/lib/emailCopy";
+import { emailCopy, WELCOME_SECTIONS, WELCOME_STEPS, type EmailMessage } from "@/lib/emailCopy";
 import { customerLanguage, type Language } from "@/lib/language";
 
 // Fired once, right after a new user's confirmation link lands them back
@@ -61,6 +61,7 @@ function welcomeEmailHtml({
   language: Language;
 }) {
   const steps = WELCOME_STEPS[language] ?? WELCOME_STEPS.en;
+  const section = WELCOME_SECTIONS[language] ?? WELCOME_SECTIONS.en;
 
   const stepRows = steps
     .map(
@@ -141,13 +142,10 @@ function welcomeEmailHtml({
           <tr>
             <td style="padding:24px 40px 0;">
               <p style="margin:0 0 4px; font-size:13px; font-weight:700; color:#003322; text-transform:uppercase; letter-spacing:0.04em;">
-                What it costs
+                ${escapeHtml(section.costsTitle)}
               </p>
               <p style="margin:0; font-size:13px; line-height:1.6; color:#4d6276;">
-                A small $5 commitment fee gets your bill into the queue for review right away -
-                it goes toward your final BillFixr fee, so it's never extra. If we find and fix
-                errors, a success fee applies only as a percentage of what you actually save. If
-                no errors are found, that's all you ever pay - no success fee.
+                ${escapeHtml(section.costsBody)}
               </p>
             </td>
           </tr>
@@ -155,11 +153,10 @@ function welcomeEmailHtml({
           <tr>
             <td style="padding:16px 40px 0;">
               <p style="margin:0 0 4px; font-size:13px; font-weight:700; color:#003322; text-transform:uppercase; letter-spacing:0.04em;">
-                Your documents are private
+                ${escapeHtml(section.privacyTitle)}
               </p>
               <p style="margin:0; font-size:13px; line-height:1.6; color:#4d6276;">
-                Your bill is only used to review and negotiate on your behalf - it's not shared or
-                sold, and you can see everything we're doing from your dashboard at any time.
+                ${escapeHtml(section.privacyBody)}
               </p>
             </td>
           </tr>
@@ -171,7 +168,7 @@ function welcomeEmailHtml({
                   <td align="center" style="border-radius:999px; background-color:#0f7545;">
                     <a href="https://www.billfixr.com/dashboard"
                        style="display:inline-block; padding:14px 40px; font-size:14px; font-weight:700; color:#ffffff; text-decoration:none; border-radius:999px;">
-                      Upload Your First Bill
+                      ${escapeHtml(copy.cta)}
                     </a>
                   </td>
                 </tr>
@@ -188,10 +185,10 @@ function welcomeEmailHtml({
           <tr>
             <td style="padding:20px 40px 40px;">
               <p style="margin:0; font-size:12px; line-height:1.6; color:#a6b1bb; text-align:center;">
-                Questions? Reach us anytime from the Support tab in your dashboard.
+                ${escapeHtml(section.support)}
               </p>
               <p style="margin:16px 0 0; font-size:11px; color:#a6b1bb; text-align:center;">
-                Copyright 2026 BillFixr Technologies. All Rights Reserved.
+                ${escapeHtml(section.rights)}
               </p>
             </td>
           </tr>

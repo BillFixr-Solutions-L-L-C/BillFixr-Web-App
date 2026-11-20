@@ -4,8 +4,24 @@
 // this pipeline was analysed on 2026-11-11, so real analyses exist now and
 // the "nothing visibly changes until real data exists" reasoning behind the
 // old mock fallback has expired with it.
+/** What the summary sentence is made of.
+ *
+ *  The sentence itself is composed at render so it follows the display
+ *  language like the rest of the screen. `analysisSummary` is still
+ *  written -- in English -- because staff read it and because an analysis
+ *  stored before this existed has nothing else to show. */
+export type BillAnalysisSummaryParts = {
+  issues: number;
+  /** Already formatted as money, or null when there is nothing to claim. */
+  savings: string | null;
+  /** The engine's own risk grade, untranslated. */
+  risk: string | null;
+};
+
 export type BillAnalysis = {
   analysisSummary: string;
+  /** Optional: analyses stored before 2026-11-20 only have the sentence. */
+  summaryParts?: BillAnalysisSummaryParts;
   memberName: string;
   memberId: string;
   group: string;

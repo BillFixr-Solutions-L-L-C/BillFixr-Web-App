@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { BillAnalysis, BillIssue } from "@/lib/billAnalysis";
+import type { MessageKey } from "@/lib/i18n/messages";
 import type { BillDocument } from "@/lib/billDocuments";
 import AppealLetterCard, { type AppealLetterData } from "@/components/dashboard/AppealLetterCard";
 import HeaderInformationCard from "@/components/dashboard/HeaderInformationCard";
@@ -11,6 +12,43 @@ import WatermarkOverlay from "@/components/dashboard/WatermarkOverlay";
 import type { HeaderField } from "@/lib/headerInfo";
 import TableScroller from "@/components/TableScroller";
 import { useT } from "@/lib/i18n/client";
+
+// The summary sentence, in the language the screen is being read in.
+//
+// It used to render `analysis.analysisSummary`, a sentence composed in
+// English when the bill was scanned and stored that way -- so a customer
+// reading the site in Spanish got one English paragraph in the middle of
+// it. The facts are carried alongside it now and the sentence is put
+// together here instead.
+//
+// An analysis stored before that falls back to the stored sentence:
+// English, but true, which beats an empty space where the summary was.
+function summaryText(
+  t: (key: MessageKey, values?: Record<string, string | number>) => string,
+  analysis: BillAnalysis,
+): string {
+  const parts = analysis.summaryParts;
+  if (!parts) return analysis.analysisSummary;
+  if (!parts.issues) return t("analysis.summaryNone");
+
+  const head =
+    parts.issues === 1 ? t("analysis.summaryOne") : t("analysis.summaryMany", { count: parts.issues });
+  const worth = parts.savings ? t("analysis.summaryWorth", { amount: parts.savings }) : "";
+  // The engine grades risk in English. Mapped where we know the grade,
+  // shown as it came where we do not -- a grade this does not recognise
+  // is still worth more than nothing.
+  const grade = (parts.risk ?? "").trim().toLowerCase();
+  const known: Record<string, MessageKey> = {
+    high: "risk.high",
+    medium: "risk.medium",
+    low: "risk.low",
+  };
+  const risk = parts.risk
+    ? ` ${t("analysis.summaryRisk", { risk: known[grade] ? t(known[grade]) : parts.risk })}`
+    : "";
+
+  return `${head}${worth}.${risk}`.trim();
+}
 
 const PRIORITY_TAG: Record<BillIssue["priority"], string> = {
   High: "bg-danger text-white",
@@ -162,7 +200,7 @@ export default function DocumentAnalysisClient({
 
       <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">{t("analysis.aiBillAnalysis")}</p>
-        <p className="mt-3 text-sm leading-relaxed text-gray-500">{analysis.analysisSummary}</p>
+        <p className="mt-3 text-sm leading-relaxed text-gray-500">{summaryText(t, analysis)}</p>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
