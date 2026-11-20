@@ -50,11 +50,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Call the cron route
+      - name: Call the cron routes
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           BASE: ${{ vars.CRON_BASE_URL || 'https://www.billfixr.com' }}
-          ROUTE: ${{ github.event.inputs.route || 'negotiation-status' }}
+          # A manual run may aim at one route; a scheduled run does both.
+          ONLY: ${{ github.event.inputs.route }}
         run: |
           set -euo pipefail
 
@@ -65,36 +66,70 @@ jobs:
             exit 1
           fi
 
-          # The engine runs on Render's free tier and spins down when idle,
-          # so the first request of a run is usually waking it up. That cold
-          # start is slow but not a failure, hence the generous timeout and
-          # the retries.
-          attempt=1
-          max=3
-          while [ "${attempt}" -le "${max}" ]; do
-            echo "attempt ${attempt}/${max}: GET /api/cron/${ROUTE}"
-            code=$(curl -sS -o response.json -w '%{http_code}' \
-              --max-time 240 \
-              -H "Authorization: Bearer ${CRON_SECRET}" \
-              "${BASE}/api/cron/${ROUTE}") || code="000"
+          # BOTH routes, in this order.
+          #
+          # negotiation-status makes the engine read its mailbox and sweep
+          # the running negotiations; follow-ups is what sends the 72-hour
+          # chase to a provider who has not replied. They are separate
+          # routes and neither runs the other.
+          #
+          # This used to call one route, defaulting to negotiation-status,
+          # and a second workflow (engine-cron.yml) looped over both. That
+          # second workflow was removed on 2026-11-18 as a duplicate --
+          # correctly, two workflows would have doubled every call -- but
+          # the one that stayed was the one that did NOT call follow-ups.
+          # So the follow-up cadence quietly went back to whatever Vercel
+          # runs daily, which is the problem both workflows existed to fix.
+          routes="negotiation-status follow-ups"
+          [ -n "${ONLY:-}" ] && routes="${ONLY}"
 
-            if [ "${code}" = "200" ]; then
-              echo "ok"
-              # The body is a count summary -- no patient data, no secrets.
-              cat response.json
-              exit 0
+          failed=""
+          for route in ${routes}; do
+            # The engine runs on Render's free tier and spins down when
+            # idle, so the first request of a run is usually waking it up.
+            # That cold start is slow but not a failure, hence the generous
+            # timeout and the retries.
+            attempt=1
+            max=3
+            ok=""
+            while [ "${attempt}" -le "${max}" ]; do
+              echo "${route}: attempt ${attempt}/${max}"
+              code=$(curl -sS -o response.json -w '%{http_code}' \
+                --max-time 240 \
+                -H "Authorization: Bearer ${CRON_SECRET}" \
+                "${BASE}/api/cron/${route}") || code="000"
+
+              if [ "${code}" = "200" ]; then
+                echo "${route}: ok"
+                # The body is a count summary -- no patient data, no secrets.
+                cat response.json
+                echo
+                ok="yes"
+                break
+              fi
+
+              if [ "${code}" = "401" ]; then
+                echo "::error::401 from /api/cron/${route} -- CRON_SECRET here does not match the one deployed on Vercel."
+                exit 1
+              fi
+
+              echo "::warning::${route}: HTTP ${code} on attempt ${attempt}"
+              attempt=$((attempt + 1))
+              [ "${attempt}" -le "${max}" ] && sleep 30
+            done
+
+            # One route failing must not skip the other: a mailbox the
+            # engine could not read is no reason to leave a provider
+            # unchased. Collect and fail at the end.
+            if [ -z "${ok}" ]; then
+              echo "::error::/api/cron/${route} did not return 200 after ${max} attempts."
+              cat response.json || true
+              echo
+              failed="${failed} ${route}"
             fi
-
-            if [ "${code}" = "401" ]; then
-              echo "::error::401 from the cron route -- CRON_SECRET here does not match the one deployed on Vercel."
-              exit 1
-            fi
-
-            echo "::warning::HTTP ${code} on attempt ${attempt}"
-            attempt=$((attempt + 1))
-            [ "${attempt}" -le "${max}" ] && sleep 30
           done
 
-          echo "::error::/api/cron/${ROUTE} did not return 200 after ${max} attempts."
-          cat response.json || true
-          exit 1
+          if [ -n "${failed}" ]; then
+            echo "::error::failed:${failed}"
+            exit 1
+          fi
