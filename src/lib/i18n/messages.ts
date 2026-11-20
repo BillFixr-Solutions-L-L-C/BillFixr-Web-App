@@ -615,6 +615,16 @@ export const MESSAGES = {
     "risk.high": "High",
     "risk.medium": "Medium",
     "risk.low": "Low",
+
+    // --- the two pricing cards ---
+    "price.perBill": "per bill",
+    "price.ofWhatYouSave": "of what you save",
+    "price.commitmentBody": "Charged once, when you submit a bill for review. It is credited in full against your success fee, so it is not an extra charge — if a success fee is owed, you pay that amount less the ${fee} you have already paid.",
+    "price.successBody": "Charged only if we find errors and your bill is actually reduced. It is {percent}% of the amount you save — never a percentage of the original bill. No reduction means no success fee.",
+
+    // --- resending the confirmation email ---
+    "auth.resendSent": "Confirmation email resent.",
+    "auth.resendFailed": "We couldn't resend it. Please try again in a moment.",
   },
 
   es: {
@@ -1184,6 +1194,16 @@ export const MESSAGES = {
     "risk.high": "Alto",
     "risk.medium": "Medio",
     "risk.low": "Bajo",
+
+    // --- the two pricing cards ---
+    "price.perBill": "por factura",
+    "price.ofWhatYouSave": "de lo que usted ahorra",
+    "price.commitmentBody": "Se cobra una sola vez, cuando envía una factura para revisión. Se descuenta íntegramente de su comisión por éxito, así que no es un cargo adicional: si corresponde una comisión por éxito, paga esa cantidad menos los ${fee} que ya pagó.",
+    "price.successBody": "Solo se cobra si encontramos errores y su factura se reduce de verdad. Es el {percent}% de lo que usted ahorra, nunca un porcentaje de la factura original. Si no hay reducción, no hay comisión por éxito.",
+
+    // --- resending the confirmation email ---
+    "auth.resendSent": "Le reenviamos el correo de confirmación.",
+    "auth.resendFailed": "No pudimos reenviarlo. Inténtelo de nuevo en un momento.",
   },
 } as const satisfies Record<Language, Record<string, string>>;
 

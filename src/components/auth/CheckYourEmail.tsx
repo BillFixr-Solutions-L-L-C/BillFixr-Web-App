@@ -2,15 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { createAuthEmailClient } from "@/lib/supabase/authEmailClient";
-import { useT } from "@/lib/i18n/client";
+import { useLanguage, useT } from "@/lib/i18n/client";
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_POLLS = 300; // ~15 minutes, matching the pairing row's server-side expiry
 const RESEND_COOLDOWN_SECONDS = 90;
 
-export default function CheckYourEmail({ email, userId }: { email: string; userId: string }) {
+export default function CheckYourEmail({ email, userId }: { email: string; userId: string | null }) {
   const t = useT();
+  // Sent with the resend so the second email is in the same language as
+  // the first.
+  const language = useLanguage();
   const [confirmedElsewhere, setConfirmedElsewhere] = useState(false);
   const pollCount = useRef(0);
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN_SECONDS);
@@ -26,14 +28,20 @@ export default function CheckYourEmail({ email, userId }: { email: string; userI
   async function handleResend() {
     setResending(true);
     setResendMessage(null);
-    const supabase = createAuthEmailClient();
-    const { error } = await supabase.auth.resend({ type: "signup", email });
+    // Our own route, not supabase.auth.resend(): that one makes GoTrue
+    // send its template, which is the English-for-everyone email this
+    // whole change exists to stop. See src/app/api/auth/register.
+    const res = await fetch("/api/auth/resend-confirmation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, language }),
+    }).catch(() => null);
     setResending(false);
-    if (error) {
-      setResendMessage(error.message);
+    if (!res?.ok) {
+      setResendMessage(t("auth.resendFailed"));
       return;
     }
-    setResendMessage("Confirmation email resent.");
+    setResendMessage(t("auth.resendSent"));
     setResendCooldown(RESEND_COOLDOWN_SECONDS);
   }
 
@@ -75,6 +83,10 @@ export default function CheckYourEmail({ email, userId }: { email: string; userI
         clearInterval(intervalId);
       }
     }
+
+    // No user id when the address was already registered: there is
+    // nothing to pair, and the screen still has to look the same.
+    if (!userId) return;
 
     fetch("/api/auth/signup-pairing/start", {
       method: "POST",

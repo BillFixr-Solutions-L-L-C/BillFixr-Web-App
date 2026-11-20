@@ -1,25 +1,23 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SignUpForm from "./SignUpForm";
 
-const push = vi.fn();
-const refresh = vi.fn();
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push, refresh }),
-}));
-
-const signUp = vi.fn();
-// The form also looks the email's domain up in blocked_email_domains
-// before signing up, so the client needs from() too.
+// The form still looks the email's domain up in blocked_email_domains
+// before registering, so the client is still needed for from().
 type BlockedLookup = { data: { domain: string } | null; error: { message: string } | null };
 const blockedDomain = vi.fn<() => Promise<BlockedLookup>>(async () => ({ data: null, error: null }));
 vi.mock("@/lib/supabase/authEmailClient", () => ({
   createAuthEmailClient: () => ({
-    auth: { signUp: (...args: unknown[]) => signUp(...args) },
     from: () => ({ select: () => ({ eq: () => ({ maybeSingle: blockedDomain }) }) }),
   }),
 }));
+
+// Registration goes through our own route now, not supabase.auth.signUp.
+// The account is created the same way; what changed is who sends the
+// confirmation email, because GoTrue's template cannot read a language.
+const register = vi.fn();
+const originalFetch = global.fetch;
 
 vi.mock("@/components/auth/CheckYourEmail", () => ({
   default: ({ email }: { email: string }) => <div>Check your email stub: {email}</div>,
@@ -36,21 +34,35 @@ async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>, overrides
 beforeEach(() => {
   vi.clearAllMocks();
   blockedDomain.mockResolvedValue({ data: null, error: null });
+  register.mockResolvedValue({ ok: true, body: { ok: true, confirmationSent: true, userId: "user-1" } });
+  global.fetch = vi.fn(async (_url: unknown, init: unknown) => {
+    const { ok, body } = await register(JSON.parse((init as { body: string }).body));
+    return new Response(JSON.stringify(body), { status: ok ? 200 : 400 });
+  }) as unknown as typeof fetch;
 });
 
+afterEach(() => {
+  global.fetch = originalFetch;
+});
+
+/** What the form sent to /api/auth/register. */
+function sentBody(): Record<string, unknown> {
+  return register.mock.calls[0][0];
+}
+
 describe("SignUpForm", () => {
-  it("shows a mismatch error and never calls signUp when passwords don't match", async () => {
+  it("shows a mismatch error and never registers when passwords don't match", async () => {
     const user = userEvent.setup();
     render(<SignUpForm />);
 
     await fillAndSubmit(user, { confirmPassword: "Different1" });
 
     expect(screen.getByText("Passwords don't match.")).toBeInTheDocument();
-    expect(signUp).not.toHaveBeenCalled();
+    expect(register).not.toHaveBeenCalled();
   });
 
-  it("shows the server error message when signUp fails", async () => {
-    signUp.mockResolvedValue({ data: null, error: { message: "User already registered" } });
+  it("shows the server's message when registration fails", async () => {
+    register.mockResolvedValue({ ok: false, body: { error: "User already registered" } });
     const user = userEvent.setup();
     render(<SignUpForm />);
 
@@ -59,24 +71,35 @@ describe("SignUpForm", () => {
     await waitFor(() => expect(screen.getByText("User already registered")).toBeInTheDocument());
   });
 
-  it("shows the check-your-email screen when signUp succeeds without an active session", async () => {
-    signUp.mockResolvedValue({ data: { session: null, user: { id: "user-1" } }, error: null });
+  it("shows the check-your-email screen once registration succeeds", async () => {
     const user = userEvent.setup();
     render(<SignUpForm />);
 
     await fillAndSubmit(user, { email: "jane@example.com" });
 
     await waitFor(() => expect(screen.getByText(/Check your email stub: jane@example.com/)).toBeInTheDocument());
-    expect(signUp).toHaveBeenCalledWith({
+    expect(sentBody()).toMatchObject({
       email: "jane@example.com",
       password: "Password1",
-      // communication_language rides along with the name. The trigger on
-      // auth.users copies it onto the profile, and it is what BillFixr
-      // writes to this customer in from then on -- whatever the website's
-      // display-language switcher is later set to.
-      options: { data: { name: "Jane Doe", communication_language: "en" } },
+      name: "Jane Doe",
+      // The language rides along. The route puts it in the user metadata
+      // and the trigger copies it onto the profile, which is what
+      // BillFixr writes to this customer in from then on -- whatever the
+      // display switcher is later set to.
+      language: "en",
     });
-    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("shows the same screen when the address is already a confirmed account", async () => {
+    // The route answers 200 with no user id, on purpose: a different
+    // answer would turn signup into a way of asking who has an account.
+    register.mockResolvedValue({ ok: true, body: { ok: true, confirmationSent: true } });
+    const user = userEvent.setup();
+    render(<SignUpForm />);
+
+    await fillAndSubmit(user, { email: "taken@example.com" });
+
+    expect(await screen.findByText(/Check your email stub: taken@example.com/)).toBeInTheDocument();
   });
 
   it("registers the language chosen on the first visit, not the one on screen now", async () => {
@@ -84,47 +107,35 @@ describe("SignUpForm", () => {
     // the site to English is still a Spanish speaker for correspondence.
     document.cookie = "bf_lang_chosen=es; path=/";
     document.cookie = "bf_lang_display=en; path=/";
-    signUp.mockResolvedValue({ data: { session: null }, error: null });
     const user = userEvent.setup();
     render(<SignUpForm />);
 
     await fillAndSubmit(user, { email: "jane@example.com" });
 
-    await waitFor(() => expect(signUp).toHaveBeenCalled());
-    expect(signUp.mock.calls[0][0].options.data.communication_language).toBe("es");
+    await waitFor(() => expect(register).toHaveBeenCalled());
+    expect(sentBody().language).toBe("es");
 
     document.cookie = "bf_lang_chosen=; path=/; max-age=0";
     document.cookie = "bf_lang_display=; path=/; max-age=0";
   });
 
-  it("redirects straight to the dashboard when signUp returns an active session", async () => {
-    signUp.mockResolvedValue({ data: { session: { access_token: "t" }, user: { id: "user-1" } }, error: null });
-    const user = userEvent.setup();
-    render(<SignUpForm />);
-
-    await fillAndSubmit(user);
-
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"));
-    expect(refresh).toHaveBeenCalled();
-  });
-
-  it("refuses a throwaway address before it reaches signUp", async () => {
+  it("refuses a throwaway address before it reaches the route", async () => {
     blockedDomain.mockResolvedValue({ data: { domain: "mailinator.com" }, error: null });
     const user = userEvent.setup();
     render(<SignUpForm />);
     await fillAndSubmit(user, { email: "jane@mailinator.com" });
 
     expect(await screen.findByText(/temporary email address/i)).toBeInTheDocument();
-    expect(signUp).not.toHaveBeenCalled();
+    expect(register).not.toHaveBeenCalled();
   });
 
   it("explains a rejection that only the database catches", async () => {
     // The lookup fails, so the pre-check lets it through and the trigger
-    // rejects it — Supabase reports that as a bare database error.
+    // rejects it — which surfaces as a bare database error.
     blockedDomain
       .mockResolvedValueOnce({ data: null, error: { message: "offline" } })
       .mockResolvedValueOnce({ data: { domain: "mailinator.com" }, error: null });
-    signUp.mockResolvedValue({ data: {}, error: { message: "Database error creating new user" } });
+    register.mockResolvedValue({ ok: false, body: { error: "Database error creating new user" } });
 
     const user = userEvent.setup();
     render(<SignUpForm />);

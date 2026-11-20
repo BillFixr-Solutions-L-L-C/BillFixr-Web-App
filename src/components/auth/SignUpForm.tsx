@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createAuthEmailClient } from "@/lib/supabase/authEmailClient";
 import { friendlyAuthError, DISPOSABLE_EMAIL_MESSAGE } from "@/lib/authErrors";
@@ -14,7 +13,6 @@ import { useT } from "@/lib/i18n/client";
 
 export default function SignUpForm() {
   const t = useT();
-  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,46 +48,48 @@ export default function SignUpForm() {
     // `communication_language`, and from then on it is what BillFixr
     // writes to them in -- regardless of what the site's display-language
     // switcher is later set to. See src/lib/language.ts.
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-          communication_language: registrationLanguage(
-            readLanguageCookie(FIRST_VISIT_LANGUAGE_COOKIE),
-            readLanguageCookie(DISPLAY_LANGUAGE_COOKIE),
-          ),
-        },
-      },
-    });
+    // Registration goes through our own route rather than
+    // supabase.auth.signUp(). The account is created exactly the same
+    // way; what changes is who sends the confirmation email. GoTrue's
+    // template cannot read a language, so it wrote to everyone in
+    // English -- see src/app/api/auth/register/route.ts.
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        password,
+        name,
+        language: registrationLanguage(
+          readLanguageCookie(FIRST_VISIT_LANGUAGE_COOKIE),
+          readLanguageCookie(DISPLAY_LANGUAGE_COOKIE),
+        ),
+      }),
+    }).catch(() => null);
+    const body = await res?.json().catch(() => null);
 
-    if (error) {
+    if (!res?.ok) {
       // The pre-check above deliberately lets a failed lookup through, so
-      // the trigger can still be what rejects this. Supabase reports that
-      // as a bare "Database error creating new user", so confirm the
-      // cause rather than guessing from the wording.
+      // the trigger can still be what rejects this. It surfaces as a bare
+      // "Database error creating new user", so confirm the cause rather
+      // than guessing from the wording.
       const blocked = await isBlockedEmailDomain(supabase, email);
-      setError(blocked ? DISPOSABLE_EMAIL_MESSAGE : friendlyAuthError(error.message));
+      setError(blocked ? DISPOSABLE_EMAIL_MESSAGE : friendlyAuthError(body?.error ?? ""));
       setLoading(false);
       return;
     }
 
-    // With email confirmations enabled, signUp doesn't return an active
-    // session — the account only activates once the confirmation link is
-    // clicked, so there's nothing to redirect into yet.
-    if (!data.session) {
-      setPendingUserId(data.user?.id ?? null);
-      setConfirmationSent(true);
-      setLoading(false);
-      return;
-    }
-
-    router.push("/dashboard");
-    router.refresh();
+    // Email confirmations are on, so there is never a session here: the
+    // account only activates once the link is clicked.
+    setPendingUserId(typeof body?.userId === "string" ? body.userId : null);
+    setConfirmationSent(true);
+    setLoading(false);
   }
 
-  if (confirmationSent && pendingUserId) {
+  // Not gated on the user id: an address that is already a confirmed
+  // account comes back without one, and that case has to be
+  // indistinguishable from a fresh signup.
+  if (confirmationSent) {
     return <CheckYourEmail email={email} userId={pendingUserId} />;
   }
 

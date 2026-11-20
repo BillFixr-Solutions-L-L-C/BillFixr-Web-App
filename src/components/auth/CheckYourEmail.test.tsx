@@ -2,18 +2,26 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import CheckYourEmail from "./CheckYourEmail";
 
+// Resend goes through our own route now, not supabase.auth.resend():
+// that one makes GoTrue send its template, which is the
+// English-for-everyone email this change exists to stop.
 const resend = vi.fn();
-vi.mock("@/lib/supabase/authEmailClient", () => ({
-  createAuthEmailClient: () => ({ auth: { resend } }),
-}));
 
 const originalFetch = global.fetch;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // The pairing-poll effect's own fetch calls — not under test here, just
-  // kept from rejecting/hanging.
-  global.fetch = vi.fn(async () => new Response(JSON.stringify({}), { status: 500 }));
+  // Two different callers share global.fetch here. The pairing-poll
+  // effect's calls are not under test and only need to not hang; the
+  // resend button's call to /api/auth/resend-confirmation is, so it is
+  // routed to the `resend` mock by URL.
+  global.fetch = vi.fn(async (url: unknown, init?: unknown) => {
+    if (String(url).includes("resend-confirmation")) {
+      const { ok } = await resend(JSON.parse((init as { body: string }).body));
+      return new Response(JSON.stringify({ ok }), { status: ok ? 200 : 500 });
+    }
+    return new Response(JSON.stringify({}), { status: 500 });
+  }) as unknown as typeof fetch;
 });
 
 afterEach(() => {
@@ -41,7 +49,7 @@ describe("CheckYourEmail", () => {
 
   it("resends the confirmation email and restarts the cooldown", async () => {
     vi.useFakeTimers();
-    resend.mockResolvedValue({ error: null });
+    resend.mockResolvedValue({ ok: true });
     render(<CheckYourEmail email="jane@example.org" userId="user-1" />);
 
     act(() => {
@@ -53,14 +61,14 @@ describe("CheckYourEmail", () => {
       await Promise.resolve();
     });
 
-    expect(resend).toHaveBeenCalledWith({ type: "signup", email: "jane@example.org" });
+    expect(resend).toHaveBeenCalledWith({ email: "jane@example.org", language: "en" });
     expect(screen.getByText("Confirmation email resent.")).toBeInTheDocument();
     expect(screen.getByText("Didn't get it? You can resend in 90s")).toBeInTheDocument();
   });
 
   it("shows the error message when resend fails", async () => {
     vi.useFakeTimers();
-    resend.mockResolvedValue({ error: { message: "Rate limit exceeded" } });
+    resend.mockResolvedValue({ ok: false });
     render(<CheckYourEmail email="jane@example.org" userId="user-1" />);
 
     act(() => {
@@ -72,6 +80,6 @@ describe("CheckYourEmail", () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByText("Rate limit exceeded")).toBeInTheDocument();
+    expect(screen.getByText("We couldn't resend it. Please try again in a moment.")).toBeInTheDocument();
   });
 });
