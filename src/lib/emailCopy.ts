@@ -299,6 +299,9 @@ export const PUBLIC_EMAILS: Record<
   {
     newsletter: { subject: string; heading: string; body: string; footer: string };
     application: { subject: string; heading: string; body: string };
+    /** The signup confirmation. Sent by this app rather than by GoTrue --
+     *  see src/app/api/auth/register/route.ts for why. */
+    confirm: { subject: string; heading: string; body: string; cta: string; footer: string };
   }
 > = {
   en: {
@@ -307,6 +310,13 @@ export const PUBLIC_EMAILS: Record<
       heading: "You're on the list",
       body: "Thanks for subscribing. We'll send you occasional updates on medical billing, your rights as a patient, and what BillFixr is working on.",
       footer: "Didn't subscribe? You can safely ignore this email.",
+    },
+    confirm: {
+      subject: "Confirm your BillFixr account",
+      heading: "Welcome to BillFixr",
+      body: "Thanks for signing up with {email}. Confirm your email to activate your account and start reviewing your medical bills.",
+      cta: "Confirm Your Account",
+      footer: "If you didn't create a BillFixr account, you can safely ignore this email.",
     },
     application: {
       subject: "We received your application",
@@ -320,6 +330,13 @@ export const PUBLIC_EMAILS: Record<
       heading: "Ya está en la lista",
       body: "Gracias por suscribirse. Le enviaremos novedades ocasionales sobre facturación médica, sus derechos como paciente y en qué está trabajando BillFixr.",
       footer: "¿No se suscribió? Puede ignorar este mensaje.",
+    },
+    confirm: {
+      subject: "Confirme su cuenta de BillFixr",
+      heading: "Bienvenido a BillFixr",
+      body: "Gracias por registrarse con {email}. Confirme su correo para activar su cuenta y empezar a revisar sus facturas médicas.",
+      cta: "Confirmar cuenta",
+      footer: "Si no creó una cuenta en BillFixr, puede ignorar este mensaje.",
     },
     application: {
       subject: "Recibimos su solicitud",

@@ -80,12 +80,10 @@ export default async function PricingPage() {
             </h2>
             <p className="mt-3 text-4xl font-bold text-[#003322]">
               ${commitmentFee}
-              <span className="ml-2 text-base font-medium text-primary-900/50">per bill</span>
+              <span className="ml-2 text-base font-medium text-primary-900/50">{t("price.perBill")}</span>
             </p>
             <p className="mt-4 text-sm leading-relaxed text-primary-900/70">
-              Charged once, when you submit a bill for review. It is credited in full against your
-              success fee, so it is not an extra charge — if a success fee is owed, you pay that
-              amount less the ${commitmentFee} you have already paid.
+              {t("price.commitmentBody", { fee: commitmentFee })}
             </p>
           </section>
 
@@ -95,12 +93,10 @@ export default async function PricingPage() {
             </h2>
             <p className="mt-3 text-4xl font-bold text-[#003322]">
               {percentage}%
-              <span className="ml-2 text-base font-medium text-primary-900/50">of what you save</span>
+              <span className="ml-2 text-base font-medium text-primary-900/50">{t("price.ofWhatYouSave")}</span>
             </p>
             <p className="mt-4 text-sm leading-relaxed text-primary-900/70">
-              Charged only if we find errors and your bill is actually reduced. It is {percentage}% of
-              the amount you save — never a percentage of the original bill. No reduction means no
-              success fee.
+              {t("price.successBody", { percent: percentage })}
             </p>
           </section>
         </div>
