@@ -237,6 +237,39 @@ export function fillCopy(text: string, values: Record<string, string>): string {
   );
 }
 
+/** The two prose sections, the button and the sign-off of the welcome
+ *  email. Separate from MESSAGES because they do not fit the four-field
+ *  EmailMessage shape, and alongside WELCOME_STEPS because they are part
+ *  of the same email. */
+export const WELCOME_SECTIONS: Record<
+  Language,
+  { costsTitle: string; costsBody: string; privacyTitle: string; privacyBody: string; support: string; rights: string }
+> = {
+  en: {
+    costsTitle: "What it costs",
+    costsBody:
+      "A small $5 commitment fee gets your bill into the queue for review right away - it goes toward your final BillFixr fee, so it's never extra. If we find and fix errors, a success fee applies only as a percentage of what you actually save. If no errors are found, that's all you ever pay - no success fee.",
+    privacyTitle: "Your documents are private",
+    privacyBody:
+      "Your bill is only used to review and negotiate on your behalf - it's not shared or sold, and you can see everything we're doing from your dashboard at any time.",
+    support: "Questions? Reach us anytime from the Support tab in your dashboard.",
+    rights: "Copyright 2026 BillFixr Technologies. All Rights Reserved.",
+  },
+  es: {
+    costsTitle: "Lo que cuesta",
+    // The success fee is a percentage of the SAVING, never of the
+    // corrected bill. See docs/FEES.md -- the Spanish has to say the same
+    // thing, because this is the paragraph someone reads before paying.
+    costsBody:
+      "Una tarifa de compromiso de $5 pone su factura en la cola de revisión de inmediato, y se descuenta de su tarifa final de BillFixr, así que nunca es un cargo adicional. Si encontramos y corregimos errores, se aplica una comisión por éxito que es solo un porcentaje de lo que usted ahorra. Si no encontramos errores, eso es todo lo que paga: sin comisión por éxito.",
+    privacyTitle: "Sus documentos son privados",
+    privacyBody:
+      "Su factura solo se usa para revisarla y negociar en su nombre; no se comparte ni se vende, y usted puede ver todo lo que hacemos desde su panel en cualquier momento.",
+    support: "¿Tiene preguntas? Escríbanos cuando quiera desde la pestaña Soporte de su panel.",
+    rights: "Copyright 2026 BillFixr Technologies. Todos los derechos reservados.",
+  },
+};
+
 /** The four "how it works" steps in the welcome email. */
 export const WELCOME_STEPS: Record<Language, { title: string; description: string }[]> = {
   en: [

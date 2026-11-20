@@ -76,3 +76,94 @@ describe("POST /api/auth/welcome-email", () => {
     expect(res.status).toBe(500);
   });
 });
+
+// The first email a customer ever gets, in the language they registered
+// in.
+//
+// The route read communication_language from the start and the four
+// "how it works" steps were translated -- but two whole sections, the
+// button and the sign-off were English literals in the template, so a
+// Spanish registrant opened a Spanish email and found the fee
+// explanation in English. That is the one paragraph in it that costs
+// money to misunderstand.
+describe("the language the welcome email is written in", () => {
+  function profileIn(language: string | null) {
+    serverMock.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    serverMock.queueResult("profiles", {
+      data: { name: "Ana", email: "ana@example.com", welcome_email_sent_at: null, communication_language: language },
+      error: null,
+    });
+  }
+
+  function sent() {
+    return sendEmail.mock.calls[0][0];
+  }
+
+  it("writes the whole email in Spanish, not just the opening", async () => {
+    profileIn("es");
+
+    await POST();
+
+    const html = String(sent().html);
+    expect(sent().subject).toBe("Bienvenido a BillFixr");
+    // The steps were already translated.
+    expect(html).toContain("Suba su factura");
+    // These were not.
+    expect(html).toContain("Lo que cuesta");
+    expect(html).toContain("Sus documentos son privados");
+    expect(html).toContain("pestaña Soporte");
+    expect(html).toContain("Todos los derechos reservados");
+  });
+
+  it("states the success fee against the saving, in Spanish too", async () => {
+    // docs/FEES.md: a percentage of what the customer saves, never of
+    // the corrected bill. The Spanish has to say the same thing.
+    profileIn("es");
+
+    await POST();
+
+    expect(String(sent().html)).toContain("un porcentaje de lo que usted ahorra");
+  });
+
+  it("leaves no English prose behind in the Spanish version", async () => {
+    profileIn("es");
+
+    await POST();
+
+    const html = String(sent().html);
+    for (const english of [
+      "What it costs",
+      "Your documents are private",
+      "Upload Your First Bill",
+      "Reach us anytime",
+      "All Rights Reserved",
+    ]) {
+      expect(html, english).not.toContain(english);
+    }
+  });
+
+  it("marks the document as Spanish", async () => {
+    profileIn("es");
+
+    await POST();
+
+    expect(String(sent().html)).toContain('<html lang="es">');
+  });
+
+  it("still writes English to a customer who registered in English", async () => {
+    profileIn("en");
+
+    await POST();
+
+    expect(sent().subject).toBe("Welcome to BillFixr");
+    expect(String(sent().html)).toContain("What it costs");
+  });
+
+  it("falls back to English for a profile recorded before the column existed", async () => {
+    profileIn(null);
+
+    await POST();
+
+    expect(sent().subject).toBe("Welcome to BillFixr");
+  });
+});
