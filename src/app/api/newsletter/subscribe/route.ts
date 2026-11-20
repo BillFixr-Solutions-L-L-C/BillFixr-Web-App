@@ -2,11 +2,17 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
+import { PUBLIC_EMAILS } from "@/lib/emailCopy";
+import { asLanguage, type Language } from "@/lib/language";
+import { escapeHtml } from "@/lib/html";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
-  const { email } = await request.json();
+  const { email, language: requested } = await request.json();
+  // Whatever the switcher was on when they typed their address. A
+  // subscriber has no profile, so this is the only signal there is.
+  const language = asLanguage(requested);
   if (typeof email !== "string" || !EMAIL_RE.test(email)) {
     return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
   }
@@ -23,7 +29,8 @@ export async function POST(request: Request) {
 
   if (!error) {
     try {
-      await sendEmail({ to: email, subject: "You're subscribed to BillFixr", html: newsletterEmailHtml() });
+      const copy = PUBLIC_EMAILS[language].newsletter;
+      await sendEmail({ to: email, subject: copy.subject, html: newsletterEmailHtml(language) });
     } catch (err) {
       // Best-effort — the subscription itself already succeeded.
       console.error("Newsletter confirmation email failed for", email, err);
@@ -33,13 +40,13 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
-function newsletterEmailHtml() {
+function newsletterEmailHtml(language: Language) {
+  const copy = PUBLIC_EMAILS[language].newsletter;
   return renderEmailCard({
-    title: "You're subscribed to BillFixr",
-    heading: "You're on the list",
-    bodyHtml: emailParagraph(
-      "Thanks for subscribing. We'll send you occasional updates on medical billing, your rights as a patient, and what BillFixr is working on.",
-    ),
-    footerNote: "Didn't subscribe? You can safely ignore this email.",
+    title: copy.subject,
+    heading: copy.heading,
+    language,
+    bodyHtml: emailParagraph(escapeHtml(copy.body)),
+    footerNote: copy.footer,
   });
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useT } from "@/lib/i18n/client";
+import { useLanguage, useT } from "@/lib/i18n/client";
 
 function SendIcon() {
   return (
@@ -14,6 +14,9 @@ function SendIcon() {
 
 export default function ApplyForm({ jobId }: { jobId: string }) {
   const t = useT();
+  // Likewise: an applicant has no profile, so the page's own language is
+  // what the acknowledgement is written in.
+  const language = useLanguage();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -45,7 +48,7 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
     const res = await fetch("/api/careers/apply", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jobId, fullName, email, phone, cvPath: path }),
+      body: JSON.stringify({ jobId, fullName, email, phone, cvPath: path, language }),
     });
 
     setLoading(false);

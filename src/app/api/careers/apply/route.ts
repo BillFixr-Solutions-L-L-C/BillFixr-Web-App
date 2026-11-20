@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
 import { renderEmailCard, emailParagraph } from "@/lib/emailTemplate";
 import { escapeHtml } from "@/lib/html";
+import { PUBLIC_EMAILS, fillCopy } from "@/lib/emailCopy";
+import { asLanguage, type Language } from "@/lib/language";
 
 // The CV file itself is uploaded client-side straight to the `cvs`
 // storage bucket (unchanged) before this is called — this route only
@@ -11,7 +13,10 @@ import { escapeHtml } from "@/lib/html";
 // existed), and sends the confirmation email, which has to happen
 // server-side since sendEmail is server-only.
 export async function POST(request: Request) {
-  const { jobId, fullName, email, phone, cvPath } = await request.json();
+  const { jobId, fullName, email, phone, cvPath, language: requested } = await request.json();
+  // The language the careers page was being read in. An applicant has
+  // no profile, so this is the only signal there is.
+  const language = asLanguage(requested);
   if (
     typeof jobId !== "string" ||
     typeof fullName !== "string" ||
@@ -38,10 +43,11 @@ export async function POST(request: Request) {
   const { data: job } = await supabase.from("job_postings").select("title").eq("id", jobId).single();
 
   try {
+    const copy = PUBLIC_EMAILS[language].application;
     await sendEmail({
       to: email,
-      subject: "We received your application",
-      html: applicationReceivedEmailHtml({ fullName, jobTitle: job?.title ?? "the role" }),
+      subject: copy.subject,
+      html: applicationReceivedEmailHtml({ fullName, jobTitle: job?.title ?? "", language }),
     });
   } catch (err) {
     // Best-effort — the application itself is already recorded.
@@ -51,12 +57,27 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
-function applicationReceivedEmailHtml({ fullName, jobTitle }: { fullName: string; jobTitle: string }) {
+function applicationReceivedEmailHtml({
+  fullName,
+  jobTitle,
+  language,
+}: {
+  fullName: string;
+  jobTitle: string;
+  language: Language;
+}) {
+  const copy = PUBLIC_EMAILS[language].application;
+  // The role is emphasised inside the sentence, so the two values are
+  // escaped before they are put into it and the result is not escaped
+  // again -- doing both would show the customer &amp; in their own name.
+  const body = fillCopy(copy.body, {
+    name: escapeHtml(fullName),
+    role: `<span style="color:#003322; font-weight:600;">${escapeHtml(jobTitle)}</span>`,
+  });
   return renderEmailCard({
-    title: "We received your application",
-    heading: "Application received",
-    bodyHtml: emailParagraph(
-      `Hi ${escapeHtml(fullName)}, thanks for applying for <span style="color:#003322; font-weight:600;">${escapeHtml(jobTitle)}</span>. Our team will review your application and reach out if it's a match.`,
-    ),
+    title: copy.subject,
+    heading: copy.heading,
+    language,
+    bodyHtml: emailParagraph(body),
   });
 }

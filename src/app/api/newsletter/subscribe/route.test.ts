@@ -78,3 +78,45 @@ describe("POST /api/newsletter/subscribe", () => {
     expect(res.status).toBe(500);
   });
 });
+
+// A subscriber has no profile, so there is no communication_language to
+// read. The form sends the language the site was being read in instead.
+describe("the language the confirmation is written in", () => {
+  function subscribe(language?: string) {
+    serverMock.queueResult("newsletter_subscribers", { data: null, error: null });
+    return POST(
+      new Request("http://localhost/api/newsletter/subscribe", {
+        method: "POST",
+        body: JSON.stringify({ email: "ana@example.com", ...(language ? { language } : {}) }),
+      }),
+    );
+  }
+
+  it("writes it in Spanish when the page was Spanish", async () => {
+    await subscribe("es");
+
+    const call = sendEmail.mock.calls[0][0];
+    expect(call.subject).toBe("Se suscribió a BillFixr");
+    expect(String(call.html)).toContain("Gracias por suscribirse");
+    expect(String(call.html)).toContain('<html lang="es">');
+  });
+
+  it("writes it in English when the page was English", async () => {
+    await subscribe("en");
+
+    expect(sendEmail.mock.calls[0][0].subject).toBe("You're subscribed to BillFixr");
+  });
+
+  it("falls back to English when the form sends nothing", async () => {
+    // An older cached page, or a request made by hand.
+    await subscribe();
+
+    expect(sendEmail.mock.calls[0][0].subject).toBe("You're subscribed to BillFixr");
+  });
+
+  it("falls back to English for a language we do not have", async () => {
+    await subscribe("fr");
+
+    expect(sendEmail.mock.calls[0][0].subject).toBe("You're subscribed to BillFixr");
+  });
+});
