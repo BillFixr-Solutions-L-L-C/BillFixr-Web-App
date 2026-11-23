@@ -9,8 +9,8 @@ import {
   mapBillAnalysisFromEngine,
   mapCaseFieldsFromEngine,
 } from "@/lib/engineAnalysisMapping";
-import { storedBillData } from "@/lib/engineBillData";
-import { auditBill } from "@/lib/automation-engine";
+import { isEngineExtraction, storedBillData } from "@/lib/engineBillData";
+import { auditBill, extractBill } from "@/lib/automation-engine";
 import { guessContentType } from "@/lib/contentType";
 import type { AiCaseProcessingResponse } from "@/types/ai";
 import { MAX_RESCANS, canRescan, remaining, used } from "@/lib/rescan";
@@ -130,19 +130,68 @@ export async function POST(request: Request) {
   // the hospital details; that whole response was parked in
   // bill_extractions. Reuse it rather than paying for a second reading —
   // this is where the parts held back until payment get written out.
-  // A re-scan has to actually re-read the document, so the stored reading
-  // is dropped rather than reused.
-  if (force) {
-    await admin.from("bill_extractions").delete().eq("bill_id", bill.id);
-  }
+  // A re-scan has to actually re-read the document.
+  //
+  // It used to do that by DELETING the stored reading first and then
+  // falling through to the ai-service, and both halves of that were
+  // wrong. The delete happened before the new reading existed, so a
+  // re-scan that failed left the case with no reading at all -- and
+  // because nothing else writes engine_result except the information
+  // step, the only thing left to re-read with was the ai-service, which
+  // the engine was brought in to replace. One press of Re-scan on a
+  // working case turned it into "This bill hasn't been read yet" and no
+  // way to proceed. Reported from a real run on 2026-11-22.
+  //
+  // Nobody could press Re-scan until 2026-11-18, which is why this sat
+  // here harmlessly until the button became reachable.
+  //
+  // So: re-read with the engine, and only replace the stored reading once
+  // the new one is in hand.
+  let { data: cached } = await admin
+    .from("bill_extractions")
+    .select("engine_result, result")
+    .eq("bill_id", bill.id)
+    .maybeSingle();
 
-  const { data: cached } = force
-    ? { data: null }
-    : await admin
+  if (force) {
+    const { data: fileBlob, error: downloadError } = await admin.storage
+      .from("bills")
+      .download(bill.storage_url);
+    if (downloadError || !fileBlob) {
+      console.error("bill download failed for re-scan of case", caseId, downloadError);
+      return NextResponse.json(
+        { error: "We couldn't load your bill to read it again. Please try again.", stage: "bill_download" },
+        { status: 500 },
+      );
+    }
+    try {
+      const reread = await extractBill({
+        filename: bill.filename,
+        bytes: new Blob([await fileBlob.arrayBuffer()], { type: guessContentType(bill.filename) }),
+      });
+      if (!isEngineExtraction(reread)) {
+        // A 200 carrying something that is not a reading is a failure,
+        // and the old reading is still the better of the two.
+        console.error("Re-scan returned no usable reading for bill", bill.id);
+        return NextResponse.json(
+          { error: "We read your bill again but couldn't make sense of it. Your previous reading is unchanged.", stage: "extract_empty" },
+          { status: 502 },
+        );
+      }
+      await admin
         .from("bill_extractions")
-        .select("engine_result, result")
-        .eq("bill_id", bill.id)
-        .maybeSingle();
+        .upsert({ bill_id: bill.id, engine_result: reread }, { onConflict: "bill_id" });
+      cached = { engine_result: reread, result: cached?.result ?? null };
+    } catch (err) {
+      // The old reading is left exactly as it was. The customer has spent
+      // one of their allowance, which is the only thing lost.
+      console.error("Re-scan failed for bill", bill.id, err);
+      return NextResponse.json(
+        { error: "We couldn't read your bill again just now. Your previous reading is unchanged.", stage: "rescan_failed" },
+        { status: 502 },
+      );
+    }
+  }
 
   // The engine's own reading is preferred, and it is already there: the
   // information step wrote it when it read the bill for the form. This

@@ -29,7 +29,11 @@ vi.mock("@/lib/automation-engine", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/automation-engine")>()),
   auditBill: (...args: unknown[]) => auditBill(...args),
   getNegotiation: (...args: unknown[]) => getNegotiation(...args),
+  // A re-scan re-reads the document through the engine. It used to delete
+  // the stored reading and fall through to the ai-service instead.
+  extractBill: (...args: unknown[]) => extractBill(...args),
 }));
+const extractBill = vi.fn();
 const getDomainAccess = vi.fn();
 vi.mock("@/lib/domainAccess", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/domainAccess")>()),
@@ -112,6 +116,13 @@ const AI_RESPONSE = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Queued results are per table and survive vi.clearAllMocks(), so a
+  // test that leaves one unconsumed hands it to the next one. That makes
+  // every test downstream depend on the order of the ones above it --
+  // which is how adding two tests in the middle of this file turned six
+  // unrelated ones red.
+  serverMock.reset();
+  adminMock.reset();
   getAiServiceConfig.mockReturnValue({ baseUrl: "http://localhost:8000" });
   startNegotiationForCase.mockResolvedValue({ started: true, negotiation: { id: "neg-1" } });
   getNegotiation.mockResolvedValue({ id: "neg-1", messages: [] });
@@ -224,20 +235,80 @@ describe("POST /api/dev/process-with-ai", () => {
     expect(JSON.stringify(body)).not.toContain("/v1/cases/process");
   });
 
-  it("re-scans on force: drops the stored reading and calls the AI again", async () => {
+  const READING = {
+    provider_name: "Matthew Walker Comprehensive Health Center",
+    patient_due: 428.53,
+    line_items: [{ description: "PREV VISIT, EST, AGE 40-64", amount: 306.5 }],
+  };
+
+  it("re-scans by reading the document again through the engine", async () => {
+    // Not the ai-service. The engine is what produces a reading with CPT
+    // codes on it, and it is the only thing that writes engine_result --
+    // so a re-scan that went to the ai-service could never restore what
+    // it had just deleted.
     serverMock.getUser.mockResolvedValue({ data: { user: USER } });
     queueCaseRow({ analysis_result: { already: "there" } });
+    adminMock.queueResult("bill_extractions", { data: { engine_result: READING }, error: null });
     adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf bytes"]), error: null });
-    processCase.mockResolvedValue(AI_RESPONSE);
+    extractBill.mockResolvedValue({ ...READING, patient_due: 400 });
+    auditBill.mockResolvedValue({
+      issues: [],
+      risk_level: "Low",
+      total_billed: 428.53,
+      patient_due: 428.53,
+      settlement_options: { aggressive_offer: 100, fair_market_offer: 150, potential_savings: 0 },
+    });
     adminMock.queueResult("bills", { data: null, error: null });
     adminMock.queueResult("cases", { data: null, error: null });
 
     const res = await POST(makeRequest({ caseId: "case-1", force: true }));
 
     expect(res.status).toBe(200);
-    expect(await res.json()).not.toMatchObject({ alreadyProcessed: true });
-    expect(processCase).toHaveBeenCalled();
-    expect(adminMock.from).toHaveBeenCalledWith("bill_extractions");
+    expect(extractBill).toHaveBeenCalled();
+    expect(processCase).not.toHaveBeenCalled();
+  });
+
+  it("keeps the stored reading when the re-read fails", async () => {
+    // The bug a real run found on 2026-11-22. This used to DELETE the
+    // stored reading first and then re-read; when the re-read failed the
+    // case was left with no reading at all, and Proceed answered "This
+    // bill hasn't been read yet" with no way back.
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    queueCaseRow({ analysis_result: { already: "there" } });
+    adminMock.queueResult("bill_extractions", { data: { engine_result: READING }, error: null });
+    adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf bytes"]), error: null });
+    extractBill.mockRejectedValue(new Error("engine unreachable"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await POST(makeRequest({ caseId: "case-1", force: true }));
+
+    expect(res.status).toBe(502);
+    expect((await res.json()).error).toMatch(/previous reading is unchanged/i);
+
+    // Nothing was deleted, and nothing was written over it.
+    const wrote = adminMock.from.mock.calls
+      .map((call, i) => ({ table: call[0], result: adminMock.from.mock.results[i] }))
+      .filter((e) => e.table === "bill_extractions")
+      .flatMap((e) => {
+        const builder = e.result?.value as Record<string, { mock?: { calls: unknown[][] } }>;
+        return [...(builder?.delete?.mock?.calls ?? []), ...(builder?.upsert?.mock?.calls ?? [])];
+      });
+    expect(wrote).toHaveLength(0);
+  });
+
+  it("keeps the stored reading when the re-read comes back unusable", async () => {
+    serverMock.getUser.mockResolvedValue({ data: { user: USER } });
+    queueCaseRow({ analysis_result: { already: "there" } });
+    adminMock.queueResult("bill_extractions", { data: { engine_result: READING }, error: null });
+    adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf bytes"]), error: null });
+    // A 200 carrying nothing that is a reading.
+    extractBill.mockResolvedValue({ processed_documents: [] });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await POST(makeRequest({ caseId: "case-1", force: true }));
+
+    expect(res.status).toBe(502);
+    expect((await res.json()).error).toMatch(/previous reading is unchanged/i);
   });
 
   it("refuses the second re-scan", async () => {
@@ -260,8 +331,16 @@ describe("POST /api/dev/process-with-ai", () => {
   it("records the re-scan so the next one is refused", async () => {
     serverMock.getUser.mockResolvedValue({ data: { user: USER } });
     queueCaseRow({ analysis_result: { already: "there" } });
+    adminMock.queueResult("bill_extractions", { data: { engine_result: READING }, error: null });
     adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf"]), error: null });
-    processCase.mockResolvedValue(AI_RESPONSE);
+    extractBill.mockResolvedValue(READING);
+    auditBill.mockResolvedValue({
+      issues: [],
+      risk_level: "Low",
+      total_billed: 428.53,
+      patient_due: 428.53,
+      settlement_options: { aggressive_offer: 100, fair_market_offer: 150, potential_savings: 0 },
+    });
     adminMock.queueResult("bills", { data: null, error: null });
     adminMock.queueResult("cases", { data: null, error: null });
 
