@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getDomainAccess, hasDomainAccess } from "@/lib/domainAccess";
 import { getBillDocuments } from "@/lib/billDocuments";
 import { EMPTY_BILL_ANALYSIS, type BillAnalysis } from "@/lib/billAnalysis";
 import DocumentAnalysisClient from "@/components/dashboard/DocumentAnalysisClient";
@@ -16,12 +18,32 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: bill } = await supabase
-    .from("bills")
-    .select("id, filename, storage_url, status, provider_name, service_date, statement_date, analysis_result")
-    .eq("id", id)
-    .eq("user_id", user!.id)
-    .single();
+  const COLUMNS =
+    "id, user_id, filename, storage_url, status, provider_name, service_date, statement_date, analysis_result";
+
+  let { data: bill } = await supabase.from("bills").select(COLUMNS).eq("id", id).eq("user_id", user!.id).single();
+
+  // Staff reading a customer's analysis.
+  //
+  // The admin case screen lists an "Analysis Generated" row, and until now
+  // that row had nowhere to go: this page was scoped to the owner, so an
+  // admin following it got a 404 and the team could see that an analysis
+  // existed without being able to read it. Reported 2026-11-24.
+  //
+  // Gated on the same client_data access every other admin view of a
+  // customer's documents uses, and read with the service role because the
+  // customer's own RLS policy is what refused the first read. Nothing is
+  // written here, and the decision-point buttons are withheld below:
+  // Re-scan spends the customer's allowance and Proceed writes to their
+  // provider, and neither is staff's to press.
+  const viewingAsStaff = !bill;
+  if (viewingAsStaff) {
+    if (!hasDomainAccess(await getDomainAccess(supabase, "client_data"))) {
+      notFound();
+    }
+    const { data: asStaff } = await createAdminClient().from("bills").select(COLUMNS).eq("id", id).single();
+    bill = asStaff;
+  }
 
   if (!bill) {
     notFound();
@@ -35,11 +57,15 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
     { id: bill.id, filename: bill.filename, storage_url: bill.storage_url, status: bill.status, uploaded_at: "" },
   ]);
 
-  const { data: caseRow } = await supabase
+  const CASE_COLUMNS =
+    "id, status, errors_detected, appeal_letter_text, provider_email, letter_sent_at, negotiation_id, rescanned_at, rescan_count";
+  // Read with whichever client could see the bill: the customer's own
+  // policy refuses a case that is not theirs, and staff got here only by
+  // passing the client_data check above.
+  const reader = viewingAsStaff ? createAdminClient() : supabase;
+  const { data: caseRow } = await reader
     .from("cases")
-    .select(
-      "id, status, errors_detected, appeal_letter_text, provider_email, letter_sent_at, negotiation_id, rescanned_at, rescan_count",
-    )
+    .select(CASE_COLUMNS)
     .eq("bill_id", bill.id)
     .maybeSingle();
 
@@ -97,8 +123,11 @@ export default async function DocumentAnalysisPage({ params }: { params: Promise
   // `negotiation_id` as well as `letter_sent_at`: a negotiation that
   // started but whose send is not recorded yet is still a dispute in
   // flight.
+  // Never for staff. Re-scan spends the customer's allowance and Proceed
+  // writes to their provider; both are the customer's to press, on their
+  // own case.
   const atDecisionPoint =
-    Boolean(caseRow) && !caseRow!.letter_sent_at && !caseRow!.negotiation_id;
+    !viewingAsStaff && Boolean(caseRow) && !caseRow!.letter_sent_at && !caseRow!.negotiation_id;
 
   // Documents stay watermarked until the case is completed.
   const inProgress = Boolean(caseRow) && !isCaseCompleted(caseRow!.status);

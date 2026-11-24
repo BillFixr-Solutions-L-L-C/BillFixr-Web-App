@@ -4,6 +4,7 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 const serverMock = createSupabaseMock();
 const adminMock = createSupabaseMock();
 const extractBill = vi.fn();
+const wakeAutomationEngine = vi.fn();
 const getAutomationEngineConfig = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => serverMock.client) }));
@@ -15,6 +16,9 @@ vi.mock("@/lib/automation-engine", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/automation-engine")>()),
   extractBill: (...a: unknown[]) => extractBill(...a),
   getAutomationEngineConfig: () => getAutomationEngineConfig(),
+  // Asked before the engine is used: on a free tier it sleeps, and a cold
+  // start costs more than the whole request budget.
+  wakeAutomationEngine: () => wakeAutomationEngine(),
 }));
 
 const { POST } = await import("./route");
@@ -91,6 +95,8 @@ beforeEach(() => {
   serverMock.reset();
   adminMock.reset();
   getAutomationEngineConfig.mockReturnValue({ baseUrl: "http://engine" });
+  // Awake unless a test says otherwise.
+  wakeAutomationEngine.mockResolvedValue(true);
   adminMock.storageDownload.mockResolvedValue({ data: new Blob(["pdf"]), error: null });
 });
 
@@ -293,5 +299,72 @@ describe("POST /api/dashboard/bills/[id]/extract", () => {
 
     expect(res.status).toBe(200);
     expect((await res.json()).fields.hospitalName).toBe("Riverside General");
+  });
+});
+
+// The engine runs on a free tier that spins down when idle.
+//
+// Measured on 2026-11-24: a warm read is 22s direct and 44s through this
+// route, against a platform ceiling of 60. A cold start on top of that is
+// over the line, and the platform kills the request before any timeout
+// here can answer -- so the information step saw a dead response, gave
+// up, and left every box blank. That is what a customer reported on
+// 2026-11-22.
+describe("when the engine is asleep", () => {
+  function ownedBill() {
+    serverMock.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    serverMock.queueResult("bills", {
+      data: { id: "bill-1", user_id: "user-1", filename: "bill.pdf", storage_url: "user-1/bill.pdf" },
+      error: null,
+    });
+    adminMock.queueResult("bill_extractions", { data: null, error: null });
+  }
+
+  it("asks whether it is awake before trying to read", async () => {
+    ownedBill();
+    extractBill.mockResolvedValue({ provider_name: "Matthew Walker", patient_due: 428.53 });
+
+    await POST(new Request("http://localhost/x", { method: "POST" }), {
+      params: Promise.resolve({ id: "bill-1" }),
+    });
+
+    expect(wakeAutomationEngine).toHaveBeenCalled();
+  });
+
+  it("comes back later instead of spending the whole budget waiting", async () => {
+    ownedBill();
+    wakeAutomationEngine.mockResolvedValue(false);
+
+    const res = await POST(new Request("http://localhost/x", { method: "POST" }), {
+      params: Promise.resolve({ id: "bill-1" }),
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(503);
+    // The stage is what the information step keys its retry on. Any other
+    // failure is not worth waiting twelve seconds for.
+    expect(body.stage).toBe("engine_waking");
+    expect(extractBill).not.toHaveBeenCalled();
+  });
+
+  it("does not wake anything for a bill it has already read", async () => {
+    // The cached reading is the point: no engine, no cost, no wait.
+    serverMock.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    serverMock.queueResult("bills", {
+      data: { id: "bill-1", user_id: "user-1", filename: "bill.pdf", storage_url: "user-1/bill.pdf" },
+      error: null,
+    });
+    adminMock.queueResult("bill_extractions", {
+      data: { engine_result: { provider_name: "Matthew Walker", patient_due: 428.53 } },
+      error: null,
+    });
+
+    const res = await POST(new Request("http://localhost/x", { method: "POST" }), {
+      params: Promise.resolve({ id: "bill-1" }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(wakeAutomationEngine).not.toHaveBeenCalled();
+    expect(extractBill).not.toHaveBeenCalled();
   });
 });

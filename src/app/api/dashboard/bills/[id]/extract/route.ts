@@ -5,6 +5,7 @@ import {
   AutomationEngineTimeoutError,
   extractBill,
   getAutomationEngineConfig,
+  wakeAutomationEngine,
 } from "@/lib/automation-engine";
 import { isEngineExtraction } from "@/lib/engineBillData";
 import { guessContentType } from "@/lib/contentType";
@@ -30,6 +31,9 @@ import type { EngineExtraction } from "@/types/automation-engine";
 // Same reason as the analysis route: a vision-model call behind a free-tier
 // cold start. Stated here rather than inherited from a platform default
 // that is invisible from the repo.
+//
+// 300 is the Hobby maximum as well as its default, so this is the whole
+// budget the plan allows, not an aspiration.
 export const maxDuration = 300;
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -81,6 +85,26 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     : undefined;
 
   if (!extraction) {
+    // Is the engine even up? On Render's free tier it spins down when
+    // idle, and a cold start plus a vision read is longer than the whole
+    // request budget -- so the read was being killed by the platform
+    // before any timeout of ours could answer, and the step just gave up
+    // silently. Measured on 2026-11-24: 22s against a warm engine, 44s
+    // through this route, and the ceiling is 60.
+    //
+    // Asking first costs seconds, starts the cold boot, and turns a dead
+    // screen into "coming back in a moment".
+    if (!(await wakeAutomationEngine())) {
+      return NextResponse.json(
+        {
+          error: "We're still waking up the reader. Give it a moment and we'll try again.",
+          fields: null,
+          stage: "engine_waking",
+        },
+        { status: 503 },
+      );
+    }
+
     const { data: fileBlob, error: downloadError } = await admin.storage.from("bills").download(bill.storage_url);
     if (downloadError || !fileBlob) {
       console.error("bill download failed for bill", id, downloadError);

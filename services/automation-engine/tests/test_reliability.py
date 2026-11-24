@@ -1,3 +1,4 @@
+import re
 """Failure modes that cost a customer or a hospital something real.
 
 Each of these used to be a way for the engine to look healthy while a paid
@@ -161,3 +162,48 @@ def test_it_gives_up_with_a_clear_error_after_every_attempt_fails(monkeypatch):
     ex = _extractor(monkeypatch)
     with pytest.raises(RuntimeError, match="could not be read after 3 attempts"):
         _run_with_replies(ex, [_response(200, "nonsense")] * 3, monkeypatch)
+
+
+# --- the same bill has to read the same way --------------------------------
+
+
+def test_the_extraction_call_samples_nothing():
+    """Reported 2026-11-24: one document uploaded twice produced two
+    different sets of findings -- a duplicate 96127 on one reading, two
+    global-surgery overlaps on the other.
+
+    The audit is pure rules over the extracted line items, so it cannot be
+    the source of that. The reading is. A transcription has nothing worth
+    sampling for, and 0.1 was enough to change which lines came back.
+    """
+    import inspect
+
+    from engine import vision_extractor
+
+    source = inspect.getsource(vision_extractor)
+    # Every model call in this module transcribes a document. None of them
+    # should sample.
+    temperatures = re.findall(r'"temperature":\s*([0-9.]+)', source)
+    assert temperatures, "expected the extractor to set a temperature"
+    assert set(temperatures) == {"0"}, f"a sampling temperature is still set: {temperatures}"
+
+
+def test_the_extraction_asks_for_a_repeatable_answer():
+    from engine import vision_extractor
+
+    # A fixed seed narrows the variance further wherever the provider
+    # honours it. It does not remove it -- not every provider does.
+    assert isinstance(vision_extractor.EXTRACTION_SEED, int)
+
+
+def test_a_reading_records_which_model_produced_it():
+    """Two readings can still differ when the primary model fails its
+    sanity check and the fallback answers instead. That is worth being
+    able to see rather than guess at."""
+    import inspect
+
+    from engine import vision_extractor
+
+    assert '"read_by_model"' in inspect.getsource(vision_extractor) or "read_by_model" in inspect.getsource(
+        vision_extractor
+    )
