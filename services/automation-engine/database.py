@@ -514,7 +514,14 @@ class NegotiationRepository:
     def list_negotiations() -> List[Dict[str, Any]]:
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, tracking_code, provider_name, patient_name, account_number, total_billed, current_demanded_balance, current_offer, status, auto_pilot_enabled, updated_at FROM negotiations ORDER BY updated_at DESC")
+        # external_ref is the web app's case id. It is in this projection
+        # so the app can ask "does this case already have a negotiation?"
+        # before starting another one. Without it the only answer was the
+        # app's own cases.negotiation_id -- which is written AFTER the
+        # engine returns, so a start that timed out left a real
+        # negotiation, with a letter already sent, that the app could not
+        # see and would happily duplicate.
+        cursor.execute("SELECT id, tracking_code, provider_name, patient_name, account_number, total_billed, current_demanded_balance, current_offer, status, auto_pilot_enabled, external_ref, updated_at FROM negotiations ORDER BY updated_at DESC")
         items = [dict(r) for r in cursor.fetchall()]
         conn.close()
         return items

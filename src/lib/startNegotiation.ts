@@ -1,7 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isBackendConfigured } from "@/lib/aiStack";
-import { auditBill, getNegotiation, startNegotiation } from "@/lib/automation-engine";
+import {
+  AutomationEngineTimeoutError,
+  auditBill,
+  findNegotiationForCase,
+  getNegotiation,
+  startNegotiation,
+} from "@/lib/automation-engine";
 import { storedBillData } from "@/lib/engineBillData";
 import type { AutomationNegotiation } from "@/types/automation-engine";
 import { notifyCustomer } from "@/lib/customerNotifications";
@@ -31,6 +37,7 @@ export type StartNegotiationResult =
   | { started: true; negotiation: AutomationNegotiation }
   | { started: false; blocked: NegotiationNotStarted }
   | { started: false; failed: "engine_refused"; cause: unknown }
+  | { started: false; failed: "engine_timeout"; cause: unknown }
   | { started: false; failed: "link_lost"; negotiationId: string; cause: unknown };
 
 export type StartableCase = { id: string; bill_id: string | null; negotiation_id: string | null };
@@ -99,19 +106,40 @@ export async function startNegotiationForCase(
     // -- whichever reading it came from. Handing the ai-service's nested
     // shape over untranslated audits as a $0 bill with no charges and
     // reports nothing wrong. See src/lib/engineBillData.ts.
-    const audit = await auditBill(billData);
-    negotiation = await startNegotiation({
-      auditResult: audit,
-      // The opening position, not the one we expect to settle at — the
-      // engine negotiates up from here.
-      initialOffer: audit.settlement_options.aggressive_offer,
-      hospitalEmail: bill.provider_email,
-      supportEmail: bill.provider_support_email ?? undefined,
-      caseId: caseRow.id,
-      commitmentPaymentRef: paidFee.processor_ref ?? caseRow.id,
-      completionFeeRate: Number.isFinite(feeRate) ? feeRate / 100 : undefined,
-    });
+    // Has the engine already got one for this case?
+    //
+    // cases.negotiation_id is written AFTER the engine answers, so a
+    // start that timed out -- or whose response was lost -- leaves a real
+    // negotiation, with a letter already sent, that this app cannot see.
+    // Without this check the customer presses Proceed again and the
+    // provider gets a second letter about the same bill. That is the one
+    // mistake in this flow nobody can take back.
+    const existing = await findNegotiationForCase(caseRow.id);
+    if (existing) {
+      negotiation = await getNegotiation(existing.id);
+    } else {
+      const audit = await auditBill(billData);
+      negotiation = await startNegotiation({
+        auditResult: audit,
+        // The opening position, not the one we expect to settle at — the
+        // engine negotiates up from here.
+        initialOffer: audit.settlement_options.aggressive_offer,
+        hospitalEmail: bill.provider_email,
+        supportEmail: bill.provider_support_email ?? undefined,
+        caseId: caseRow.id,
+        commitmentPaymentRef: paidFee.processor_ref ?? caseRow.id,
+        completionFeeRate: Number.isFinite(feeRate) ? feeRate / 100 : undefined,
+      });
+    }
   } catch (cause) {
+    // A timeout is not a refusal. The engine may be waking up, or simply
+    // slow, and trying again shortly is the right advice -- which it is
+    // not for a bill the engine will not accept. They were the same
+    // answer until 2026-11-24, so a customer whose start timed out was
+    // told the same thing as one whose bill was rejected.
+    if (cause instanceof AutomationEngineTimeoutError) {
+      return { started: false, failed: "engine_timeout", cause };
+    }
     return { started: false, failed: "engine_refused", cause };
   }
 
