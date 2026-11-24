@@ -254,6 +254,30 @@ export async function startNegotiation(input: StartNegotiationInput): Promise<Au
 
 // Poll this to follow a case. Status AWAITING_COMPLETION_FEE means the client should be asked to pay
 // `completion_fee`. SYSTEM messages are notices for the client.
+/**
+ * The negotiation the engine already holds for this case, if there is one.
+ *
+ * Exists because `cases.negotiation_id` is written AFTER the engine
+ * answers. If the start times out, or the connection drops, the engine
+ * can hold a real negotiation -- with a letter already sent to the
+ * provider -- that this app cannot see. Retrying then sends that provider
+ * a second letter about the same bill, which is the one mistake in this
+ * flow a customer cannot undo.
+ *
+ * Matched on external_ref, which is the case id the start was given.
+ */
+export async function findNegotiationForCase(caseId: string): Promise<{ id: string } | null> {
+  const response = await automationEngineFetch("/api/negotiations");
+  const body = await readJson<unknown>(response, "negotiation list");
+  const rows = Array.isArray(body)
+    ? body
+    : ((body as { negotiations?: unknown[] })?.negotiations ?? []);
+  const match = (rows as { id?: unknown; external_ref?: unknown }[]).find(
+    (row) => typeof row?.external_ref === "string" && row.external_ref === caseId,
+  );
+  return match && typeof match.id === "string" ? { id: match.id } : null;
+}
+
 export async function getNegotiation(negotiationId: string): Promise<AutomationNegotiation> {
   return readJson(await automationEngineFetch(`/api/negotiations/${negotiationId}`), "negotiation lookup");
 }

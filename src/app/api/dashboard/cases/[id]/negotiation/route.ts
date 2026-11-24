@@ -113,6 +113,17 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     console.error("Negotiation", result.negotiationId, "started but could not be linked to case", id, result.cause);
     return NextResponse.json({ error: "The negotiation started but could not be saved." }, { status: 500 });
   }
+  if (result.failed === "engine_timeout") {
+    // Different advice, and a different status. The engine is waking or
+    // busy; coming back shortly is the right thing to do, and it is safe
+    // to -- startNegotiationForCase adopts a negotiation the engine
+    // already made rather than starting a second one.
+    console.error("Negotiation start timed out for case", id, result.cause);
+    return NextResponse.json(
+      { error: "The negotiation service is still waking up. Give it a moment and try again." },
+      { status: 504 },
+    );
+  }
   console.error("Could not start a negotiation for case", id, result.cause);
   return NextResponse.json({ error: "We couldn't start the negotiation. Please try again." }, { status: 502 });
 }

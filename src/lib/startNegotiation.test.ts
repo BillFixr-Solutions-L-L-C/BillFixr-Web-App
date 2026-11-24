@@ -2,14 +2,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock } from "@/test/supabaseMock";
 
 import { negotiationSummary, startNegotiationForCase } from "@/lib/startNegotiation";
+import { AutomationEngineTimeoutError } from "@/lib/automation-engine";
 
 const adminMock = createSupabaseMock();
 const auditBill = vi.fn();
 const startNegotiation = vi.fn();
 const getNegotiation = vi.fn();
+// Asked before every start: has the engine already got one for this case?
+const findNegotiationForCase = vi.fn();
 const isBackendConfigured = vi.fn();
 
-vi.mock("@/lib/automation-engine", () => ({
+vi.mock("@/lib/automation-engine", async (importOriginal) => ({
+  // The real AutomationEngineTimeoutError: the code tells a timeout from
+  // a refusal with instanceof, so a stand-in class would pass the test
+  // and fail in production.
+  ...(await importOriginal<typeof import("@/lib/automation-engine")>()),
   auditBill: (...a: unknown[]) => auditBill(...a),
   startNegotiation: (...a: unknown[]) => startNegotiation(...a),
   // Read back after a successful start, for the letter the engine
@@ -17,6 +24,7 @@ vi.mock("@/lib/automation-engine", () => ({
   // threw into its own catch and the letter was simply never stored,
   // which is the failure it exists to prevent.
   getNegotiation: (...a: unknown[]) => getNegotiation(...a),
+  findNegotiationForCase: (...a: unknown[]) => findNegotiationForCase(...a),
 }));
 vi.mock("@/lib/aiStack", () => ({ isBackendConfigured: (...a: unknown[]) => isBackendConfigured(...a) }));
 
@@ -107,6 +115,8 @@ function readyToStart({
 beforeEach(() => {
   vi.clearAllMocks();
   adminMock.reset();
+  // No negotiation for this case yet, unless a test says otherwise.
+  findNegotiationForCase.mockResolvedValue(null);
 });
 
 describe("startNegotiationForCase", () => {
@@ -367,5 +377,72 @@ describe("the letter the provider received", () => {
 
     expect(result).toMatchObject({ started: true });
     expect(storedLetter()).toBeUndefined();
+  });
+});
+
+// Never two letters about the same bill.
+//
+// cases.negotiation_id is written AFTER the engine answers, so a start
+// that timed out -- or whose response was lost -- leaves a real
+// negotiation, with a letter already sent, that this app cannot see.
+// Pressing Proceed again then sends the provider a second letter about
+// the same bill, which is the one mistake in this flow nobody can take
+// back.
+describe("a case the engine already has a negotiation for", () => {
+  it("adopts it instead of starting another", async () => {
+    readyToStart();
+    findNegotiationForCase.mockResolvedValue({ id: "neg-existing" });
+    getNegotiation.mockResolvedValue({ id: "neg-existing", status: "DISPATCHED", messages: [] });
+
+    const result = await startNegotiationForCase(adminMock.client as never, CASE);
+
+    expect(startNegotiation).not.toHaveBeenCalled();
+    // And no second audit either: the bill was already audited to make
+    // the letter that went out.
+    expect(auditBill).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ started: true });
+  });
+
+  it("links the one it adopted to the case", async () => {
+    readyToStart();
+    findNegotiationForCase.mockResolvedValue({ id: "neg-existing" });
+    getNegotiation.mockResolvedValue({ id: "neg-existing", status: "DISPATCHED", messages: [] });
+
+    await startNegotiationForCase(adminMock.client as never, CASE);
+
+    const i = adminMock.from.mock.calls.findIndex(([table]) => table === "cases");
+    const update = adminMock.from.mock.results[i]!.value.update as ReturnType<typeof vi.fn>;
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ negotiation_id: "neg-existing" }));
+  });
+
+  it("asks before it starts, not after", async () => {
+    // Asking afterwards would be asking once the second letter had gone.
+    readyToStart();
+
+    await startNegotiationForCase(adminMock.client as never, CASE);
+
+    expect(findNegotiationForCase).toHaveBeenCalledWith("case-1");
+  });
+});
+
+describe("a start that times out", () => {
+  it("is reported as a timeout, not a refusal", async () => {
+    // Different advice: the engine is waking or busy, and trying again
+    // shortly is right -- which it is not for a bill it will not accept.
+    readyToStart();
+    auditBill.mockRejectedValue(new AutomationEngineTimeoutError("/api/audit", 60_000));
+
+    const result = await startNegotiationForCase(adminMock.client as never, CASE);
+
+    expect(result).toMatchObject({ started: false, failed: "engine_timeout" });
+  });
+
+  it("still reports anything else as a refusal", async () => {
+    readyToStart();
+    auditBill.mockRejectedValue(new Error("the engine said no"));
+
+    const result = await startNegotiationForCase(adminMock.client as never, CASE);
+
+    expect(result).toMatchObject({ started: false, failed: "engine_refused" });
   });
 });
