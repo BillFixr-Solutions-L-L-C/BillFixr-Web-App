@@ -4,8 +4,17 @@ import { createSupabaseMock } from "@/test/supabaseMock";
 import DocumentAnalysisPage from "./page";
 
 const mock = createSupabaseMock();
+const adminMock = createSupabaseMock();
+const getDomainAccess = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => mock.client,
+}));
+// Staff reading a customer's analysis come through the service role,
+// because the customer's own policy is what refused the first read.
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => adminMock.client }));
+vi.mock("@/lib/domainAccess", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/domainAccess")>()),
+  getDomainAccess: (...a: unknown[]) => getDomainAccess(...a),
 }));
 vi.mock("@/lib/billDocuments", () => ({
   getBillDocuments: async () => [{ id: "bill-1", filename: "bill.png", previewUrl: null, downloadUrl: null }],
@@ -53,7 +62,11 @@ async function renderPage() {
 
 beforeEach(() => {
   mock.reset();
+  adminMock.reset();
+  vi.clearAllMocks();
   mock.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+  // Not staff unless a test says so.
+  getDomainAccess.mockResolvedValue("none");
 });
 
 // Asked for on 2026-11-13: Re-scan and Proceed should only be on this
@@ -108,5 +121,60 @@ describe("the analysis page's actions", () => {
     const captured = await renderPage();
     expect(captured.atDecisionPoint).toBe(false);
     expect(captured.caseId).toBe(null);
+  });
+});
+
+// Staff reading a customer's analysis.
+//
+// The admin case screen lists an "Analysis Generated" row. Until
+// 2026-11-24 it carried no link, because this page was scoped to the
+// owner: an admin following it got a 404, so the team could see that an
+// analysis existed and had no way to read it.
+describe("an admin opening a customer's analysis", () => {
+  function asStaff(access: string, caseOverrides: Record<string, unknown> = {}) {
+    // The customer-scoped read finds nothing: this bill is not theirs.
+    mock.queueResult("bills", { data: null, error: null });
+    getDomainAccess.mockResolvedValue(access);
+    adminMock.queueResult("bills", { data: BILL, error: null });
+    adminMock.queueResult("cases", { data: { ...CASE, ...caseOverrides }, error: null });
+  }
+
+  it("reads it when they have client_data access", async () => {
+    asStaff("full");
+
+    const captured = await renderPage();
+
+    expect(captured.analysis).toBeDefined();
+    expect(adminMock.from).toHaveBeenCalledWith("bills");
+  });
+
+  it("is refused without it", async () => {
+    mock.queueResult("bills", { data: null, error: null });
+    getDomainAccess.mockResolvedValue("none");
+
+    await expect(renderPage()).rejects.toThrow();
+    expect(adminMock.from).not.toHaveBeenCalled();
+  });
+
+  it("never offers them Re-scan or Proceed", async () => {
+    // Re-scan spends the customer's allowance and Proceed writes to their
+    // provider. Neither is staff's to press, even on a case sitting
+    // exactly at the decision point.
+    asStaff("full", { letter_sent_at: null, negotiation_id: null });
+
+    const captured = await renderPage();
+
+    expect(captured.atDecisionPoint).toBe(false);
+  });
+
+  it("still offers them to the customer whose case it is", async () => {
+    // The owner-scoped read succeeds, so nothing staff-related happens.
+    mock.queueResult("bills", { data: BILL, error: null });
+    mock.queueResult("cases", { data: CASE, error: null });
+
+    const captured = await renderPage();
+
+    expect(captured.atDecisionPoint).toBe(true);
+    expect(adminMock.from).not.toHaveBeenCalled();
   });
 });

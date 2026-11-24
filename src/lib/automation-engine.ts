@@ -41,7 +41,16 @@ export function getAutomationEngineConfig(): AutomationEngineConfig | null {
 // log line naming the stage, and a bill stuck mid-read with nothing to say
 // why. See src/lib/ai-service.ts.
 const DEFAULT_TIMEOUT_MS = Number(process.env.AUTOMATION_ENGINE_TIMEOUT_MS ?? 60_000);
+// Four minutes, inside the 300s the route is allowed. Our timeout has to
+// fire before the platform's so the customer gets "this took too long,
+// try again" rather than a dead request.
 const EXTRACT_TIMEOUT_MS = Number(process.env.AUTOMATION_ENGINE_EXTRACT_TIMEOUT_MS ?? 240_000);
+
+// How long to wait for the engine to say it is awake. Short on purpose:
+// this is a question, not the work. On Render's free tier the service
+// spins down when idle and a cold start takes longer than the whole
+// request budget, so the only thing to do is start it and come back.
+const WAKE_TIMEOUT_MS = Number(process.env.AUTOMATION_ENGINE_WAKE_TIMEOUT_MS ?? 8_000);
 
 /** The engine did not answer in time. Distinct so a caller can say "try
  *  again", which is right for a timeout and wrong for a refusal. */
@@ -164,6 +173,23 @@ export async function extractBill(file: {
   });
 
   return readJson(response, "bill extraction");
+}
+
+/**
+ * Whether the engine is awake, and a nudge if it is not.
+ *
+ * Returns false rather than throwing: a cold engine is not an error, it
+ * is a thing that takes another twenty seconds. The request that got this
+ * answer should say so and let the caller come back, because waiting here
+ * spends the budget the actual work needs.
+ */
+export async function wakeAutomationEngine(): Promise<boolean> {
+  try {
+    await automationEngineFetch("/api/health", { timeoutMs: WAKE_TIMEOUT_MS });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function getEngineHealth(): Promise<AutomationEngineHealth> {

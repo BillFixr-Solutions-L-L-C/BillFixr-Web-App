@@ -139,6 +139,11 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
     letterSentAt: caseRow.letter_sent_at,
     hasAnalysis: Boolean(bill?.analysis_result),
     analysisDate: caseRow.created_at,
+    // The row used to carry no link at all, so an admin could see that an
+    // analysis existed and had no way to open it. It is the customer's
+    // own analysis screen, which staff may now read -- see
+    // src/app/dashboard/documents/[id]/page.tsx.
+    analysisUrl: bill?.id ? `/dashboard/documents/${bill.id}` : null,
     stored: (caseDocuments ?? []) as CaseDocumentSource["stored"],
     signStored: true,
     showFilenames: true,

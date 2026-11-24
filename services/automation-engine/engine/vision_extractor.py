@@ -23,6 +23,11 @@ VISION_MODEL = os.getenv("VISION_MODEL", "google/gemini-2.5-flash")
 FALLBACK_VISION_MODEL = "qwen/qwen2.5-vl-72b-instruct"
 # A multi-page bill at 8000 output tokens does not fit in the 45s this used
 # to allow; the web app already waits up to 240s for the whole call.
+# A fixed seed, so the same document asked the same question gets the same
+# answer from a provider that supports it. Overridable only to reproduce an
+# old reading against a changed prompt.
+EXTRACTION_SEED = int(os.getenv("ENGINE_EXTRACTION_SEED", "20261124"))
+
 VISION_TIMEOUT_SECONDS = float(os.getenv("VISION_TIMEOUT_SECONDS", "90"))
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -330,7 +335,18 @@ class VisionExtractor:
         payload = {
             "model": VISION_MODEL,
             "messages": messages,
-            "temperature": 0.1,
+            # Zero, not 0.1. This is a transcription of a document, so
+            # there is nothing here worth sampling for. At 0.1 the same
+            # bill read twice produced two different sets of line items,
+            # and because the audit is pure rules over those items, two
+            # different sets of findings followed -- reported from a real
+            # run where one upload found a duplicate 96127 and the other
+            # found two global-surgery overlaps on the same document.
+            "temperature": 0,
+            # Same request, same reading, where the provider honours it.
+            # Not every one does, so this narrows the variance rather than
+            # removing it.
+            "seed": EXTRACTION_SEED,
             "max_tokens": 8000
         }
 
@@ -356,6 +372,12 @@ class VisionExtractor:
                     if not self._looks_like_a_bill(candidate):
                         raise ValueError("the reading contained no charges and no total")
                     parsed_data = candidate
+                    # Which model actually produced this reading. Two
+                    # readings of one document can still differ when the
+                    # primary fails its sanity check and a different model
+                    # answers instead, and that is worth being able to see
+                    # rather than guess at.
+                    parsed_data["read_by_model"] = model
                     break
                 except Exception as err:  # noqa: BLE001 -- try the next model
                     last_error = err

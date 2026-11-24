@@ -222,16 +222,34 @@ export default function CaseInformationStep({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const res = await fetch(`/api/dashboard/bills/${billId}/extract`, { method: "POST" }).catch(() => null);
-      const body = await res?.json().catch(() => null);
-      if (cancelled || !res?.ok || !body?.fields) {
+      // The reader runs on a free tier that spins down when idle, so the
+      // first attempt after a quiet spell finds it asleep and is answered
+      // with "waking up" rather than a reading. That answer is what
+      // starts it, so coming back shortly after is all it takes.
+      //
+      // Before this the step gave up on the first failure and left every
+      // box blank, which is what a customer saw on 2026-11-22: a form it
+      // had read nothing into, and no sign that anything had happened.
+      let body: { fields?: Record<string, string>; stage?: string } | null = null;
+      for (let attempt = 0; attempt < 3 && !cancelled; attempt++) {
+        const res = await fetch(`/api/dashboard/bills/${billId}/extract`, { method: "POST" }).catch(() => null);
+        body = await res?.json().catch(() => null);
+        if (res?.ok && body?.fields) break;
+        // Only a sleeping reader is worth waiting for. A document we
+        // cannot read will not read any better in twelve seconds.
+        if (body?.stage !== "engine_waking") break;
+        await new Promise((resolve) => setTimeout(resolve, 12_000));
+        body = null;
+      }
+      if (cancelled || !body?.fields) {
         if (!cancelled) setReading(false);
         return;
       }
+      const fields = body.fields;
       setValues((v) => {
         const next = { ...v };
         for (const key of FROM_BILL) {
-          const found = String(body.fields[key] ?? "").trim();
+          const found = String(fields[key] ?? "").trim();
           if (found && !next[key]?.trim()) next[key] = found;
         }
         return next;
