@@ -242,7 +242,13 @@ export default function CaseInformationStep({
       // box blank, which is what a customer saw on 2026-11-22: a form it
       // had read nothing into, and no sign that anything had happened.
       let body: { fields?: Record<string, string>; stage?: string } | null = null;
-      for (let attempt = 0; attempt < 3 && !cancelled; attempt++) {
+      // Four attempts, not three. Together with the route's own backoff
+      // this keeps asking for about ninety seconds, which is what it
+      // takes to ride out the free instance being recycled -- a ~30s
+      // boot during which every request is answered 503. A run on
+      // 2026-11-25 lost one upload in ten to exactly that, having given
+      // up after 46s.
+      for (let attempt = 0; attempt < 4 && !cancelled; attempt++) {
         const res = await fetch(`/api/dashboard/bills/${billId}/extract`, { method: "POST" }).catch(() => null);
         body = await res?.json().catch(() => null);
         if (res?.ok && body?.fields) break;
@@ -250,14 +256,11 @@ export default function CaseInformationStep({
         // document we cannot read will not read any better in a few
         // seconds, so those stop here and the customer types it in.
         if (!RETRYABLE.has(body?.stage ?? "")) break;
-        // Short, because the waiting now happens server-side: the route
-        // holds the request open for up to 45s giving the engine time to
-        // boot, so by the time we are told "waking" it has already waited
-        // out a cold start and failed at something worse. This gap was
-        // 12s, chosen when the route gave up after 8s and answered
-        // instantly, which made the whole retry budget shorter than the
-        // 29.5s cold start it was supposed to cover.
-        await new Promise((resolve) => setTimeout(resolve, 5_000));
+        // Ten seconds between attempts. This was 12s when the route gave
+        // up in 8s, then 5s when the waiting moved server-side; neither
+        // covered a restart, because the route now returns in ~30s and
+        // three of those plus 5s gaps still gave up inside the window.
+        await new Promise((resolve) => setTimeout(resolve, 10_000));
         body = null;
       }
       if (cancelled || !body?.fields) {
