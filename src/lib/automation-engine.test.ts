@@ -6,6 +6,7 @@ import {
   findProviderContact,
   getAutomationEngineConfig,
   getNegotiation,
+  extractBill,
   startNegotiation,
   wakeAutomationEngine,
   WAKE_TIMEOUT_MS,
@@ -163,5 +164,32 @@ describe("waking the engine", () => {
   // extract budget, or the platform kills the request instead.
   it("leaves the extract budget inside the 300s request ceiling", () => {
     expect(WAKE_TIMEOUT_MS + 240_000).toBeLessThan(300_000);
+  });
+});
+
+describe("reading a bill", () => {
+  // The route works to a deadline of its own and passes what is left of
+  // it. A cap above the client's own budget would hand the engine longer
+  // than we are willing to wait.
+  it("never lets a caller raise the read budget above the default", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ provider_name: "Matthew Walker" }));
+    await extractBill({
+      filename: "bill.pdf",
+      bytes: new Blob(["pdf"]),
+      timeoutMs: 999_999_999,
+    });
+
+    const { init } = lastCall();
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(init.signal!.aborted).toBe(false);
+  });
+
+  it("sends the file under the field name the engine expects", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ provider_name: "Matthew Walker" }));
+    await extractBill({ filename: "bill.pdf", bytes: new Blob(["pdf"]) });
+
+    const { url, init } = lastCall();
+    expect(url).toBe("https://engine.example.com/api/extract");
+    expect((init.body as FormData).get("files")).toBeInstanceOf(Blob);
   });
 });

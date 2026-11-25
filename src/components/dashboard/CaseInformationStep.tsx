@@ -16,10 +16,15 @@ const FROM_BILL = [
 ] as const satisfies readonly (keyof CaseInformation)[];
 
 // Stages that mean "ask again", as opposed to "this document is not
-// going to read". A sleeping engine is the free tier spinning down; a busy
-// one is its single worker already mid-read, and the host in front sheds
-// the request in about a second. Both are answered by coming back.
-const RETRYABLE = new Set(["engine_waking", "engine_busy"]);
+// going to read". The engine is a single worker on a free instance, and
+// the host in front of it sheds a request in about a second when that
+// worker is already mid-read; coming back is the whole answer.
+//
+// engine_waking is still listed although the route no longer sends it. A
+// deploy is not atomic: while one is rolling out, a browser holding the
+// new bundle can be answered by the old route, and dropping the stage
+// would turn that into the blank form this whole chain of fixes is about.
+const RETRYABLE = new Set(["engine_busy", "engine_waking"]);
 
 function SparkIcon() {
   return (

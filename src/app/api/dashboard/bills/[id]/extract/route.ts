@@ -37,7 +37,13 @@ import type { EngineExtraction } from "@/types/automation-engine";
 // budget the plan allows, not an aspiration.
 export const maxDuration = 300;
 
+// What this handler may spend in total, kept under maxDuration so the
+// last thing to happen is our own answer rather than the platform killing
+// the request without one.
+const BUDGET_MS = 280_000;
+
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const startedAt = Date.now();
   const { id } = await params;
 
   const supabase = await createClient();
@@ -86,28 +92,28 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     : undefined;
 
   if (!extraction) {
-    // Is the engine even up? On Render's free tier it spins down when
-    // idle, so the first read after a quiet spell finds it asleep.
-    // Asking first starts the cold boot and separates "the reader is
-    // down" from "we cannot read this document", which want different
-    // things said to the customer.
+    // Nudge the engine, but do not let its answer decide anything.
     //
-    // The reasoning this replaces was wrong in a way worth recording: it
-    // said the ceiling here was 60s, so waiting for a cold engine was
-    // hopeless and bailing in 8s was the only option. The ceiling is
-    // 300s. Waiting was always affordable, and the 8s gate turned a
-    // reader that was merely asleep into a blank form -- reported
-    // 2026-11-25, two days after the gate shipped. The budget now covers
-    // a measured cold start; see WAKE_TIMEOUT_MS.
+    // On Render's free tier it spins down when idle, so the first read
+    // after a quiet spell finds it asleep and this call is what starts
+    // the boot. Waiting for that here is worth it: by the time we read,
+    // the engine is usually up.
+    //
+    // What this must NOT do is refuse to read when the health check
+    // fails. It used to, and that was the second version of the same
+    // mistake. The host in front of the engine sheds requests
+    // independently of whether the engine can work, so a shed health
+    // check says nothing about the document -- and a run against
+    // production on 2026-11-25 produced three shed health checks in a
+    // row, each answered in about a second, so the step gave up without
+    // ever asking the engine to read a bill it would very likely have
+    // read. The read is the only authoritative test, it already retries
+    // a shed, and it is what the customer is waiting for.
+    //
+    // The verdict is logged because a persistently cold engine is worth
+    // seeing in the logs, not because it changes what happens next.
     if (!(await wakeAutomationEngine())) {
-      return NextResponse.json(
-        {
-          error: "We're still waking up the reader. Give it a moment and we'll try again.",
-          fields: null,
-          stage: "engine_waking",
-        },
-        { status: 503 },
-      );
+      console.warn(`Engine health check did not answer before reading bill ${id}; reading anyway`);
     }
 
     const { data: fileBlob, error: downloadError } = await admin.storage.from("bills").download(bill.storage_url);
@@ -139,20 +145,29 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     // cheap and the customer never learns it happened. A document we
     // genuinely cannot read fails differently and is not retried.
     let lastError: unknown;
-    // Leaves room for a last full read inside the 300s ceiling rather
-    // than starting one it cannot finish.
-    const deadline = Date.now() + 200_000;
     for (let attempt = 0; attempt < 3; attempt++) {
+      // Every attempt is bounded by what is left of the request, not by
+      // the engine client's own timeout. Waiting for the boot above can
+      // eat 30s, and a read that starts with its full 240s budget at
+      // that point would be killed by the platform mid-call -- which is
+      // the failure mode that leaves no answer at all, just a dead
+      // screen. Short of room for a read, stop and say so instead.
+      const remaining = BUDGET_MS - (Date.now() - startedAt);
+      if (remaining < 20_000) {
+        lastError ??= new AutomationEngineTimeoutError("/api/extract", 0);
+        break;
+      }
       try {
         extraction = await extractBill({
           filename: bill.filename,
           bytes: new Blob([bytes], { type: contentType }),
+          timeoutMs: remaining,
         });
         lastError = undefined;
         break;
       } catch (err) {
         lastError = err;
-        if (!isEngineUnavailable(err) || Date.now() > deadline) break;
+        if (!isEngineUnavailable(err)) break;
         console.warn(`Engine shed the read for bill ${id} (attempt ${attempt + 1}), retrying`);
         await new Promise((resolve) => setTimeout(resolve, retryDelayMs()));
       }

@@ -340,20 +340,46 @@ describe("when the engine is asleep", () => {
     expect(wakeAutomationEngine).toHaveBeenCalled();
   });
 
-  it("comes back later instead of spending the whole budget waiting", async () => {
+  // This test used to assert the opposite, and the opposite was the bug.
+  //
+  // A failed health check was treated as a reason not to read, so the
+  // route answered 503 without ever asking the engine for anything. The
+  // host in front of the engine sheds requests independently of whether
+  // the engine can work: a production run on 2026-11-25 hit three shed
+  // health checks in a row and the step gave up on a bill the engine
+  // would have read. The read is the authoritative test, and it has its
+  // own retry for a shed.
+  it("reads the bill even when the health check does not answer", async () => {
     ownedBill();
     wakeAutomationEngine.mockResolvedValue(false);
+    extractBill.mockResolvedValue({ provider_name: "Matthew Walker", patient_due: 428.53 });
 
     const res = await POST(new Request("http://localhost/x", { method: "POST" }), {
       params: Promise.resolve({ id: "bill-1" }),
     });
     const body = await res.json();
 
-    expect(res.status).toBe(503);
-    // The stage is what the information step keys its retry on. Any other
-    // failure is not worth waiting twelve seconds for.
-    expect(body.stage).toBe("engine_waking");
-    expect(extractBill).not.toHaveBeenCalled();
+    expect(extractBill).toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(body.fields.hospitalName).toBe("Matthew Walker");
+  });
+
+  // The read is capped by what is left of the request, not by the engine
+  // client's own 240s budget. Waiting for a cold boot first can eat 30s,
+  // and a read starting with a full budget at that point would be killed
+  // by the platform mid-call -- which leaves the customer no answer at
+  // all rather than a slow one.
+  it("caps the read by what is left of the request", async () => {
+    ownedBill();
+    extractBill.mockResolvedValue({ provider_name: "Matthew Walker", patient_due: 428.53 });
+
+    await POST(new Request("http://localhost/x", { method: "POST" }), {
+      params: Promise.resolve({ id: "bill-1" }),
+    });
+
+    const [arg] = extractBill.mock.calls[0] as [{ timeoutMs?: number }];
+    expect(arg.timeoutMs).toBeGreaterThan(0);
+    expect(arg.timeoutMs).toBeLessThanOrEqual(280_000);
   });
 
 
