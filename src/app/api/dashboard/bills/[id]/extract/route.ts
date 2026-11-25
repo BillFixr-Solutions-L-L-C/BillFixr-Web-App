@@ -9,6 +9,7 @@ import {
   wakeAutomationEngine,
 } from "@/lib/automation-engine";
 import { isEngineExtraction } from "@/lib/engineBillData";
+import { engineRetryDelayMs } from "@/lib/engineRetry";
 import { guessContentType } from "@/lib/contentType";
 import type { EngineExtraction } from "@/types/automation-engine";
 
@@ -169,7 +170,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         lastError = err;
         if (!isEngineUnavailable(err)) break;
         console.warn(`Engine shed the read for bill ${id} (attempt ${attempt + 1}), retrying`);
-        await new Promise((resolve) => setTimeout(resolve, retryDelayMs()));
+        await new Promise((resolve) => setTimeout(resolve, engineRetryDelayMs(attempt)));
       }
     }
 
@@ -308,12 +309,3 @@ function isEngineUnavailable(err: unknown): boolean {
   return err instanceof AutomationEngineError && (err.status === 429 || err.status >= 500);
 }
 
-// How long to leave a busy worker alone before asking again.
-//
-// Read per call, not bound at import: a module-level constant takes
-// whichever value the environment had when the module first loaded, which
-// in this codebase has now caused the same class of bug five times.
-// Tests set it to 0 so they are not spending real seconds asleep.
-function retryDelayMs(): number {
-  return Number(process.env.AUTOMATION_ENGINE_RETRY_DELAY_MS ?? 3_000);
-}
