@@ -174,6 +174,11 @@ function jsonRequest(method: string, body?: unknown): RequestInit {
 export async function extractBill(file: {
   filename: string;
   bytes: Blob;
+  // A caller that is working to a deadline of its own can cap the read,
+  // so a request cannot be killed by the platform mid-call -- which
+  // leaves the customer no answer rather than a slow one. Capped at the
+  // default, never raised above it.
+  timeoutMs?: number;
 }): Promise<EngineExtraction> {
   const body = new FormData();
   body.append("files", file.bytes, file.filename);
@@ -181,7 +186,7 @@ export async function extractBill(file: {
   const response = await automationEngineFetch("/api/extract", {
     method: "POST",
     body,
-    timeoutMs: EXTRACT_TIMEOUT_MS,
+    timeoutMs: Math.min(file.timeoutMs ?? EXTRACT_TIMEOUT_MS, EXTRACT_TIMEOUT_MS),
   });
 
   return readJson(response, "bill extraction");
