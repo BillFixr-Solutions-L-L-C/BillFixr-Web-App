@@ -86,14 +86,18 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
   if (!extraction) {
     // Is the engine even up? On Render's free tier it spins down when
-    // idle, and a cold start plus a vision read is longer than the whole
-    // request budget -- so the read was being killed by the platform
-    // before any timeout of ours could answer, and the step just gave up
-    // silently. Measured on 2026-11-24: 22s against a warm engine, 44s
-    // through this route, and the ceiling is 60.
+    // idle, so the first read after a quiet spell finds it asleep.
+    // Asking first starts the cold boot and separates "the reader is
+    // down" from "we cannot read this document", which want different
+    // things said to the customer.
     //
-    // Asking first costs seconds, starts the cold boot, and turns a dead
-    // screen into "coming back in a moment".
+    // The reasoning this replaces was wrong in a way worth recording: it
+    // said the ceiling here was 60s, so waiting for a cold engine was
+    // hopeless and bailing in 8s was the only option. The ceiling is
+    // 300s. Waiting was always affordable, and the 8s gate turned a
+    // reader that was merely asleep into a blank form -- reported
+    // 2026-11-25, two days after the gate shipped. The budget now covers
+    // a measured cold start; see WAKE_TIMEOUT_MS.
     if (!(await wakeAutomationEngine())) {
       return NextResponse.json(
         {
