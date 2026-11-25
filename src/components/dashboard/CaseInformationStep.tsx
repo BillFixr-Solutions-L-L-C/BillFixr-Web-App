@@ -236,9 +236,16 @@ export default function CaseInformationStep({
         body = await res?.json().catch(() => null);
         if (res?.ok && body?.fields) break;
         // Only a sleeping reader is worth waiting for. A document we
-        // cannot read will not read any better in twelve seconds.
+        // cannot read will not read any better in a few seconds.
         if (body?.stage !== "engine_waking") break;
-        await new Promise((resolve) => setTimeout(resolve, 12_000));
+        // Short, because the waiting now happens server-side: the route
+        // holds the request open for up to 45s giving the engine time to
+        // boot, so by the time we are told "waking" it has already waited
+        // out a cold start and failed at something worse. This gap was
+        // 12s, chosen when the route gave up after 8s and answered
+        // instantly, which made the whole retry budget shorter than the
+        // 29.5s cold start it was supposed to cover.
+        await new Promise((resolve) => setTimeout(resolve, 5_000));
         body = null;
       }
       if (cancelled || !body?.fields) {

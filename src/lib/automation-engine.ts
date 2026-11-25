@@ -46,11 +46,23 @@ const DEFAULT_TIMEOUT_MS = Number(process.env.AUTOMATION_ENGINE_TIMEOUT_MS ?? 60
 // try again" rather than a dead request.
 const EXTRACT_TIMEOUT_MS = Number(process.env.AUTOMATION_ENGINE_EXTRACT_TIMEOUT_MS ?? 240_000);
 
-// How long to wait for the engine to say it is awake. Short on purpose:
-// this is a question, not the work. On Render's free tier the service
-// spins down when idle and a cold start takes longer than the whole
-// request budget, so the only thing to do is start it and come back.
-const WAKE_TIMEOUT_MS = Number(process.env.AUTOMATION_ENGINE_WAKE_TIMEOUT_MS ?? 8_000);
+// How long to wait for the engine to say it is awake.
+//
+// This was 8s, chosen while I believed the whole request budget was 60s
+// and that a cold start could not possibly fit inside it. The budget is
+// actually 300s (Vercel Hobby's maximum AND its default), so there is
+// room to simply wait -- and 8s was far too short regardless.
+//
+// Measured against the live engine on 2026-11-25, cold after a night
+// idle: 29.5s to answer /api/health on the first call, then 1.6s, 9.8s
+// and 13.0s while warm. So 8s lost the race even when the engine was
+// already up, and a customer whose reader was merely asleep got a blank
+// form -- the 2026-11-25 report.
+//
+// 45s covers the measured cold start with margin and still leaves the
+// 240s extract budget inside the 300s ceiling. It costs nothing when the
+// engine is warm, because a warm engine answers in about two seconds.
+export const WAKE_TIMEOUT_MS = Number(process.env.AUTOMATION_ENGINE_WAKE_TIMEOUT_MS ?? 45_000);
 
 /** The engine did not answer in time. Distinct so a caller can say "try
  *  again", which is right for a timeout and wrong for a refusal. */
@@ -185,8 +197,16 @@ export async function extractBill(file: {
  */
 export async function wakeAutomationEngine(): Promise<boolean> {
   try {
-    await automationEngineFetch("/api/health", { timeoutMs: WAKE_TIMEOUT_MS });
-    return true;
+    const response = await automationEngineFetch("/api/health", { timeoutMs: WAKE_TIMEOUT_MS });
+    // The status has to be read. automationEngineFetch hands back
+    // whatever came, throwing only on a timeout or a dead socket, so the
+    // original `return true` here counted a 503 as "awake" -- and the
+    // host in front of the engine answers 503 with an empty body while
+    // the instance is restarting, and 429 with a bot-challenge page under
+    // a burst. Both were being reported as a healthy reader, after which
+    // the extraction failed for real and the customer was told we could
+    // not read their document.
+    return response.ok;
   } catch {
     return false;
   }

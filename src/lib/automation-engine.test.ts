@@ -7,6 +7,8 @@ import {
   getAutomationEngineConfig,
   getNegotiation,
   startNegotiation,
+  wakeAutomationEngine,
+  WAKE_TIMEOUT_MS,
 } from "./automation-engine";
 import type { AutomationAuditResult } from "@/types/automation-engine";
 
@@ -120,5 +122,46 @@ describe("automation engine client", () => {
 
     expect(response.status).toBe(402);
     expect(lastCall().url).toBe("https://engine.example.com/api/negotiations/neg-1/revised-bill/pdf");
+  });
+});
+
+describe("waking the engine", () => {
+  it("counts a healthy answer as awake", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ status: "healthy" }));
+    await expect(wakeAutomationEngine()).resolves.toBe(true);
+  });
+
+  // The host in front of the engine answers 503 with an empty body while
+  // the instance is restarting, and 429 with a bot-challenge page under a
+  // burst -- both measured against the live engine on 2026-11-25. This
+  // used to `return true` without looking at the status, so either one was
+  // reported as a healthy reader; the route then went on to read a bill
+  // from a service that was not serving and told the customer their
+  // document could not be read.
+  it.each([500, 502, 503, 429])("does not count a %i as awake", async (status) => {
+    fetchMock.mockResolvedValue(new Response("", { status }));
+    await expect(wakeAutomationEngine()).resolves.toBe(false);
+  });
+
+  it("does not count a timeout as awake", async () => {
+    const timedOut = new Error("aborted");
+    timedOut.name = "TimeoutError";
+    fetchMock.mockRejectedValue(timedOut);
+    await expect(wakeAutomationEngine()).resolves.toBe(false);
+  });
+
+  // The regression this guards. The budget was 8s, set while the request
+  // ceiling was believed to be 60s; the engine's cold start measured 29.5s
+  // and a warm /api/health answered in as much as 13s. So the gate called
+  // a sleeping engine dead, the information step gave up, and the customer
+  // got a form with nothing read into it.
+  it("allows longer than a measured cold start", () => {
+    expect(WAKE_TIMEOUT_MS).toBeGreaterThanOrEqual(30_000);
+  });
+
+  // And it has to stay inside the route's own ceiling alongside the 240s
+  // extract budget, or the platform kills the request instead.
+  it("leaves the extract budget inside the 300s request ceiling", () => {
+    expect(WAKE_TIMEOUT_MS + 240_000).toBeLessThan(300_000);
   });
 });
