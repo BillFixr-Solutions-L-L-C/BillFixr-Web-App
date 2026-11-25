@@ -15,6 +15,12 @@ const FROM_BILL = [
   "billingPhone",
 ] as const satisfies readonly (keyof CaseInformation)[];
 
+// Stages that mean "ask again", as opposed to "this document is not
+// going to read". A sleeping engine is the free tier spinning down; a busy
+// one is its single worker already mid-read, and the host in front sheds
+// the request in about a second. Both are answered by coming back.
+const RETRYABLE = new Set(["engine_waking", "engine_busy"]);
+
 function SparkIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -235,9 +241,10 @@ export default function CaseInformationStep({
         const res = await fetch(`/api/dashboard/bills/${billId}/extract`, { method: "POST" }).catch(() => null);
         body = await res?.json().catch(() => null);
         if (res?.ok && body?.fields) break;
-        // Only a sleeping reader is worth waiting for. A document we
-        // cannot read will not read any better in a few seconds.
-        if (body?.stage !== "engine_waking") break;
+        // Only a reader that is coming back is worth waiting for. A
+        // document we cannot read will not read any better in a few
+        // seconds, so those stop here and the customer types it in.
+        if (!RETRYABLE.has(body?.stage ?? "")) break;
         // Short, because the waiting now happens server-side: the route
         // holds the request open for up to 45s giving the engine time to
         // boot, so by the time we are told "waking" it has already waited

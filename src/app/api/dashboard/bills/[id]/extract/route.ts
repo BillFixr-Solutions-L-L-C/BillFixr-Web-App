@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  AutomationEngineError,
   AutomationEngineTimeoutError,
   extractBill,
   getAutomationEngineConfig,
@@ -117,17 +118,52 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         { status: 500 },
       );
     }
-    try {
-      extraction = await extractBill({
-        filename: bill.filename,
-        bytes: new Blob([await fileBlob.arrayBuffer()], { type: guessContentType(bill.filename) }),
-      });
-    } catch (err) {
-      console.error("Engine extraction failed for bill", id, err);
+    // Read the bytes once: the retry loop below may send them more than
+    // once, and re-downloading each time would charge the customer's wait
+    // for a file we already hold.
+    const bytes = await fileBlob.arrayBuffer();
+    const contentType = guessContentType(bill.filename);
+
+    // Retried, because the common failure here is not the document.
+    //
+    // The engine runs as a single worker on a free instance, and the host
+    // in front of it sheds a request with a 503 and an empty body when
+    // that worker is already busy. Measured against production on
+    // 2026-11-25: roughly one read in five came back that way, after
+    // which this route told the customer "We couldn't read this
+    // document" -- about a document the engine reads correctly every
+    // other time -- and the information step gave up and showed a blank
+    // form. That is the intermittent autofill failure as reported.
+    //
+    // The shed arrives in about a second, so a couple of retries are
+    // cheap and the customer never learns it happened. A document we
+    // genuinely cannot read fails differently and is not retried.
+    let lastError: unknown;
+    // Leaves room for a last full read inside the 300s ceiling rather
+    // than starting one it cannot finish.
+    const deadline = Date.now() + 200_000;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        extraction = await extractBill({
+          filename: bill.filename,
+          bytes: new Blob([bytes], { type: contentType }),
+        });
+        lastError = undefined;
+        break;
+      } catch (err) {
+        lastError = err;
+        if (!isEngineUnavailable(err) || Date.now() > deadline) break;
+        console.warn(`Engine shed the read for bill ${id} (attempt ${attempt + 1}), retrying`);
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs()));
+      }
+    }
+
+    if (lastError) {
+      console.error("Engine extraction failed for bill", id, lastError);
       // A timeout is worth saying out loud: the customer is waiting on this
       // one, and "try again" is genuinely the right advice for it, which it
       // is not for a document we cannot read.
-      if (err instanceof AutomationEngineTimeoutError) {
+      if (lastError instanceof AutomationEngineTimeoutError) {
         return NextResponse.json(
           {
             error: "Reading this document took too long and was stopped. Please try again.",
@@ -135,6 +171,19 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
             stage: "extract_timeout",
           },
           { status: 504 },
+        );
+      }
+      // Still unavailable after the retries. "We couldn't read this
+      // document" would be a lie about the document, and it is the lie
+      // that made this look like a parsing problem for days.
+      if (isEngineUnavailable(lastError)) {
+        return NextResponse.json(
+          {
+            error: "The reader is busy right now. Give it a moment and we'll try again.",
+            fields: null,
+            stage: "engine_busy",
+          },
+          { status: 503 },
         );
       }
       return NextResponse.json(
@@ -230,4 +279,26 @@ function str(value: unknown): string | null {
   const trimmed = value.trim();
   if (!trimmed || PLACEHOLDERS.has(trimmed.toLowerCase())) return null;
   return trimmed;
+}
+
+// Whether a failed engine call means "the engine is not serving right now"
+// rather than "this document cannot be read".
+//
+// 5xx and 429 are the engine or the host in front of it, not the file. The
+// 503-with-an-empty-body shed by a busy free-tier worker is the one that
+// matters in practice; 429 is the same host's rate limit under a burst.
+// Anything else -- a 400 about the upload, a 422 about the shape -- is
+// about the request and will fail again identically.
+function isEngineUnavailable(err: unknown): boolean {
+  return err instanceof AutomationEngineError && (err.status === 429 || err.status >= 500);
+}
+
+// How long to leave a busy worker alone before asking again.
+//
+// Read per call, not bound at import: a module-level constant takes
+// whichever value the environment had when the module first loaded, which
+// in this codebase has now caused the same class of bug five times.
+// Tests set it to 0 so they are not spending real seconds asleep.
+function retryDelayMs(): number {
+  return Number(process.env.AUTOMATION_ENGINE_RETRY_DELAY_MS ?? 3_000);
 }

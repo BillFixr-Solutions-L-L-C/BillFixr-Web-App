@@ -22,7 +22,7 @@ vi.mock("@/lib/automation-engine", async (importOriginal) => ({
 }));
 
 const { POST } = await import("./route");
-const { AutomationEngineTimeoutError } = await import("@/lib/automation-engine");
+const { AutomationEngineError, AutomationEngineTimeoutError } = await import("@/lib/automation-engine");
 
 const params = Promise.resolve({ id: "bill-1" });
 const USER = { id: "user-1" };
@@ -94,6 +94,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   serverMock.reset();
   adminMock.reset();
+  // clearAllMocks only clears call history: an implementation set with
+  // mockResolvedValue, and anything still queued by a ...Once, survives
+  // into the next test. With the retry tests below that showed up as a
+  // read being attempted three times in a test that queued two answers.
+  extractBill.mockReset();
+  // No real sleeping between retries: the backoff is 3s in production and
+  // two of them outlast vitest's own timeout, and a test that times out
+  // mid-retry leaves the loop calling extractBill into the next test.
+  vi.stubEnv("AUTOMATION_ENGINE_RETRY_DELAY_MS", "0");
   getAutomationEngineConfig.mockReturnValue({ baseUrl: "http://engine" });
   // Awake unless a test says otherwise.
   wakeAutomationEngine.mockResolvedValue(true);
@@ -345,6 +354,88 @@ describe("when the engine is asleep", () => {
     // failure is not worth waiting twelve seconds for.
     expect(body.stage).toBe("engine_waking");
     expect(extractBill).not.toHaveBeenCalled();
+  });
+
+
+  // The host in front of the engine sheds a request with a 503 and an
+  // empty body when its single free-tier worker is already reading. About
+  // one read in five, measured against production on 2026-11-25. This
+  // route used to report that as "We couldn't read this document" and the
+  // information step gave up -- the intermittent blank form.
+  it("retries a read the engine shed rather than blaming the document", async () => {
+    ownedBill();
+    const shed = new AutomationEngineError("busy", 503, "");
+    extractBill
+      .mockRejectedValueOnce(shed)
+      .mockResolvedValue({ provider_name: "Matthew Walker", patient_due: 428.53 });
+
+    const res = await POST(new Request("http://localhost/x", { method: "POST" }), {
+      params: Promise.resolve({ id: "bill-1" }),
+    });
+    const body = await res.json();
+
+    expect(extractBill).toHaveBeenCalledTimes(2);
+    expect(res.status).toBe(200);
+    expect(body.fields.hospitalName).toBe("Matthew Walker");
+  });
+
+  it("asks the customer to come back when the engine stays busy", async () => {
+    ownedBill();
+    extractBill.mockRejectedValue(new AutomationEngineError("busy", 503, ""));
+
+    const res = await POST(new Request("http://localhost/x", { method: "POST" }), {
+      params: Promise.resolve({ id: "bill-1" }),
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(503);
+    // Retryable, and it must not claim the document is unreadable.
+    expect(body.stage).toBe("engine_busy");
+    expect(body.error).not.toContain("couldn't read");
+  });
+
+  it("retries a rate-limited read too", async () => {
+    ownedBill();
+    extractBill
+      .mockRejectedValueOnce(new AutomationEngineError("slow down", 429, ""))
+      .mockResolvedValue({ provider_name: "Matthew Walker", patient_due: 428.53 });
+
+    const res = await POST(new Request("http://localhost/x", { method: "POST" }), {
+      params: Promise.resolve({ id: "bill-1" }),
+    });
+
+    expect(extractBill).toHaveBeenCalledTimes(2);
+    expect(res.status).toBe(200);
+  });
+
+  // The other half of the classification. A 400 is about the request or
+  // the file, so sending it again wastes the customer's wait.
+  it("does not retry a document the engine refused on its merits", async () => {
+    ownedBill();
+    extractBill.mockRejectedValue(new AutomationEngineError("bad file", 400, ""));
+
+    const res = await POST(new Request("http://localhost/x", { method: "POST" }), {
+      params: Promise.resolve({ id: "bill-1" }),
+    });
+    const body = await res.json();
+
+    expect(extractBill).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(502);
+    expect(body.stage).toBe("extract_failed");
+  });
+
+  it("does not retry a timeout", async () => {
+    ownedBill();
+    extractBill.mockRejectedValue(new AutomationEngineTimeoutError("/api/extract", 240_000));
+
+    const res = await POST(new Request("http://localhost/x", { method: "POST" }), {
+      params: Promise.resolve({ id: "bill-1" }),
+    });
+    const body = await res.json();
+
+    expect(extractBill).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(504);
+    expect(body.stage).toBe("extract_timeout");
   });
 
   it("does not wake anything for a bill it has already read", async () => {
