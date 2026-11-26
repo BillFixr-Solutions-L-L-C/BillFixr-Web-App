@@ -144,6 +144,18 @@ describe("syncCaseFromNegotiation", () => {
       "SETTLEMENT_AGREED",
       "AWAITING_COMPLETION_FEE",
       "COMPLETED",
+      // Moved up from the waiting list on 2026-11-25. Both are set in
+      // exactly one place in the engine -- the handler that processes an
+      // INBOUND provider email -- so neither can happen unless the
+      // provider wrote back. IN_REVIEW is that handler's fallback for a
+      // reply it could not categorise; HIPAA_AUTH_PENDING is the provider
+      // asking the customer for written authorisation.
+      //
+      // Having them below cost three customers their notification: their
+      // cases sat at letter_sent with replies already read and filed, the
+      // oldest for nine days, and no email was ever sent.
+      "IN_REVIEW",
+      "HIPAA_AUTH_PENDING",
     ];
     for (const status of responded) {
       const { client } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
@@ -153,12 +165,10 @@ describe("syncCaseFromNegotiation", () => {
   });
 
   it("stays put on every engine status that means nothing came back", async () => {
-    const waiting: AutomationNegotiationStatus[] = [
-      "DISPATCHED",
-      "IN_REVIEW",
-      "HIPAA_AUTH_PENDING",
-      "CLOSED_NO_RESPONSE",
-    ];
+    // Only these two now. They are the statuses the engine sets without
+    // any inbound mail at all: DISPATCHED when the letter goes out, and
+    // CLOSED_NO_RESPONSE on an explicit closure for silence.
+    const waiting: AutomationNegotiationStatus[] = ["DISPATCHED", "CLOSED_NO_RESPONSE"];
     for (const status of waiting) {
       const { client } = adminClient({ data: [{ id: "case-1" }], error: null }, PROFILE);
       const result = await syncCaseFromNegotiation(client, CASE, neg(status));

@@ -26,8 +26,13 @@ const SUMMARIES: Record<AutomationNegotiationStatus, NegotiationSummary> = {
     tone: "working",
   },
   IN_REVIEW: {
-    label: "Under review by the provider",
-    detail: "The provider has the dispute and is reviewing it.",
+    // Said "Under review by the provider / The provider has the dispute
+    // and is reviewing it" until 2026-11-25, which had it backwards. The
+    // engine only ever sets this on an inbound reply it could not sort
+    // into a more specific category, so the provider has written back and
+    // it is us doing the reading.
+    label: "Reply received",
+    detail: "The provider has written back. We're reading their response and will tell you what it means.",
     tone: "working",
   },
   REPLY_RECEIVED: {
@@ -153,15 +158,35 @@ export function describeNegotiationStatus(
 // The engine knows the real answer because it reads the provider's email.
 //
 // All 16 are listed, as everywhere else in this file: a default here
-// would either claim a reply that never came or hide one that did. The
-// four false cases are the ones where nothing has come back from the
-// provider — DISPATCHED and IN_REVIEW are still waiting, HIPAA_AUTH is
-// our own blocker, and CLOSED_NO_RESPONSE is the explicit silence.
+// would either claim a reply that never came or hide one that did.
+//
+// IN_REVIEW and HIPAA_AUTH_PENDING were false here and that was wrong.
+// Both are set in exactly one place in the engine -- the handler that
+// processes an INBOUND provider email (engine/negotiator.py, status_map)
+// -- so neither can occur unless the provider has written back.
+// IN_REVIEW is that handler's fallback, used when the reply is a general
+// inquiry or the classifier does not recognise it; HIPAA_AUTH_PENDING is
+// the provider asking the customer for written authorisation.
+//
+// What it cost, found 2026-11-25: three live cases sat at letter_sent
+// with replies the engine had already read and filed -- the oldest from
+// 16 November, nine days earlier. The reply showed on the website,
+// because the case screen renders the negotiation's own thread, so the
+// customer could see it while never being told it had arrived. No
+// in-app notification, no "Your provider responded" email, and the case
+// stayed in "waiting for a reply" long after one came.
+// HIPAA_AUTH_PENDING is the worse of the two: it is a request for
+// something only the customer can give, so an unannounced one stalls the
+// case indefinitely.
+//
+// The two that remain false are the ones the engine sets without any
+// inbound mail: DISPATCHED when the letter goes out (database.py, at
+// creation), and CLOSED_NO_RESPONSE on an explicit closure for silence.
 const PROVIDER_RESPONDED: Record<AutomationNegotiationStatus, boolean> = {
   DISPATCHED: false,
-  IN_REVIEW: false,
-  HIPAA_AUTH_PENDING: false,
   CLOSED_NO_RESPONSE: false,
+  IN_REVIEW: true,
+  HIPAA_AUTH_PENDING: true,
   REPLY_RECEIVED: true,
   COUNTER_OFFER_RECEIVED: true,
   // We only counter something they said, so a counter-offer going out

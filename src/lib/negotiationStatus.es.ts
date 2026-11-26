@@ -26,8 +26,10 @@ export const SUMMARIES_ES: Record<AutomationNegotiationStatus, { label: string; 
     detail: "Escribimos al departamento de facturación del proveedor y esperamos su respuesta.",
   },
   IN_REVIEW: {
-    label: "En revisión por el proveedor",
-    detail: "El proveedor tiene la disputa y la está revisando.",
+    // Kept in step with the English: this status means the provider has
+    // replied and we are reading it, not that they are still reviewing.
+    label: "Respuesta recibida",
+    detail: "El proveedor respondió. Estamos leyendo su respuesta y le diremos qué significa.",
   },
   REPLY_RECEIVED: {
     label: "Respuesta recibida",

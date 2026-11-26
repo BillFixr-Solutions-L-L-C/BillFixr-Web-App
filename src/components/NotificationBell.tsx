@@ -15,7 +15,28 @@ type Notification = {
 
 const POLL_MS = 15000;
 
-export default function NotificationBell({ initialNotifications }: { initialNotifications: Notification[] }) {
+/**
+ * Which edge the panel hangs from.
+ *
+ * It is 320px wide and has to stay on screen, and where it can go depends
+ * entirely on where the bell is -- which this component cannot see. The
+ * three callers are not alike: the admin topbar and the dashboard's phone
+ * header both put the bell near the right edge of a full-width bar, where
+ * hanging it from the right is correct, but the desktop sidebar puts it at
+ * the right edge of a 235px column, where the same rule pushed 84 of its
+ * 320px off the left of the screen. Measured on 2026-11-25: the panel sat
+ * at x=-84, so the heading read "IONS" and every message lost its first
+ * few words.
+ */
+export type BellAlign = "left" | "right";
+
+export default function NotificationBell({
+  initialNotifications,
+  align = "right",
+}: {
+  initialNotifications: Notification[];
+  align?: BellAlign;
+}) {
   const t = useT();
   const [notifications, setNotifications] = useState(initialNotifications);
   const [open, setOpen] = useState(false);
@@ -96,7 +117,11 @@ export default function NotificationBell({ initialNotifications }: { initialNoti
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-80 rounded-2xl border border-gray-100 bg-white p-2 shadow-lg">
+        <div
+          className={`absolute top-full z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-gray-100 bg-white p-2 shadow-lg ${
+            align === "left" ? "left-0" : "right-0"
+          }`}
+        >
           <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">{t("notifications.title")}</p>
           {notifications.length === 0 ? (
             <p className="px-3 py-4 text-center text-sm text-gray-400">{t("notifications.empty")}</p>

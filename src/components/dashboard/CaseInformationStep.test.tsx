@@ -474,7 +474,7 @@ describe("CaseInformationStep", () => {
   // log entry on a form. The tests above each name the phrase they expect
   // gone, which is not enough on its own -- a differently worded note would
   // slip past all of them. This one refuses any commentary at all.
-  describe("the lookup narrates nothing", () => {
+  describe("the lookup says only whether it found an email", () => {
     // The note was the only <p> of this shape under a field, so matching
     // on the element rather than on wording is what makes this hold
     // against a differently worded one. An earlier version of this test
@@ -498,6 +498,14 @@ describe("CaseInformationStep", () => {
           emailUnconfirmedReason: "it is published on another domain",
         },
       ],
+    ];
+
+    // A lookup that found no email now says so, asked for on 2026-11-25:
+    // "if it doesnt find the billing email say its not found but they can
+    // add if they have it". The rest of the narration stays gone -- what
+    // was removed on 2026-11-18 was the note that explained the lookup's
+    // reasoning, and this is one sentence about the outcome.
+    const NO_EMAIL: [string, Record<string, unknown>][] = [
       [
         "no email but a registry record",
         {
@@ -523,6 +531,45 @@ describe("CaseInformationStep", () => {
       });
     }
 
+    for (const [what, body] of NO_EMAIL) {
+      it(`says the email was not found, and that they can add it, on ${what}`, async () => {
+        mockFetch({ extract: BILL_READ, contact: { status: 200, body } });
+        const user = userEvent.setup();
+        renderStep();
+        await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
+
+        await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+        await waitFor(() => expect(screen.queryByText(/Searching/i)).not.toBeInTheDocument());
+
+        const note = await screen.findByText(/couldn't find a billing email/i);
+        expect(note).toBeInTheDocument();
+        // The half that makes it useful rather than just bad news.
+        expect(note).toHaveTextContent(/you can type it in/i);
+      });
+    }
+
+    it("stops saying it once they type an address in", async () => {
+      mockFetch({ extract: BILL_READ, contact: { status: 200, body: { ok: true, value: null } } });
+      const user = userEvent.setup();
+      renderStep();
+      await waitFor(() => expect(screen.getByLabelText(/^Hospital Address/)).toHaveValue("2 Care Rd"));
+
+      await user.click(screen.getAllByRole("button", { name: /Search by AI/ })[0]);
+      expect(await screen.findByText(/couldn't find a billing email/i)).toBeInTheDocument();
+
+      // The boxes are read-only until the section is put into edit mode,
+      // and index 1 is the Hospital section's Edit -- same as the other
+      // editing tests in this file.
+      await user.click(screen.getAllByRole("button", { name: "Edit" })[1]);
+      await user.type(screen.getByLabelText(/^Billing Department Email/), "billing@example.org");
+
+      await waitFor(() =>
+        expect(screen.queryByText(/couldn't find a billing email/i)).not.toBeInTheDocument(),
+      );
+    });
+
+    // Our own request failing is a different claim from "this hospital
+    // publishes no billing email", and must not be reported as that one.
     it("stays silent when the lookup itself fails", async () => {
       mockFetch({
         extract: BILL_READ,

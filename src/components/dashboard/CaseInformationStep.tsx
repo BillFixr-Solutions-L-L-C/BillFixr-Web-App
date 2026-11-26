@@ -112,6 +112,7 @@ function Section({
   saving,
   onSearch,
   searchingKey,
+  notFound,
   canSearch,
 }: {
   title: string;
@@ -124,6 +125,9 @@ function Section({
   saving: boolean;
   onSearch: (key: keyof CaseInformation) => void;
   searchingKey: keyof CaseInformation | null;
+  // Fields whose lookup came back without an email. Asked for on
+  // 2026-11-25: say so, and say they can fill it in themselves.
+  notFound: ReadonlySet<keyof CaseInformation>;
   // Whether the lookup has enough to go on. One hospital name covers
   // facilities in different towns -- Matthew Walker is in both Nashville
   // and Smyrna -- so without an address the search picks the wrong one and
@@ -182,6 +186,14 @@ function Section({
                 same name apart.
               </p>
             )}
+            {f.searchable && canSearch && notFound.has(f.key) && (
+              // One sentence, not a report. A longer note that explained
+              // what the lookup had and had not found used to live here
+              // and was removed on 2026-11-18 for reading like a log
+              // line; this says the outcome and what to do about it and
+              // stops.
+              <p className="mt-1 text-xs text-gray-500">{t("upload.emailNotFound")}</p>
+            )}
           </div>
         ))}
       </div>
@@ -226,6 +238,20 @@ export default function CaseInformationStep({
   const [savedNote, setSavedNote] = useState(false);
   const [reading, setReading] = useState(true);
   const [searching, setSearching] = useState<keyof CaseInformation | null>(null);
+  // Which email lookups came back with nothing. Per-field, because the
+  // billing-manager address and the support address are looked up
+  // separately and one can be found while the other is not.
+  const [notFound, setNotFound] = useState<ReadonlySet<keyof CaseInformation>>(new Set());
+
+  function markNotFound(key: keyof CaseInformation, missing: boolean) {
+    setNotFound((current) => {
+      if (current.has(key) === missing) return current;
+      const next = new Set(current);
+      if (missing) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
 
   // Everything that IS printed on the bill is read off it as soon as the
   // step opens, so the customer corrects rather than types. Only blanks are
@@ -341,6 +367,9 @@ export default function CaseInformationStep({
     // route enforces the same rule where it can actually be reached, and
     // its 400 renders through the error path below.
     setSearching(key);
+    // Clear last time's answer before asking again, or a lookup that now
+    // succeeds leaves the "not found" line sitting under a filled box.
+    markNotFound(key, false);
 
     const res = await fetch(`/api/dashboard/bills/${billId}/find-contact`, {
       method: "POST",
@@ -357,6 +386,9 @@ export default function CaseInformationStep({
     setSearching(null);
 
     if (!res?.ok) {
+      // Deliberately not marked as "not found": the lookup did not get to
+      // answer, and telling someone no email exists because our own
+      // request failed would be a different claim from the true one.
       return;
     }
 
@@ -373,6 +405,11 @@ export default function CaseInformationStep({
       // post the letter instead. Removed on request 2026-11-18: it read
       // like a log line on a form. The fields it finds still fill
       // themselves in; nothing is said about the ones it does not.
+      // Say so. The fields the lookup DID find still fill themselves in
+      // below; what is new is that the customer is told the email is not
+      // one of them, rather than being left to guess why the box stayed
+      // empty after they pressed the button.
+      markNotFound(key, true);
       applyEngineRecord(body?.fallback);
       return;
     }
@@ -402,6 +439,9 @@ export default function CaseInformationStep({
   function change(key: keyof CaseInformation, value: string) {
     setValues((v) => ({ ...v, [key]: value }));
     setSavedNote(false);
+    // They are doing exactly what the line suggested, so it has served
+    // its purpose and should not sit under an address they just typed.
+    if (value.trim()) markNotFound(key, false);
   }
 
   async function save(closeSection: boolean) {
@@ -443,6 +483,7 @@ export default function CaseInformationStep({
         saving={saving && editing === "personal"}
         onSearch={searchByAi}
         searchingKey={searching}
+        notFound={notFound}
         canSearch={Boolean(values.hospitalAddress.trim())}
       />
 
@@ -459,6 +500,7 @@ export default function CaseInformationStep({
         saving={saving && editing === "hospital"}
         onSearch={searchByAi}
         searchingKey={searching}
+        notFound={notFound}
         canSearch={Boolean(values.hospitalAddress.trim())}
       />
 
