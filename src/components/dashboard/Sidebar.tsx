@@ -22,7 +22,11 @@ const topLinks: Link[] = [
   { labelKey: "nav.dashboard", href: "/dashboard", icon: "dashboard" },
   { labelKey: "nav.documents", href: "/dashboard/documents", icon: "document" },
   { labelKey: "nav.activeCase", href: "/dashboard/case", icon: "case" },
-  { labelKey: "nav.completedCase", href: "/dashboard/completed", icon: "completed" },
+  {
+    labelKey: "nav.completedCase",
+    href: "/dashboard/completed",
+    icon: "completed",
+  },
   { labelKey: "nav.support", href: "/dashboard/support", icon: "support" },
 ];
 
@@ -33,13 +37,29 @@ const bottomLinks: Link[] = [
 
 function MenuIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M4 6h16M4 12h16M4 18h16"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
-function NavLink({ label, href, icon, onNavigate }: Omit<Link, "labelKey"> & { label: string; onNavigate?: () => void }) {
+function NavLink({
+  label,
+  href,
+  icon,
+  onNavigate,
+}: Omit<Link, "labelKey"> & { label: string; onNavigate?: () => void }) {
   const pathname = usePathname();
   const cameFrom = useSearchParams().get("from");
   // Detail routes live under their section (e.g. /dashboard/documents/[id]),
@@ -79,7 +99,11 @@ export default function Sidebar({
   user,
   initialNotifications = [],
 }: {
-  user: { name: string; status: "active" | "suspended"; avatarUrl: string | null };
+  user: {
+    name: string;
+    status: "active" | "suspended";
+    avatarUrl: string | null;
+  };
   initialNotifications?: ShellNotification[];
 }) {
   const [open, setOpen] = useState(false);
@@ -122,8 +146,19 @@ export default function Sidebar({
       <aside
         // Desktop: sticky + full viewport height so the nav stays put while
         // the page scrolls. Its own contents scroll if they ever outgrow the
-        // viewport. Mobile keeps the slide-in drawer.
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col overflow-y-auto bg-white px-5 py-8 transition-transform duration-200 md:sticky md:top-0 md:translate-x-0 ${
+        // viewport -- but on the inner wrapper below, not here. Mobile keeps
+        // the slide-in drawer.
+        //
+        // No overflow on this element on purpose. It used to carry
+        // `overflow-y-auto`, and `overflow-y: auto` forces the horizontal
+        // axis to clip as well, so nothing inside the sidebar could ever
+        // be drawn outside its 256px. The notification panel is 320px and
+        // was being sliced off at the sidebar's edge whichever side it
+        // hung from -- reported 2026-11-25 as notifications showing cut
+        // off. The scroll it was there for now lives on the wrapper around
+        // everything below the header, which keeps the header still while
+        // the nav scrolls and lets the panel out.
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col bg-white px-5 py-8 transition-transform duration-200 md:sticky md:top-0 md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -133,7 +168,14 @@ export default function Sidebar({
           </Link>
           <div className="flex items-center gap-1">
             <span className="hidden md:block">
-              <NotificationBell initialNotifications={initialNotifications} />
+              {/* Hangs from its left edge, unlike the other two. The bell
+                  is at the right of a 235px sidebar, so a panel hung from
+                  the right ran off the screen and cut the first words off
+                  every message. */}
+              <NotificationBell
+                initialNotifications={initialNotifications}
+                align="left"
+              />
             </span>
             <button
               type="button"
@@ -146,57 +188,84 @@ export default function Sidebar({
           </div>
         </div>
 
-        <nav className="mt-6 flex flex-col gap-2">
-          {topLinks.map((link) => (
-            <NavLink key={link.href} {...link} label={t(link.labelKey)} onNavigate={close} />
-          ))}
-        </nav>
+        {/* Everything below the header scrolls, so the sidebar still
+            copes with a short viewport. min-h-0 because a flex child will
+            not shrink below its content without it, and the scroll would
+            never engage. */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <nav className="mt-6 flex flex-col gap-2">
+            {topLinks.map((link) => (
+              <NavLink
+                key={link.href}
+                {...link}
+                label={t(link.labelKey)}
+                onNavigate={close}
+              />
+            ))}
+          </nav>
 
-        <div className="flex-1" />
+          <div className="flex-1" />
 
-        <nav className="flex flex-col gap-2">
-          {bottomLinks.map((link) => (
-            <NavLink key={link.href} {...link} label={t(link.labelKey)} onNavigate={close} />
-          ))}
-        </nav>
+          <nav className="flex flex-col gap-2">
+            {bottomLinks.map((link) => (
+              <NavLink
+                key={link.href}
+                {...link}
+                label={t(link.labelKey)}
+                onNavigate={close}
+              />
+            ))}
+          </nav>
 
-        {/* The site's language. Changing it here does NOT change the
+          {/* The site's language. Changing it here does NOT change the
             language BillFixr writes to this customer in -- that is fixed
             at registration. See src/lib/language.ts.
             Desktop only: on a phone the same control sits in the top bar
             above, and two of them in one drawer is one too many. */}
-        <div className="mt-6 hidden justify-center md:flex">
-          <LanguageSwitcher />
-        </div>
+          <div className="mt-6 hidden justify-center md:flex">
+            <LanguageSwitcher />
+          </div>
 
-        <div className="mt-6 flex items-center justify-center gap-2">
-          {SOCIAL_LINKS.filter((s) => s.href).map((s) => (
-            <a
-              key={s.label}
-              href={s.href!}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={s.label}
-              title={s.label}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-50 text-[#0f7545] transition hover:bg-primary-100"
-            >
-              {s.icon}
-            </a>
-          ))}
-        </div>
+          <div className="mt-6 flex items-center justify-center gap-2">
+            {SOCIAL_LINKS.filter((s) => s.href).map((s) => (
+              <a
+                key={s.label}
+                href={s.href!}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={s.label}
+                title={s.label}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-50 text-[#0f7545] transition hover:bg-primary-100"
+              >
+                {s.icon}
+              </a>
+            ))}
+          </div>
 
-        <div className="mt-4 rounded-2xl border border-gray-100 p-4 shadow-sm">
-          {user.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={user.avatarUrl} alt="" className="block h-11 w-11 shrink-0 rounded-full object-cover" />
-          ) : (
-            <span className="block h-11 w-11 shrink-0 rounded-full bg-primary-100" aria-hidden="true" />
-          )}
-          <div className="mt-3 min-w-0">
-            <p className="truncate text-base font-medium text-gray-900">{user.name}</p>
-            <p className={`text-sm ${user.status === "active" ? "text-[#0f7545]" : "text-danger"}`}>
-              {user.status === "active" ? "Active" : "Suspended"}
-            </p>
+          <div className="mt-4 rounded-2xl border border-gray-100 p-4 shadow-sm">
+            {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatarUrl}
+                alt=""
+                className="block h-11 w-11 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <span
+                className="block h-11 w-11 shrink-0 rounded-full bg-primary-100"
+                aria-hidden="true"
+              />
+            )}
+            <div className="mt-3 min-w-0">
+              <p className="truncate text-base font-medium text-gray-900">
+                {user.name}
+              </p>
+              <p
+                className={`text-sm ${user.status === "active" ? "text-[#0f7545]" : "text-danger"}`}
+              >
+                {user.status === "active" ? "Active" : "Suspended"}
+              </p>
+            </div>
           </div>
         </div>
       </aside>

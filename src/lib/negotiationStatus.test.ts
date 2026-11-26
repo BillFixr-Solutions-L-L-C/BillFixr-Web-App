@@ -5,6 +5,7 @@ import {
   clientNotices,
   describeNegotiationStatus,
   patientBalance,
+  providerHasResponded,
 } from "./negotiationStatus";
 import { isCaseCompleted } from "./caseStatus";
 import type { AutomationNegotiationStatus } from "@/types/automation-engine";
@@ -200,5 +201,55 @@ describe("canCloseForNoResponse", () => {
     expect(
       canCloseForNoResponse({ status: "DISPATCHED", cadence_step: Number.NaN }, "awaiting_response", isCaseCompleted),
     ).toEqual({ closable: false, reason: "follow_ups_incomplete", followUpsSent: 0 });
+  });
+});
+
+describe("providerHasResponded", () => {
+  // Every value the engine's inbound handler can assign, copied from the
+  // status_map in services/automation-engine/engine/negotiator.py. That
+  // handler runs only when an INBOUND provider email has been received
+  // and filed, so reaching any of these means the provider wrote back.
+  //
+  // Listed here rather than trusted to review because the coupling is
+  // invisible from this file: the names are the engine's, the semantics
+  // live in a Python dict, and getting one wrong leaves a customer
+  // waiting on a reply that already arrived with nothing on screen or in
+  // their inbox to say so. IN_REVIEW and HIPAA_AUTH_PENDING were both
+  // wrong this way until 2026-11-25.
+  const SET_FROM_AN_INBOUND_REPLY: AutomationNegotiationStatus[] = [
+    "HOSPITAL_ACCEPTED",
+    "COUNTER_OFFER_RECEIVED",
+    "FINANCIAL_ASSISTANCE_REQUIRED",
+    "ITEMIZED_BILL_RECEIVED",
+    "DISPUTE_ESCALATION",
+    "HIPAA_AUTH_PENDING",
+    "IN_REVIEW",
+  ];
+
+  it.each(SET_FROM_AN_INBOUND_REPLY)("treats %s as the provider having replied", (status) => {
+    expect(providerHasResponded(status)).toBe(true);
+  });
+
+  // The two the engine sets without any inbound mail: DISPATCHED when the
+  // letter goes out, CLOSED_NO_RESPONSE on an explicit closure for
+  // silence. Claiming a reply for either would be the opposite error.
+  it.each(["DISPATCHED", "CLOSED_NO_RESPONSE"] as AutomationNegotiationStatus[])(
+    "does not claim a reply for %s",
+    (status) => {
+      expect(providerHasResponded(status)).toBe(false);
+    },
+  );
+
+  it("treats a status it does not know as no reply yet", () => {
+    expect(providerHasResponded("SOMETHING_NEW_FROM_THE_ENGINE")).toBe(false);
+  });
+
+  // The label went with the classification: it used to say the provider
+  // was still reviewing the dispute, which told a customer the opposite
+  // of what had happened.
+  it("describes IN_REVIEW as a reply that arrived", () => {
+    const summary = describeNegotiationStatus("IN_REVIEW", "en");
+    expect(summary.label).toBe("Reply received");
+    expect(summary.detail).not.toMatch(/is reviewing it/i);
   });
 });

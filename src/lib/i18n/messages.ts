@@ -172,6 +172,7 @@ export const MESSAGES = {
     "upload.scanNow": "Scan now",
     "upload.analyzing": "Analyzing your bill — this can take a moment...",
     "upload.readingDetails": "Reading the details of your bill…",
+    "upload.emailNotFound": "We couldn't find a billing email for this hospital. If you have it, you can type it in.",
     "upload.agree": "I Agree",
 
     // --- stats ---
@@ -760,6 +761,7 @@ export const MESSAGES = {
     "upload.scanNow": "Analizar ahora",
     "upload.analyzing": "Analizando su factura: esto puede tardar un momento...",
     "upload.readingDetails": "Leyendo los datos de su factura…",
+    "upload.emailNotFound": "No encontramos un correo de facturación para este hospital. Si usted lo tiene, puede escribirlo.",
     "upload.agree": "Acepto",
 
     "stats.billAnalyzed": "Facturas analizadas",
