@@ -16,7 +16,9 @@ for (const c of mine) {
 }
 console.log("\n=== notifications for their owners ===");
 const owners = [...new Set(mine.map(c=>c.user_id))];
-const { data: notes } = await db.from("notifications")
-  .select("id, user_id, kind, title, created_at, read_at").in("user_id", owners)
+const { data: notes, error: noteErr } = await db.from("notifications")
+  .select("id, user_id, type, message, created_at").in("user_id", owners)
   .order("created_at",{ascending:false}).limit(25);
-for (const n of notes ?? []) console.log(n.created_at, n.kind, "|", n.title, n.read_at ? "(read)" : "");
+if (noteErr) throw noteErr;   // a silently-swallowed error here once read as "no notifications"
+console.log(`owners: ${owners.length}, rows: ${notes.length}`);
+for (const n of notes) console.log(n.created_at, n.type, "|", n.message.slice(0,90));
