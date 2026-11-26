@@ -4,6 +4,7 @@ import { syncCaseFromNegotiation } from "@/lib/caseStatusSync";
 import { getNegotiation, syncEngineInbox, tickFollowUpCadence } from "@/lib/automation-engine";
 import { followUpDecision } from "@/lib/followUpCadence";
 import { isBackendConfigured } from "@/lib/aiStack";
+import { withEngineRetry } from "@/lib/engineRetry";
 
 // Vercel Cron hits this on a schedule (see vercel.json). Asks the engine
 // where each running negotiation stands and advances the case when the
@@ -18,7 +19,29 @@ import { isBackendConfigured } from "@/lib/aiStack";
 // `0 */4 * * *` was refused outright). Reconcile-on-read carries the
 // common case -- a customer who opens their case sees the truth
 // immediately -- so the sweep is the backstop, not the main path.
+// The sweep talks to the engine once per case, and a free instance sheds
+// requests at random, so every call may need its retries. 300s is both the
+// default and the ceiling on Hobby.
+export const maxDuration = 300;
+
+// What this handler may spend in total, kept under maxDuration so the
+// response below is actually returned rather than the function being cut
+// off mid-sweep.
+//
+// Read per call rather than bound at module load, so a test can shrink it
+// without sleeping through four minutes. Binding env at import is a bug
+// this codebase has produced five times -- see src/lib/engineRetry.ts.
+function budgetMs(): number {
+  return Number(process.env.CRON_SWEEP_BUDGET_MS ?? 280_000);
+}
+
+// Enough left to be worth starting a case: one read, and one retry of it.
+function perCaseMs(): number {
+  return Number(process.env.CRON_SWEEP_PER_CASE_MS ?? 40_000);
+}
+
 export async function GET(request: Request) {
+  const deadline = Date.now() + budgetMs();
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -50,7 +73,7 @@ export async function GET(request: Request) {
   let inboxMessages: number | null = null;
   let inboxError = false;
   try {
-    const synced = await syncEngineInbox();
+    const synced = await withEngineRetry(() => syncEngineInbox(), { deadline });
     inboxMessages = Number(synced?.new_messages_processed ?? 0);
   } catch (err) {
     console.error("Could not make the engine sync its inbox", err);
@@ -72,11 +95,27 @@ export async function GET(request: Request) {
 
   let advanced = 0;
   let followedUp = 0;
+  let deferred = 0;
   const failures: string[] = [];
 
   for (const caseRow of cases ?? []) {
+    // Stop starting cases we cannot finish. Being counted as skipped and
+    // picked up by the next run is honest; being cut off mid-case by the
+    // platform loses the count and the log line with it.
+    if (deadline - Date.now() < perCaseMs()) {
+      deferred += 1;
+      continue;
+    }
     try {
-      const negotiation = await getNegotiation(caseRow.negotiation_id as string);
+      // Retried, because one shed request used to cost this case a whole
+      // day. The engine answered 12 of 14 reads when measured on
+      // 2026-11-26 -- fine for a single read, fatal across seven in a row,
+      // which is how a sweep that found seven live negotiations advanced
+      // none of them. See src/lib/engineRetry.ts.
+      const negotiation = await withEngineRetry(
+        () => getNegotiation(caseRow.negotiation_id as string),
+        { deadline },
+      );
       const result = await syncCaseFromNegotiation(admin, caseRow, negotiation);
       if (result.changed) {
         // The provider has replied, so this case is not owed a chase. Moving
@@ -91,7 +130,10 @@ export async function GET(request: Request) {
       // decided here or not at all. See src/lib/followUpCadence.ts.
       const decision = followUpDecision(negotiation);
       if (decision.due) {
-        const ticked = await tickFollowUpCadence(caseRow.negotiation_id as string);
+        const ticked = await withEngineRetry(
+          () => tickFollowUpCadence(caseRow.negotiation_id as string),
+          { deadline },
+        );
         // The engine answers `needs_review` when a finding below `high`
         // confidence is holding the case, and sends nothing. That is a
         // correct outcome, not a follow-up, so it is not counted as one.
@@ -112,5 +154,6 @@ export async function GET(request: Request) {
     inboxMessages,
     inboxError,
     failed: failures.length,
+    deferred,
   });
 }

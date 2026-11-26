@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSupabaseMock } from "@/test/supabaseMock";
+import { AutomationEngineError } from "@/lib/automation-engine";
 
 const adminMock = createSupabaseMock();
 const getNegotiation = vi.fn();
@@ -71,6 +72,83 @@ beforeEach(() => {
   syncEngineInbox.mockResolvedValue({ status: "success", new_messages_processed: 0 });
   syncCaseFromNegotiation.mockResolvedValue({ changed: false, reason: "no_response_yet" });
   tickFollowUpCadence.mockResolvedValue({ status: "success", action: "followup_1_sent" });
+  // Retries without the real backoff, which would exceed vitest's timeout.
+  vi.stubEnv("AUTOMATION_ENGINE_RETRY_DELAY_MS", "0");
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+/** A request the free instance shed: 503 with an empty body. */
+const shed = () => new AutomationEngineError("negotiation lookup failed", 503, "");
+
+describe("riding out the engine shedding requests", () => {
+  // The regression. On 2026-11-26 this sweep found seven live
+  // negotiations and advanced none of them: the free instance sheds about
+  // one request in seven, each hanging ~28s before a 503, and there was
+  // no second attempt. Three cases whose provider had already replied sat
+  // at letter_sent for over a week with the customer told nothing.
+  it("advances a case whose first read was shed", async () => {
+    getNegotiation.mockRejectedValueOnce(shed()).mockResolvedValue(overdue({ status: "IN_REVIEW" }));
+    syncCaseFromNegotiation.mockResolvedValue({ changed: true, from: "letter_sent", to: "response_received" });
+    oneRunningCase();
+
+    const body = await (await GET(request())).json();
+
+    expect(getNegotiation).toHaveBeenCalledTimes(2);
+    expect(syncCaseFromNegotiation).toHaveBeenCalledTimes(1);
+    expect(body).toMatchObject({ checked: 1, advanced: 1, failed: 0 });
+  });
+
+  it("records the case as failed when every attempt is shed", async () => {
+    getNegotiation.mockRejectedValue(shed());
+    oneRunningCase();
+
+    const body = await (await GET(request())).json();
+
+    expect(getNegotiation).toHaveBeenCalledTimes(3);
+    expect(syncCaseFromNegotiation).not.toHaveBeenCalled();
+    expect(body).toMatchObject({ checked: 1, advanced: 0, failed: 1 });
+  });
+
+  it("does not retry a negotiation id the engine does not hold", async () => {
+    getNegotiation.mockRejectedValue(new AutomationEngineError("not found", 404, ""));
+    oneRunningCase();
+
+    const body = await (await GET(request())).json();
+
+    expect(getNegotiation).toHaveBeenCalledTimes(1);
+    expect(body).toMatchObject({ failed: 1 });
+  });
+
+  it("retries a shed mailbox read instead of reporting the inbox unreadable", async () => {
+    syncEngineInbox.mockRejectedValueOnce(shed()).mockResolvedValue({ status: "success", new_messages_processed: 2 });
+    getNegotiation.mockResolvedValue(overdue());
+    oneRunningCase();
+
+    const body = await (await GET(request())).json();
+
+    expect(body).toMatchObject({ inboxError: false, inboxMessages: 2 });
+  });
+
+  // One slow case must not get the sweep cut off mid-flight by the
+  // platform, losing the count and the log line with it.
+  it("defers the cases it cannot finish inside the budget", async () => {
+    vi.stubEnv("CRON_SWEEP_BUDGET_MS", "0");
+    adminMock.queueResult("cases", {
+      data: [
+        { id: "case-1", user_id: "user-1", status: "awaiting_response", negotiation_id: "neg-1" },
+        { id: "case-2", user_id: "user-2", status: "awaiting_response", negotiation_id: "neg-2" },
+      ],
+      error: null,
+    });
+
+    const body = await (await GET(request())).json();
+
+    expect(getNegotiation).not.toHaveBeenCalled();
+    expect(body).toMatchObject({ checked: 2, deferred: 2, failed: 0 });
+  });
 });
 
 describe("GET /api/cron/negotiation-status", () => {

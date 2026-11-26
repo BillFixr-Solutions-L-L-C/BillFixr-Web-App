@@ -2,14 +2,13 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  AutomationEngineError,
   AutomationEngineTimeoutError,
   extractBill,
   getAutomationEngineConfig,
   wakeAutomationEngine,
 } from "@/lib/automation-engine";
 import { isEngineExtraction } from "@/lib/engineBillData";
-import { engineRetryDelayMs } from "@/lib/engineRetry";
+import { engineRetryDelayMs, isEngineUnavailable } from "@/lib/engineRetry";
 import { guessContentType } from "@/lib/contentType";
 import type { EngineExtraction } from "@/types/automation-engine";
 
@@ -297,15 +296,4 @@ function str(value: unknown): string | null {
   return trimmed;
 }
 
-// Whether a failed engine call means "the engine is not serving right now"
-// rather than "this document cannot be read".
-//
-// 5xx and 429 are the engine or the host in front of it, not the file. The
-// 503-with-an-empty-body shed by a busy free-tier worker is the one that
-// matters in practice; 429 is the same host's rate limit under a burst.
-// Anything else -- a 400 about the upload, a 422 about the shape -- is
-// about the request and will fail again identically.
-function isEngineUnavailable(err: unknown): boolean {
-  return err instanceof AutomationEngineError && (err.status === 429 || err.status >= 500);
-}
 
